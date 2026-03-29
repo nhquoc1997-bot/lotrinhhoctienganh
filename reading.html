@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kiểm tra Phát âm Tiếng Anh</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Hiệu ứng nhấp nháy cho trạng thái đang thu âm */
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .recording-indicator {
+            animation: pulse-ring 2s infinite;
+        }
+        
+        /* Chữ đang được nhận diện dở dang sẽ có màu nhạt hơn */
+        .interim-text {
+            color: #9ca3af; /* text-gray-400 */
+            font-style: italic;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen flex flex-col items-center py-10 px-4 md:px-8">
+
+    <div class="max-w-4xl w-full">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-slate-800 mb-2">
+                <i class="fa-solid fa-microphone-lines text-blue-500 mr-2"></i> Luyện Đọc Tiếng Anh
+            </h1>
+            <p class="text-slate-600 text-sm md:text-base">
+                Đọc tiếng Anh và máy sẽ nhận diện liên tục. Nghỉ ngơi thoải mái, máy sẽ không tự ngắt.
+            </p>
+        </header>
+
+        <!-- Main Content -->
+        <div class="w-full mb-8">
+            
+            <!-- Kết quả nhận diện (Full width) -->
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col h-[60vh] min-h-[400px] relative">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg md:text-xl font-semibold text-slate-700 flex items-center">
+                        <i class="fa-solid fa-ear-listen mr-2 text-blue-500"></i>Máy nghe được
+                        <!-- Indicator -->
+                        <span id="statusIndicator" class="ml-3 w-3 h-3 rounded-full bg-slate-300 hidden"></span>
+                    </h2>
+                    <button id="btnClear" class="text-sm md:text-base text-slate-500 hover:text-red-600 transition-colors px-3 py-2 rounded-lg hover:bg-red-50">
+                        <i class="fa-solid fa-trash-can mr-1"></i>Xóa
+                    </button>
+                </div>
+                
+                <!-- Thêm chú thích màu sắc đánh giá -->
+                <div class="flex items-center space-x-4 mb-3 text-sm border-b border-slate-100 pb-3">
+                    <span class="text-slate-500 text-xs uppercase font-bold tracking-wider hidden md:inline-block">Đánh giá:</span>
+                    <span class="flex items-center text-slate-700"><span class="w-3 h-3 rounded-full bg-slate-700 mr-1.5"></span>Tốt</span>
+                    <span class="flex items-center text-orange-600"><span class="w-3 h-3 rounded-full bg-orange-500 mr-1.5"></span>Chưa rõ</span>
+                    <span class="flex items-center text-purple-600"><span class="w-3 h-3 rounded-full bg-purple-500 mr-1.5"></span>Chưa tốt, cần cải thiện</span>
+                </div>
+                
+                <div id="resultBox" class="w-full flex-grow p-4 md:p-6 bg-slate-50 border border-slate-100 rounded-2xl overflow-y-auto text-xl md:text-2xl leading-relaxed text-slate-800 focus:outline-none">
+                    <span id="finalText"></span>
+                    <span id="interimText" class="interim-text"></span>
+                </div>
+                
+                <!-- Thông báo lỗi (nếu có) -->
+                <div id="errorMessage" class="absolute bottom-6 left-6 right-6 bg-red-100 text-red-700 px-4 py-3 rounded-xl text-sm md:text-base shadow-sm hidden">
+                    <!-- Nội dung lỗi -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex justify-center items-center space-x-4 w-full">
+            <button id="btnStart" class="flex items-center justify-center px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white text-lg font-medium rounded-full shadow-lg shadow-blue-500/30 transition-all transform active:scale-95 w-full md:w-auto">
+                <i class="fa-solid fa-play mr-2"></i> Bắt đầu đọc
+            </button>
+            
+            <button id="btnStop" class="hidden items-center justify-center px-8 py-4 bg-red-500 hover:bg-red-600 text-white text-lg font-medium rounded-full shadow-lg shadow-red-500/30 transition-all transform active:scale-95 w-full md:w-auto">
+                <i class="fa-solid fa-stop mr-2"></i> Dừng lại
+            </button>
+        </div>
+
+        <div class="text-center mt-6">
+            <p id="statusText" class="text-sm font-medium text-slate-500">Nhấn "Bắt đầu đọc" và cho phép sử dụng Micro.</p>
+        </div>
+
+    </div>
+
+    <script>
+        // Kiểm tra hỗ trợ Web Speech API
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        
+        if (!SpeechRecognition) {
+            document.getElementById('statusText').innerHTML = '<span class="text-red-500">Trình duyệt của bạn không hỗ trợ nhận diện giọng nói. Vui lòng sử dụng Google Chrome, Edge hoặc Safari.</span>';
+            document.getElementById('btnStart').disabled = true;
+            document.getElementById('btnStart').classList.add('opacity-50', 'cursor-not-allowed');
+        } else {
+            const recognition = new SpeechRecognition();
+            
+            // Cài đặt quan trọng:
+            recognition.lang = 'en-US'; // Nhận diện tiếng Anh
+            recognition.continuous = true; // Trả về kết quả liên tục cho từng câu
+            recognition.interimResults = true; // Cho phép xem trước kết quả đang xử lý
+
+            let isUserStopped = true; // Biến kiểm soát xem người dùng chủ động tắt hay máy tự ngắt
+            let finalTranscriptStr = ''; // Lưu trữ chuỗi kết quả cuối cùng
+
+            // Các phần tử DOM
+            const btnStart = document.getElementById('btnStart');
+            const btnStop = document.getElementById('btnStop');
+            const btnClear = document.getElementById('btnClear');
+            const finalTextSpan = document.getElementById('finalText');
+            const interimTextSpan = document.getElementById('interimText');
+            const statusIndicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            const errorMessage = document.getElementById('errorMessage');
+            const resultBox = document.getElementById('resultBox');
+
+            // Cập nhật giao diện theo trạng thái
+            function setUIState(isRecording) {
+                if (isRecording) {
+                    btnStart.classList.add('hidden');
+                    btnStop.classList.remove('hidden');
+                    statusIndicator.classList.remove('hidden', 'bg-slate-300');
+                    statusIndicator.classList.add('bg-red-500', 'recording-indicator');
+                    statusText.innerText = "Đang lắng nghe... Bạn có thể nói, hoặc dừng lại nghỉ ngơi tùy ý.";
+                    statusText.classList.replace('text-slate-500', 'text-blue-600');
+                    errorMessage.classList.add('hidden');
+                } else {
+                    btnStart.classList.remove('hidden');
+                    btnStop.classList.add('hidden');
+                    statusIndicator.classList.remove('recording-indicator', 'bg-red-500');
+                    statusIndicator.classList.add('bg-slate-300', 'hidden');
+                    statusText.innerText = "Đã dừng. Nhấn 'Bắt đầu đọc' để tiếp tục.";
+                    statusText.classList.replace('text-blue-600', 'text-slate-500');
+                }
+            }
+
+            // Xử lý khi có kết quả trả về
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const result = event.results[i];
+                    const transcript = result[0].transcript;
+                    const confidence = result[0].confidence; // Lấy độ tự tin của AI nhận diện
+
+                    if (result.isFinal) {
+                        // CHẾ ĐỘ NGHIÊM KHẮC (Strict Mode): Đánh giá màu sắc dựa trên độ tự tin
+                        let colorClass = 'text-slate-800'; // Mặc định: Phát âm tốt (>= 90%)
+                        
+                        // Nếu AI phải tự đoán nhiều (do phát âm mờ, sai âm, lấp vấp)
+                        if (confidence > 0 && confidence < 0.80) {
+                            colorClass = 'text-purple-600 font-medium underline decoration-purple-300 decoration-wavy underline-offset-4'; 
+                        } else if (confidence >= 0.80 && confidence < 0.90) {
+                            colorClass = 'text-orange-500 font-medium underline decoration-orange-300 decoration-wavy underline-offset-4';
+                        }
+
+                        // Bọc đoạn text lại, có thêm tooltip để xem % (nếu dùng trên máy tính)
+                        const formattedText = `<span class="${colorClass}" title="Độ rõ nét: ${Math.round(confidence * 100)}%">${transcript}</span> `;
+                        finalTranscriptStr += formattedText;
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+
+                // Hiển thị lên màn hình
+                finalTextSpan.innerHTML = finalTranscriptStr.replace(/\n/g, '<br>');
+                interimTextSpan.innerHTML = interimTranscript;
+                
+                // Tự động cuộn xuống dưới cùng
+                resultBox.scrollTop = resultBox.scrollHeight;
+            };
+
+            // Bắt đầu
+            btnStart.addEventListener('click', () => {
+                isUserStopped = false;
+                try {
+                    recognition.start();
+                    setUIState(true);
+                } catch (e) {
+                    // Xử lý lỗi nếu recognition đã đang chạy
+                    console.error("Lỗi khi bắt đầu:", e);
+                }
+            });
+
+            // Người dùng chủ động dừng
+            btnStop.addEventListener('click', () => {
+                isUserStopped = true;
+                recognition.stop();
+                setUIState(false);
+            });
+
+            // Xóa kết quả
+            btnClear.addEventListener('click', () => {
+                finalTranscriptStr = '';
+                finalTextSpan.innerHTML = '';
+                interimTextSpan.innerHTML = '';
+            });
+
+            // XỬ LÝ QUAN TRỌNG: Giữ cho máy luôn nghe nếu người dùng chưa bấm Dừng
+            recognition.onend = () => {
+                if (!isUserStopped) {
+                    // Nếu người dùng KHÔNG bấm stop, mà API tự ngắt (thường xảy ra sau ~10s im lặng)
+                    // thì ta sẽ tự động khởi động lại nó.
+                    console.log("Trình duyệt tự ngắt, đang tự động kết nối lại...");
+                    try {
+                        recognition.start();
+                    } catch (error) {
+                        console.error("Không thể khởi động lại:", error);
+                        isUserStopped = true;
+                        setUIState(false);
+                    }
+                } else {
+                    setUIState(false);
+                }
+            };
+
+            // Xử lý lỗi
+            recognition.onerror = (event) => {
+                console.warn("Lỗi nhận diện:", event.error);
+                if (event.error === 'not-allowed') {
+                    isUserStopped = true;
+                    setUIState(false);
+                    errorMessage.innerText = "Lỗi: Chưa cấp quyền sử dụng Micro. Vui lòng cho phép trình duyệt dùng micro.";
+                    errorMessage.classList.remove('hidden');
+                }
+                // Các lỗi như 'no-speech' (không nghe thấy gì) có thể bỏ qua 
+                // vì sự kiện onend sẽ tự động chạy lại nhờ logic ở trên.
+            };
+        }
+    </script>
+</body>
+</html>

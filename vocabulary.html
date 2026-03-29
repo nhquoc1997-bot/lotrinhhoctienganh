@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luyện Phản Xạ Tiếng Anh</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .pulse-animation { animation: pulse 1.5s infinite; }
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c7c7cc; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        const STOPWORDS = ['i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them', 'my', 'your', 'his', 'their', 'our', 'am', 'is', 'are', 'was', 'were', 'be', 'been', 'do', 'does', 'did', 'have', 'has', 'had', 'a', 'an', 'the', 'to', 'in', 'on', 'at', 'for', 'of', 'with', 'about', 'as', 'by', 'and', 'or', 'but', 'so', 'because'];
+
+        function App() {
+            // Khởi tạo bài học rỗng để mặc định hiển thị màn hình Nhập văn bản
+            const [lessons, setLessons] = useState([]);
+            const [currentIndex, setCurrentIndex] = useState(0);
+            
+            // Speech states (English)
+            const [isRecording, setIsRecording] = useState(false);
+            const [liveTranscript, setLiveTranscript] = useState("");
+            const [result, setResult] = useState(null);
+            const [recognitionError, setRecognitionError] = useState("");
+            
+            // Custom Input Mode states
+            const [customVi, setCustomVi] = useState("");
+            const [isTranslating, setIsTranslating] = useState(false);
+            
+            // Voice Typing (Vietnamese) states
+            const [isDictatingVi, setIsDictatingVi] = useState(false);
+            const viRecognitionRef = useRef(null);
+
+            // Phonetics & Audio states
+            const [phoneticData, setPhoneticData] = useState(null);
+            
+            const recognitionRef = useRef(null);
+            const finalTranscriptRef = useRef("");
+
+            useEffect(() => { lucide.createIcons(); });
+
+            useEffect(() => {
+                if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    // --- Cấu hình nhận diện Tiếng Anh (Luyện dịch) ---
+                    const recognition = new SpeechRecognition();
+                    recognition.continuous = true;
+                    recognition.interimResults = true;
+                    recognition.lang = 'en-US';
+
+                    recognition.onresult = (event) => {
+                        let interim = '';
+                        let final = '';
+                        for (let i = event.resultIndex; i < event.results.length; ++i) {
+                            if (event.results[i].isFinal) final += event.results[i][0].transcript + ' ';
+                            else interim += event.results[i][0].transcript;
+                        }
+                        finalTranscriptRef.current += final;
+                        setLiveTranscript(finalTranscriptRef.current + interim);
+                    };
+
+                    recognition.onerror = (e) => {
+                        setIsRecording(false);
+                        setRecognitionError(e.error === 'not-allowed' ? "Vui lòng cấp quyền Micro." : "Lỗi: " + e.error);
+                    };
+
+                    recognition.onend = () => setIsRecording(false);
+                    recognitionRef.current = recognition;
+
+                    // --- Cấu hình nhận diện Tiếng Việt (Nhập văn bản) ---
+                    const viRecognition = new SpeechRecognition();
+                    viRecognition.continuous = true;
+                    viRecognition.interimResults = true;
+                    viRecognition.lang = 'vi-VN';
+
+                    let currentTextBeforeDictation = ""; // Lưu lại text đã có trước khi bật mic
+
+                    viRecognition.onstart = () => {
+                        // Lấy giá trị textarea hiện tại làm mốc
+                        currentTextBeforeDictation = document.getElementById('vi-textarea')?.value || "";
+                        if(currentTextBeforeDictation && !currentTextBeforeDictation.endsWith(' ')) {
+                            currentTextBeforeDictation += ' ';
+                        }
+                    };
+
+                    viRecognition.onresult = (event) => {
+                        let interim = '';
+                        let final = '';
+                        for (let i = event.resultIndex; i < event.results.length; ++i) {
+                            if (event.results[i].isFinal) final += event.results[i][0].transcript + ' ';
+                            else interim += event.results[i][0].transcript;
+                        }
+                        setCustomVi(currentTextBeforeDictation + final + interim);
+                        if(final) currentTextBeforeDictation += final;
+                    };
+
+                    viRecognition.onerror = (e) => {
+                        console.error("Lỗi mic tiếng Việt:", e);
+                        setIsDictatingVi(false);
+                    };
+
+                    viRecognition.onend = () => setIsDictatingVi(false);
+                    viRecognitionRef.current = viRecognition;
+
+                } else {
+                    setRecognitionError("Trình duyệt không hỗ trợ nhận diện giọng nói.");
+                }
+            }, []);
+
+            // Logic bật/tắt Micro Tiếng Việt
+            const toggleViDictation = () => {
+                if (isDictatingVi) {
+                    viRecognitionRef.current?.stop();
+                    setIsDictatingVi(false);
+                } else {
+                    try {
+                        viRecognitionRef.current?.start();
+                        setIsDictatingVi(true);
+                    } catch (e) {
+                        console.error(e);
+                    }
+                }
+            };
+
+            // Logic Đọc từ vựng & Hiển thị phiên âm IPA
+            const handleWordClick = async (word) => {
+                // 1. Phát âm thanh (Text-to-Speech)
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel(); // Ngắt âm đang đọc (nếu có)
+                    const utterance = new SpeechSynthesisUtterance(word);
+                    utterance.lang = 'en-US';
+                    utterance.rate = 0.9; // Đọc chậm lại một chút cho rõ
+                    window.speechSynthesis.speak(utterance);
+                }
+
+                // 2. Fetch API lấy phiên âm (Free Dictionary API)
+                setPhoneticData({ word, ipa: '...', show: true });
+                try {
+                    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        // Lấy phonetic, ưu tiên text có sẵn
+                        let ipa = data[0]?.phonetic || data[0]?.phonetics?.find(p => p.text)?.text || '';
+                        if (ipa) {
+                            setPhoneticData({ word, ipa, show: true });
+                        } else {
+                            setPhoneticData({ word, ipa: '(Không có)', show: true });
+                        }
+                    } else {
+                        setPhoneticData({ word, ipa: '(Không có)', show: true });
+                    }
+                } catch (e) {
+                    setPhoneticData({ word, ipa: 'Lỗi mạng', show: true });
+                }
+
+                // Tự động ẩn phiên âm sau 4 giây
+                setTimeout(() => {
+                    setPhoneticData(null);
+                }, 4000);
+            };
+
+            // Logic chấm điểm & Chuẩn bị Data cho Highlight Inline
+            const evaluateSpeech = (spokenText, lesson) => {
+                if (!spokenText.trim()) return;
+                
+                const rawWords = spokenText.trim().split(/\s+/);
+                let matchedKeywords = [];
+                let missingKeywords = [...lesson.keywords];
+                
+                // Mảng dùng để render Highlight trực tiếp
+                const coloredWords = rawWords.map(rawWord => {
+                    const cleanWord = rawWord.toLowerCase().replace(/[.,?!]/g, '');
+                    let status = 'normal';
+                    let isKeyword = false;
+                    let note = "";
+                    let matchedTargetKw = null;
+                    
+                    // 1. Kiểm tra khớp chính xác (Exact match)
+                    if (lesson.keywords.includes(cleanWord)) {
+                        isKeyword = true;
+                        matchedTargetKw = cleanWord;
+                    } else if (lesson.synonyms) {
+                        for (const [key, synList] of Object.entries(lesson.synonyms)) {
+                            if (synList.includes(cleanWord)) {
+                                isKeyword = true;
+                                matchedTargetKw = key;
+                                break;
+                            }
+                        }
+                    }
+
+                    // 2. Kiểm tra khớp linh hoạt (Thiếu/Dư hậu tố: ed, s, es, ing...)
+                    // Nếu chưa khớp chính xác, kiểm tra xem có phải chỉ sai đuôi câu không
+                    if (!isKeyword && cleanWord.length >= 3) {
+                        const suffixes = ['d', 'ed', 's', 'es', 'ing', 'ly'];
+                        for (const kw of lesson.keywords) {
+                            // VD: target là "wanted", user nói "want" -> thiếu -ed
+                            if (kw.startsWith(cleanWord) && suffixes.includes(kw.slice(cleanWord.length))) {
+                                isKeyword = true;
+                                status = 'partial';
+                                matchedTargetKw = kw;
+                                note = `thiếu -${kw.slice(cleanWord.length)}`;
+                                break;
+                            }
+                            // VD: target là "want", user nói "wanted" -> dư -ed
+                            if (cleanWord.startsWith(kw) && suffixes.includes(cleanWord.slice(kw.length))) {
+                                isKeyword = true;
+                                status = 'partial';
+                                matchedTargetKw = kw;
+                                note = `dư -${cleanWord.slice(kw.length)}`;
+                                break;
+                            }
+                            // VD: target là "studies", user nói "study" -> thiếu -ies
+                            if (kw.endsWith('ies') && cleanWord === kw.replace(/ies$/, 'y')) {
+                                isKeyword = true; status = 'partial'; matchedTargetKw = kw; note = `thiếu -ies`; break;
+                            }
+                        }
+                    }
+
+                    if (isKeyword) {
+                        if (status !== 'partial') status = 'matched';
+                        if (!matchedKeywords.includes(matchedTargetKw)) matchedKeywords.push(matchedTargetKw);
+                        // Loại khỏi danh sách missing
+                        missingKeywords = missingKeywords.filter(k => k !== matchedTargetKw && !(lesson.synonyms?.[k]?.includes(matchedTargetKw)));
+                    } else if (!STOPWORDS.includes(cleanWord) && cleanWord.length > 0) {
+                        // Nói từ không phải keyword, không phải stopword => Lỗi thừa từ / sai từ
+                        status = 'wrong';
+                    }
+
+                    return { text: rawWord, status, note };
+                });
+
+                const score = lesson.keywords.length > 0 ? Math.round((matchedKeywords.length / lesson.keywords.length) * 100) : 0;
+                setResult({ spokenText, score, coloredWords, missingKeywords });
+            };
+
+            const toggleRecording = () => {
+                setRecognitionError("");
+                if (isRecording) {
+                    recognitionRef.current?.stop();
+                    setIsRecording(false);
+                    const textToEval = finalTranscriptRef.current || liveTranscript;
+                    if (textToEval) evaluateSpeech(textToEval, lessons[currentIndex]);
+                } else {
+                    finalTranscriptRef.current = "";
+                    setLiveTranscript("");
+                    setResult(null);
+                    recognitionRef.current?.start();
+                    setIsRecording(true);
+                }
+            };
+
+            const nextLesson = () => {
+                setResult(null);
+                setLiveTranscript("");
+                finalTranscriptRef.current = "";
+                setCurrentIndex((prev) => (prev + 1) % lessons.length);
+            };
+
+            // Tự động chia đoạn (3 câu / chunk)
+            const splitIntoChunks = (text, sentencesPerChunk = 3) => {
+                // Tách câu dựa trên dấu . ? !
+                const sentences = text.match(/[^.?!]+[.?!]+(?=\s|$)|[^.?!]+$/g);
+                if (!sentences) return [text];
+                
+                const chunks = [];
+                for (let i = 0; i < sentences.length; i += sentencesPerChunk) {
+                    chunks.push(sentences.slice(i, i + sentencesPerChunk).join(' ').trim());
+                }
+                return chunks;
+            };
+
+            // Dịch & Tạo bài học hàng loạt
+            const handleBulkTranslateAndGenerate = async () => {
+                if (!customVi.trim()) return;
+                setIsTranslating(true);
+                
+                try {
+                    const chunks = splitIntoChunks(customVi, 3); // Cứ 3 câu gom 1 đoạn
+                    const newLessons = [];
+
+                    for (let i = 0; i < chunks.length; i++) {
+                        const chunkVi = chunks[i];
+                        if (!chunkVi) continue;
+
+                        // Gọi API Dịch
+                        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=vi&tl=en&dt=t&q=${encodeURIComponent(chunkVi)}`;
+                        const res = await fetch(url);
+                        const data = await res.json();
+                        const chunkEn = data[0].map(item => item[0]).join('').trim();
+
+                        // Trích xuất Keywords (loại bỏ punctuation cẩn thận hơn)
+                        const cleanEn = chunkEn.replace(/[.,?!]/g, '').toLowerCase();
+                        const words = cleanEn.split(/\s+/);
+                        const generatedKeywords = [...new Set(words.filter(w => w.length > 0 && !STOPWORDS.includes(w)))];
+
+                        newLessons.push({
+                            id: Date.now() + i,
+                            vi: chunkVi,
+                            targetEn: chunkEn,
+                            keywords: generatedKeywords,
+                            synonyms: {}
+                        });
+                    }
+
+                    // Cập nhật state
+                    setLessons(newLessons);
+                    setCurrentIndex(0); 
+                    setCustomVi("");
+                    setResult(null);
+                    setLiveTranscript("");
+
+                } catch (error) {
+                    console.error("Lỗi:", error);
+                    alert("Có lỗi khi dịch tự động. Vui lòng thử lại.");
+                } finally {
+                    setIsTranslating(false);
+                }
+            };
+
+            const resetApp = () => {
+                setLessons([]);
+                setCustomVi("");
+                setResult(null);
+                setLiveTranscript("");
+                finalTranscriptRef.current = "";
+                if(isRecording) toggleRecording();
+            };
+
+            const currentLesson = lessons[currentIndex];
+
+            return (
+                <div className="max-w-md mx-auto min-h-screen bg-white shadow-lg flex flex-col relative overflow-hidden">
+                    
+                    {/* Header */}
+                    <div className="bg-indigo-600 text-white p-4 text-center font-bold text-xl shadow-md z-10 flex justify-between items-center">
+                        <span>Luyện Dịch Phản Xạ ⚡</span>
+                        {lessons.length > 0 && (
+                            <button 
+                                onClick={resetApp}
+                                className="text-sm bg-indigo-500 hover:bg-indigo-700 px-3 py-1.5 rounded-lg flex items-center transition"
+                            >
+                                <i data-lucide="home" className="w-4 h-4 mr-1"></i> Bắt đầu lại
+                            </button>
+                        )}
+                    </div>
+
+                    {lessons.length > 0 && (
+                        <div className="flex justify-between px-4 py-2 text-sm text-gray-500 bg-gray-100">
+                            <span>Phần {currentIndex + 1} / {lessons.length}</span>
+                            <span className="font-medium text-indigo-600">Đọc & Dịch</span>
+                        </div>
+                    )}
+
+                    <div className="flex-1 p-5 flex flex-col items-center">
+                        
+                        {lessons.length === 0 ? (
+                            /* GIAO DIỆN NHẬP VĂN BẢN (MẶC ĐỊNH) */
+                            <div className="w-full flex-1 flex flex-col animate-in fade-in zoom-in duration-200">
+                                <h2 className="text-xl font-bold text-gray-800 mb-2">Bạn muốn luyện dịch gì hôm nay?</h2>
+                                <p className="text-sm text-gray-500 mb-4">
+                                    Nhập hoặc <b>đọc</b> một đoạn văn tiếng Việt. Hệ thống sẽ tự động dịch sang Tiếng Anh và chia nhỏ ra để bạn luyện tập.
+                                </p>
+                                
+                                <div className="flex-1 flex flex-col relative">
+                                    <textarea 
+                                        id="vi-textarea"
+                                        value={customVi}
+                                        onChange={(e) => setCustomVi(e.target.value)}
+                                        placeholder="Ví dụ: Chào buổi sáng. Hôm nay tôi có một cuộc họp quan trọng với khách hàng lúc 9 giờ..."
+                                        className="w-full flex-1 p-4 pb-16 border-2 border-indigo-100 rounded-xl focus:ring-0 focus:border-indigo-400 outline-none resize-none min-h-[250px] text-lg bg-gray-50/50 shadow-inner"
+                                    ></textarea>
+                                    
+                                    {/* Nút Micro Tiếng Việt chèn thẳng vào góc textarea */}
+                                    <button
+                                        onClick={toggleViDictation}
+                                        className={`absolute bottom-4 right-4 p-3 rounded-full shadow-lg transition-all flex items-center justify-center text-white
+                                            ${isDictatingVi ? 'bg-red-500 pulse-animation' : 'bg-blue-500 hover:bg-blue-600'}`}
+                                        title="Nhập bằng giọng nói"
+                                    >
+                                        <i data-lucide={isDictatingVi ? "square" : "mic"} className="w-5 h-5"></i>
+                                    </button>
+                                    
+                                    {isDictatingVi && (
+                                        <span className="absolute bottom-6 right-16 text-xs font-semibold text-red-500 animate-pulse">
+                                            Đang nghe tiếng Việt...
+                                        </span>
+                                    )}
+                                </div>
+
+                                <button 
+                                    onClick={handleBulkTranslateAndGenerate}
+                                    disabled={isTranslating || !customVi.trim()}
+                                    className="mt-6 w-full py-4 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg flex justify-center items-center disabled:opacity-50"
+                                >
+                                    {isTranslating ? (
+                                        <><i data-lucide="loader-2" className="w-5 h-5 mr-2 animate-spin"></i> Đang xử lý AI...</>
+                                    ) : (
+                                        <><i data-lucide="wand-2" className="w-5 h-5 mr-2"></i> Tạo Bài Luyện Tập</>
+                                    )}
+                                </button>
+                            </div>
+                        ) : (
+                            /* GIAO DIỆN LUYỆN TẬP */
+                            <div className="w-full flex flex-col flex-1">
+                                
+                                {/* Câu tiếng Việt */}
+                                <div className="w-full bg-indigo-50 rounded-2xl p-5 text-center shadow-sm border border-indigo-100 mb-4">
+                                    <p className="text-xs text-indigo-500 font-bold mb-2 uppercase tracking-wide">Bạn hãy dịch đoạn này:</p>
+                                    <h2 className="text-xl font-bold text-gray-800 leading-relaxed">"{currentLesson.vi}"</h2>
+                                </div>
+
+                                {recognitionError && (
+                                    <div className="text-red-500 mb-4 text-center text-sm px-4 py-2 bg-red-50 rounded-lg border border-red-200">
+                                        {recognitionError}
+                                    </div>
+                                )}
+
+                                {/* TRẠNG THÁI ĐANG NÓI (CHƯA CHẤM ĐIỂM) */}
+                                {!result && (
+                                    <div className="flex flex-col items-center justify-start flex-1 w-full pt-2">
+                                        <div className={`w-full bg-white rounded-xl p-4 mb-6 min-h-[120px] border-2 transition-colors duration-300 ${isRecording ? 'border-indigo-400 bg-indigo-50/20' : 'border-gray-200'} flex items-start justify-start shadow-sm`}>
+                                            {liveTranscript ? (
+                                                <p className="text-lg text-gray-800 font-medium leading-relaxed">{liveTranscript}</p>
+                                            ) : (
+                                                <div className="w-full text-center mt-4">
+                                                    <p className="text-gray-400 italic">
+                                                        {isRecording ? "Đang lắng nghe bạn nói..." : "Bấm nút Micro bên dưới và bắt đầu dịch"}
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <button 
+                                            onClick={toggleRecording}
+                                            className={`w-20 h-20 rounded-full flex items-center justify-center text-white transition-all shadow-lg mx-auto
+                                                ${isRecording ? 'bg-red-500 pulse-animation' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+                                        >
+                                            <i data-lucide={isRecording ? "square" : "mic"} className="w-8 h-8"></i>
+                                        </button>
+                                        <p className={`mt-3 text-center text-sm font-bold ${isRecording ? 'text-red-500' : 'text-gray-500'}`}>
+                                            {isRecording ? "BẤM ĐỂ DỪNG & CHẤM ĐIỂM" : "BẤM ĐỂ NÓI"}
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* KẾT QUẢ INLINE HIGHLIGHT */}
+                                {result && (
+                                    <div className="w-full flex flex-col flex-1 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                        
+                                        {/* Điểm số rút gọn */}
+                                        <div className="flex items-center justify-between mb-4 bg-white p-3 rounded-xl border shadow-sm">
+                                            <span className="font-bold text-gray-600">Độ chuẩn xác:</span>
+                                            <span className={`text-2xl font-black ${result.score >= 80 ? 'text-green-500' : result.score >= 50 ? 'text-amber-500' : 'text-red-500'}`}>
+                                                {result.score}%
+                                            </span>
+                                        </div>
+
+                                        {/* Transcript được Highlight trực tiếp */}
+                                        <div className="w-full bg-white rounded-xl p-5 mb-4 border-2 border-gray-100 shadow-sm">
+                                            <p className="text-xs text-gray-400 font-bold mb-4 uppercase flex items-center">
+                                                <i data-lucide="check-square" className="w-4 h-4 mr-1"></i> Phân tích câu bạn nói:
+                                            </p>
+                                            
+                                            {/* Sử dụng Flex Wrap để chữ tự xuống dòng mượt mà trên điện thoại */}
+                                            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-3 mb-2 text-lg">
+                                                {result.coloredWords.map((wordObj, idx) => {
+                                                    let className = "text-gray-600";
+                                                    if (wordObj.status === 'matched') className = "bg-green-100 text-green-700 font-bold px-2 py-1 rounded-lg";
+                                                    if (wordObj.status === 'partial') className = "bg-amber-100 text-amber-700 font-bold px-2 py-1 rounded-lg border-b-2 border-amber-400";
+                                                    if (wordObj.status === 'wrong') className = "bg-red-100 text-red-500 line-through px-2 py-1 rounded-lg";
+                                                    
+                                                    return (
+                                                        <div key={idx} className="flex items-center">
+                                                            <span className={className}>
+                                                                {wordObj.text}
+                                                            </span>
+                                                            {/* Hiển thị lỗi thiếu/dư đuôi câu (ed, s, ing...) */}
+                                                            {wordObj.note && (
+                                                                <span className="ml-1 text-[11px] uppercase font-black text-white bg-orange-500 px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap">
+                                                                    {wordObj.note}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            {/* Hiển thị Keyword bị thiếu ngay bên dưới */}
+                                            {result.missingKeywords.length > 0 && (
+                                                <div className="mt-4 pt-4 border-t border-gray-100">
+                                                    <p className="text-sm font-semibold text-red-500 mb-3">⚠️ Bạn đang quên các từ này (Bấm vào từ để nghe):</p>
+                                                    <div className="flex flex-wrap gap-2.5 items-center">
+                                                        {result.missingKeywords.map((kw, idx) => (
+                                                            <div key={idx} className="flex items-center">
+                                                                <button 
+                                                                    onClick={() => handleWordClick(kw)}
+                                                                    className="bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 px-3 py-1.5 rounded-lg text-sm font-bold shadow-sm flex items-center transition-colors active:scale-95"
+                                                                >
+                                                                    {kw} <i data-lucide="volume-2" className="w-3.5 h-3.5 ml-1.5 opacity-70"></i>
+                                                                </button>
+                                                                
+                                                                {/* Hiển thị Popup Phiên âm (IPA) ngay cạnh từ đang được bấm */}
+                                                                {phoneticData && phoneticData.word === kw && (
+                                                                    <span className="ml-2 text-[13px] font-mono font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100 animate-in fade-in zoom-in duration-200">
+                                                                        {phoneticData.ipa}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Đáp án chuẩn */}
+                                        <div className="bg-blue-50 p-4 rounded-xl mb-6 border border-blue-100">
+                                            <div className="text-xs font-bold text-blue-600 mb-1 uppercase flex items-center">
+                                                <i data-lucide="lightbulb" className="w-4 h-4 mr-1"></i> Đáp án tham khảo
+                                            </div>
+                                            <div className="font-medium text-blue-900 text-lg">{currentLesson.targetEn}</div>
+                                        </div>
+
+                                        <div className="flex gap-3 mt-auto">
+                                            <button 
+                                                onClick={toggleRecording}
+                                                className="flex-1 py-3 bg-white border border-gray-300 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition flex justify-center items-center shadow-sm"
+                                            >
+                                                <i data-lucide="rotate-ccw" className="w-4 h-4 mr-2"></i> Nói lại
+                                            </button>
+                                            <button 
+                                                onClick={nextLesson}
+                                                className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition flex justify-center items-center shadow-md"
+                                            >
+                                                Phần tiếp theo <i data-lucide="arrow-right" className="w-4 h-4 ml-2"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

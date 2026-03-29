@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Dictation & Shadowing</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel for JSX transpiling -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .animate-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .voice-badge {
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- CÁC HÀM TIỆN ÍCH ---
+        const cleanText = (text) => text.replace(/[^\w\s]|_/g, "").replace(/\s+/g, " ").toLowerCase().trim();
+
+        const compareSentences = (target, input) => {
+            const targetWords = cleanText(target).split(" ");
+            const inputWords = cleanText(input).split(" ");
+            let correctCount = 0;
+            const result = targetWords.map((tWord, i) => {
+                const iWord = inputWords[i] || "";
+                const isCorrect = tWord === iWord;
+                if (isCorrect) correctCount++;
+                return { word: tWord, inputWord: iWord, isCorrect };
+            });
+            const accuracy = Math.round((correctCount / targetWords.length) * 100) || 0;
+            return { result, accuracy };
+        };
+
+        const splitIntoSentences = (text) => {
+            if (!text) return [];
+            return text.match(/[^.!?]+[.!?]+|\S+/g) || [text];
+        };
+
+        const Icon = ({ name, size = 24, className = "" }) => {
+            useEffect(() => {
+                if (window.lucide) window.lucide.createIcons();
+            }, [name, size]);
+            return <i data-lucide={name} className={className} style={{ width: size, height: size, display: 'inline-block' }}></i>;
+        };
+
+        function App() {
+            const [appState, setAppState] = useState('input');
+            const [rawText, setRawText] = useState("I started learning English eight years ago because I wanted a better job. I hope this system helps everyone improve their listening skills.");
+            const [sentences, setSentences] = useState([]);
+            const [currentIdx, setCurrentIdx] = useState(0);
+            const [practiceStep, setPracticeStep] = useState('dictation');
+            const [userInput, setUserInput] = useState("");
+            const [feedback, setFeedback] = useState(null);
+            const [hintType, setHintType] = useState(null);
+            const [isPlaying, setIsPlaying] = useState(false);
+            const [speed, setSpeed] = useState(1.0);
+            const [shadowingResult, setShadowingResult] = useState(null);
+            const [isRecording, setIsRecording] = useState(false);
+            
+            // Audio System States
+            const [availableVoices, setAvailableVoices] = useState([]);
+            const [selectedVoiceURI, setSelectedVoiceURI] = useState("");
+
+            // Load hệ thống giọng đọc và sắp xếp theo chất lượng
+            useEffect(() => {
+                const loadVoices = () => {
+                    let voices = window.speechSynthesis.getVoices();
+                    
+                    // Lọc giọng tiếng Anh
+                    let enVoices = voices.filter(v => v.lang.startsWith('en'));
+
+                    // Hàm chấm điểm chất lượng giọng đọc
+                    const getVoiceScore = (v) => {
+                        let score = 0;
+                        const name = v.name.toLowerCase();
+                        if (name.includes("natural") || name.includes("neural") || name.includes("online")) score += 100;
+                        if (name.includes("google")) score += 50;
+                        if (name.includes("premium") || name.includes("enhanced")) score += 30;
+                        if (v.lang.includes("US")) score += 10;
+                        return score;
+                    };
+
+                    enVoices.sort((a, b) => getVoiceScore(b) - getVoiceScore(a));
+                    setAvailableVoices(enVoices);
+                    
+                    if (enVoices.length > 0 && !selectedVoiceURI) {
+                        setSelectedVoiceURI(enVoices[0].voiceURI);
+                    }
+                };
+                loadVoices();
+                window.speechSynthesis.onvoiceschanged = loadVoices;
+            }, [selectedVoiceURI]);
+
+            const playAudio = (textToPlay) => {
+                const text = textToPlay || sentences[currentIdx];
+                
+                if (isPlaying) { 
+                    window.speechSynthesis.cancel(); 
+                    setIsPlaying(false); 
+                    return; 
+                }
+                
+                setIsPlaying(true);
+                const ut = new SpeechSynthesisUtterance(text);
+                
+                const voice = availableVoices.find(v => v.voiceURI === selectedVoiceURI);
+                if (voice) ut.voice = voice;
+                
+                ut.rate = speed;
+                // Tinh chỉnh nhẹ pitch (0.98 - 1.0) giúp giọng Web Speech nghe ấm và tự nhiên hơn một chút
+                ut.pitch = 1.0; 
+                ut.volume = 1.0;
+                
+                ut.onend = () => setIsPlaying(false);
+                ut.onerror = () => setIsPlaying(false);
+                
+                window.speechSynthesis.speak(ut);
+            };
+
+            const handleStart = () => {
+                const parsed = splitIntoSentences(rawText).map(s => s.trim()).filter(s => s.length > 0);
+                if (parsed.length === 0) return;
+                setSentences(parsed);
+                setCurrentIdx(0);
+                setUserInput("");
+                setAppState('practice');
+                setPracticeStep('dictation');
+            };
+
+            const handleCheck = () => {
+                const res = compareSentences(sentences[currentIdx], userInput);
+                setFeedback(res);
+                setPracticeStep('feedback');
+            };
+
+            const handleNext = () => {
+                if (currentIdx < sentences.length - 1) {
+                    setCurrentIdx(currentIdx + 1);
+                    setUserInput("");
+                    setFeedback(null);
+                    setPracticeStep('dictation');
+                    setShadowingResult(null);
+                    setHintType(null);
+                } else {
+                    setAppState('results');
+                }
+            };
+
+            const startShadowing = () => {
+                const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!Recognition) return alert("Trình duyệt không hỗ trợ nhận diện giọng nói.");
+                const rec = new Recognition();
+                rec.lang = 'en-US';
+                rec.onstart = () => setIsRecording(true);
+                rec.onresult = (e) => {
+                    const t = e.results[0][0].transcript;
+                    setShadowingResult({ transcript: t, accuracy: compareSentences(sentences[currentIdx], t).accuracy });
+                };
+                rec.onend = () => setIsRecording(false);
+                rec.start();
+            };
+
+            const generateHint = () => {
+                if (!hintType) return "";
+                const words = sentences[currentIdx].split(" ");
+                return words.map((w, i) => (hintType === 'start' && i < words.length / 3) || (hintType === 'keywords' && w.length > 5) ? w : "___").join(" ");
+            };
+
+            const isNeural = (name) => name.toLowerCase().match(/natural|neural|online/);
+
+            return (
+                <div className="min-h-screen pb-20">
+                    <header className="max-w-4xl mx-auto p-5 bg-white shadow-sm border-b rounded-b-3xl flex flex-wrap items-center justify-between mb-6 sticky top-0 z-20 gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-indigo-600 p-2 rounded-xl shadow-md"><Icon name="volume-2" className="text-white" size={20}/></div>
+                            <h1 className="text-xl font-bold text-slate-800">Smart Dictation</h1>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+                            <div className={`p-1 rounded-lg ${isNeural(availableVoices.find(v => v.voiceURI === selectedVoiceURI)?.name || '') ? 'voice-badge' : 'bg-slate-300'}`}>
+                                <Icon name="zap" size={14} className="text-white" />
+                            </div>
+                            <select 
+                                className="bg-transparent text-xs font-bold text-slate-600 outline-none max-w-[150px] md:max-w-[250px] cursor-pointer"
+                                value={selectedVoiceURI}
+                                onChange={(e) => setSelectedVoiceURI(e.target.value)}
+                            >
+                                {availableVoices.map(v => (
+                                    <option key={v.voiceURI} value={v.voiceURI}>
+                                        {isNeural(v.name) ? '✨ ' : ''}{v.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    </header>
+
+                    <main className="max-w-3xl mx-auto px-4">
+                        {appState === 'input' && (
+                            <div className="bg-white p-8 rounded-3xl shadow-xl border animate-in">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <h2 className="text-2xl font-bold text-slate-800">Văn bản luyện tập</h2>
+                                </div>
+                                <textarea className="w-full h-64 p-5 border-2 border-slate-100 rounded-2xl focus:border-indigo-400 outline-none text-lg mb-6 transition-all" value={rawText} onChange={e => setRawText(e.target.value)} />
+                                <button onClick={handleStart} className="w-full py-4 bg-indigo-600 text-white font-black text-lg rounded-2xl shadow-lg flex justify-center items-center gap-2 hover:bg-indigo-700 transition-all">
+                                    Bắt đầu luyện tập <Icon name="arrow-right" size={20}/>
+                                </button>
+                            </div>
+                        )}
+
+                        {appState === 'practice' && (
+                            <div className="bg-white p-6 md:p-8 rounded-3xl shadow-xl border animate-in">
+                                <div className="mb-8">
+                                    <div className="flex justify-between text-sm font-bold text-slate-500 mb-2">
+                                        <span>Câu {currentIdx + 1} / {sentences.length}</span>
+                                        <span className="text-indigo-600">{Math.round((currentIdx/sentences.length)*100)}%</span>
+                                    </div>
+                                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                                        <div className="bg-indigo-500 h-full transition-all duration-500" style={{width: `${(currentIdx/sentences.length)*100}%`}}></div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-indigo-50 rounded-3xl p-6 flex flex-col items-center mb-8 border border-indigo-100 relative overflow-hidden">
+                                    <div className="flex gap-2 mb-4 relative z-10">
+                                        {[0.7, 0.85, 1.0].map(s => (
+                                            <button key={s} onClick={() => setSpeed(s)} className={`px-4 py-1 rounded-full text-xs font-bold transition-all ${speed === s ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-indigo-600 border'}`}>{s}x</button>
+                                        ))}
+                                    </div>
+                                    <button onClick={() => playAudio()} className={`w-20 h-20 rounded-full flex items-center justify-center shadow-lg transform active:scale-95 transition-all relative z-10 ${isPlaying ? 'bg-indigo-400' : 'bg-indigo-600 hover:scale-105'}`}>
+                                        {isPlaying ? <Icon name="square" className="text-white" size={24}/> : <Icon name="play" className="text-white ml-1" size={32}/>}
+                                    </button>
+                                    <p className="mt-3 text-xs font-black text-indigo-400 uppercase tracking-widest relative z-10">
+                                        {isNeural(availableVoices.find(v => v.voiceURI === selectedVoiceURI)?.name || '') ? "Đang dùng giọng Neural cao cấp" : "Đang dùng giọng chuẩn"}
+                                    </p>
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-100 rounded-full -mr-16 -mt-16 opacity-50"></div>
+                                </div>
+
+                                {practiceStep === 'dictation' && (
+                                    <div className="space-y-6">
+                                        <div className="flex gap-2">
+                                            <button onClick={() => setHintType('start')} className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-200 transition-colors">Gợi ý đầu</button>
+                                            <button onClick={() => setHintType('keywords')} className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-200 transition-colors">Từ khóa</button>
+                                        </div>
+                                        {hintType && <p className="p-4 bg-slate-50 rounded-xl border font-mono text-slate-500 text-sm break-words animate-in shadow-inner">{generateHint()}</p>}
+                                        <textarea className="w-full p-5 border-2 border-slate-100 rounded-2xl focus:border-indigo-400 outline-none h-32 text-lg transition-all shadow-sm" placeholder="Nghe và gõ lại câu..." value={userInput} onChange={e => setUserInput(e.target.value)} />
+                                        <button onClick={handleCheck} disabled={!userInput.trim()} className="w-full py-4 bg-emerald-500 text-white font-black rounded-2xl shadow-lg hover:bg-emerald-600 disabled:opacity-50 transition-all">Kiểm tra kết quả</button>
+                                    </div>
+                                )}
+
+                                {practiceStep === 'feedback' && feedback && (
+                                    <div className="space-y-6">
+                                        <div className={`p-6 rounded-2xl border-2 animate-in ${feedback.accuracy === 100 ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'}`}>
+                                            <h3 className={`font-black mb-3 flex items-center gap-2 ${feedback.accuracy === 100 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                                <Icon name={feedback.accuracy === 100 ? "check-circle" : "alert-circle"} size={20}/>
+                                                Chính xác: {feedback.accuracy}%
+                                            </h3>
+                                            <div className="text-lg leading-relaxed flex flex-wrap gap-x-1.5">
+                                                {feedback.result.map((item, i) => (
+                                                    <span key={i} className={item.isCorrect ? 'text-emerald-700' : 'text-red-600 underline font-bold decoration-2'}>{item.word}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <button onClick={() => setPracticeStep('shadowing')} className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl flex items-center justify-center gap-2 shadow-lg hover:bg-indigo-700 transition-all">Luyện nói (Shadowing) <Icon name="mic" size={20}/></button>
+                                    </div>
+                                )}
+
+                                {practiceStep === 'shadowing' && (
+                                    <div className="space-y-6 text-center animate-in">
+                                        <p className="text-lg font-medium p-6 bg-slate-50 rounded-2xl border border-dashed text-slate-700">"{sentences[currentIdx]}"</p>
+                                        <div className="flex justify-center items-center">
+                                            <button onClick={startShadowing} disabled={isRecording} className={`w-20 h-20 rounded-full flex items-center justify-center text-white shadow-xl transition-all ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-indigo-600 hover:scale-105'}`}>
+                                                <Icon name="mic" size={32}/>
+                                            </button>
+                                        </div>
+                                        {shadowingResult && (
+                                            <div className="p-5 bg-emerald-50 rounded-2xl border border-emerald-100 text-left animate-in shadow-sm">
+                                                <p className="text-xs font-bold text-emerald-600 uppercase mb-1">Độ tương đồng: {shadowingResult.accuracy}%</p>
+                                                <p className="text-slate-600 italic leading-relaxed">"{shadowingResult.transcript}"</p>
+                                            </div>
+                                        )}
+                                        <button onClick={handleNext} className="w-full py-4 bg-emerald-500 text-white font-black rounded-2xl shadow-lg mt-4 flex items-center justify-center gap-2 hover:bg-emerald-600 transition-all">Câu tiếp theo <Icon name="arrow-right" size={20}/></button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {appState === 'results' && (
+                            <div className="text-center bg-white p-12 rounded-3xl shadow-xl border animate-in">
+                                <div className="w-24 h-24 voice-badge text-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-indigo-200">
+                                    <Icon name="award" size={48}/>
+                                </div>
+                                <h2 className="text-3xl font-black text-slate-800 mb-2">Hoàn thành bài học!</h2>
+                                <p className="text-slate-500 mb-8">Bạn đã hoàn thành xuất sắc các câu luyện tập.</p>
+                                <button onClick={() => window.location.reload()} className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-lg flex items-center justify-center gap-2 mt-4 hover:bg-indigo-700 transition-all">
+                                    <Icon name="refresh-cw" size={20}/> Luyện tập bài mới
+                                </button>
+                            </div>
+                        )}
+                    </main>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

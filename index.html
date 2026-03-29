@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BobEnglish - Hệ thống học tập trực tuyến</title>
+    
+    <!-- Core Libraries -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Firebase SDK (Optional/Placeholders) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: #f8fafc;
+            min-height: 100vh;
+            margin: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .glass-nav {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .animate-fade-up { animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .lesson-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @media (hover: hover) {
+            .lesson-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+            }
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+    </style>
+</head>
+<body class="text-slate-900">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- 1. FIREBASE CONFIG (Placeholder) ---
+        const DEFAULT_CONFIG = { apiKey: "" };
+        const isConfigValid = DEFAULT_CONFIG.apiKey !== "";
+        const APP_IDENTIFIER = 'bob-english-v4';
+
+        // --- 2. COMPONENTS ---
+        const Icon = ({ name, size = 20, className = "" }) => {
+            const iconRef = useRef(null);
+            useEffect(() => {
+                if (window.lucide && iconRef.current) {
+                    window.lucide.createIcons({
+                        attrs: { class: className },
+                        nameAttr: 'data-lucide'
+                    });
+                }
+            }, [name, className]);
+            return <i ref={iconRef} data-lucide={name} style={{ width: size, height: size }}></i>;
+        };
+
+        // --- 3. MAIN APP ---
+        function App() {
+            const [user, setUser] = useState(null);
+            const [usersList, setUsersList] = useState([
+                { id: 'admin_root', username: 'admin', password: '123', role: 'admin', name: 'Quản trị viên' },
+                { id: 'stu_demo', username: 'hocvien', password: '123', role: 'student', name: 'Nguyễn Văn A' }
+            ]);
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState('');
+
+            const handleLogin = (u, p) => {
+                const found = usersList.find(x => x.username.toLowerCase() === u.trim().toLowerCase() && x.password === p.trim());
+                if (found) {
+                    setUser(found);
+                    setError('');
+                } else {
+                    setError("Tài khoản hoặc mật khẩu không đúng.");
+                }
+            };
+
+            return (
+                <div className="min-h-screen pb-10">
+                    {!user ? (
+                        <LoginScreen onLogin={handleLogin} error={error} />
+                    ) : (
+                        <div className="animate-fade-up">
+                            {/* Navigation Bar */}
+                            <nav className="glass-nav sticky top-0 z-50 border-b border-slate-200/60 px-4 sm:px-6 h-16 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-9 h-9 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-lg">
+                                        <Icon name="graduation-cap" size={20} />
+                                    </div>
+                                    <span className="text-xl font-black text-indigo-600 tracking-tight">BobEnglish</span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <div className="text-right hidden xs:block">
+                                        <p className="text-xs font-bold leading-none">{user.name}</p>
+                                        <p className="text-[9px] uppercase font-black text-indigo-500 mt-1">{user.role}</p>
+                                    </div>
+                                    <button onClick={() => setUser(null)} className="w-9 h-9 flex items-center justify-center bg-slate-100 text-slate-500 rounded-xl active:bg-red-50 active:text-red-500 transition-colors">
+                                        <Icon name="log-out" size={16} />
+                                    </button>
+                                </div>
+                            </nav>
+
+                            <main className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8">
+                                {user.role === 'admin' ? (
+                                    <AdminPanel users={usersList} setUsers={setUsersList} />
+                                ) : (
+                                    <StudentHub user={user} />
+                                )}
+                            </main>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const LoginScreen = ({ onLogin, error }) => {
+            const [u, setU] = useState('');
+            const [p, setP] = useState('');
+
+            return (
+                <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50">
+                    <div className="w-full max-w-sm animate-fade-up">
+                        <div className="bg-white p-8 rounded-[2rem] shadow-xl border border-white">
+                            <div className="text-center mb-8">
+                                <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white shadow-lg">
+                                    <Icon name="zap" size={28} />
+                                </div>
+                                <h1 className="text-2xl font-black text-slate-800">Chào bạn!</h1>
+                                <p className="text-slate-400 text-sm">Học tập hiệu quả cùng BobEnglish</p>
+                            </div>
+                            
+                            <form onSubmit={e => { e.preventDefault(); onLogin(u, p); }} className="space-y-4">
+                                {error && (
+                                    <div className="p-3 bg-red-50 text-red-600 text-xs font-bold rounded-xl border border-red-100 flex items-center gap-2">
+                                        <Icon name="alert-circle" size={14} /> {error}
+                                    </div>
+                                )}
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Tài khoản</label>
+                                    <input type="text" value={u} onChange={e=>setU(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white transition-all text-sm" placeholder="Tên đăng nhập..." required />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Mật khẩu</label>
+                                    <input type="password" value={p} onChange={e=>setP(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white transition-all text-sm" placeholder="••••••••" required />
+                                </div>
+                                <button className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-lg hover:bg-indigo-700 active:scale-95 transition-all uppercase text-xs tracking-[0.2em] mt-2">
+                                    Đăng nhập
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const StudentHub = ({ user }) => {
+            const lessons = [
+                { 
+                    title: "Reading", 
+                    subtitle: "Luyện đọc hiểu",
+                    desc: "Cải thiện kỹ năng đọc thông qua các bài báo, truyện ngắn và bài tập đọc hiểu đa dạng.",
+                    icon: "book-open", 
+                    color: "text-indigo-600", 
+                    bg: "bg-indigo-50",
+                    path: "reading.html" 
+                },
+                { 
+                    title: "Bảng IPA", 
+                    subtitle: "Phát âm chuẩn",
+                    desc: "Học cách đọc 44 âm trong bảng phiên âm Quốc tế để nói tiếng Anh chuẩn xác.",
+                    icon: "mic-2", 
+                    color: "text-blue-600", 
+                    bg: "bg-blue-50",
+                    path: "ipa.html"
+                },
+                { 
+                    title: "Listening", 
+                    subtitle: "Luyện nghe hiểu",
+                    desc: "Cải thiện khả năng nghe thông qua các bài hội thoại và video thực tế hàng ngày.",
+                    icon: "headphones", 
+                    color: "text-emerald-600", 
+                    bg: "bg-emerald-50",
+                    path: "listening.html"
+                },
+                { 
+                    title: "Speaking", 
+                    subtitle: "Luyện nói tự tin",
+                    desc: "Thực hành giao tiếp theo các tình huống phổ biến để tăng phản xạ nói lưu loát.",
+                    icon: "message-circle", 
+                    color: "text-violet-600", 
+                    bg: "bg-violet-50",
+                    path: "speaking.html"
+                },
+                { 
+                    title: "Vocabulary", 
+                    subtitle: "Vốn từ vựng",
+                    desc: "Ghi nhớ từ mới theo chủ đề thông qua hình ảnh minh họa và ví dụ sinh động.",
+                    icon: "sparkles", 
+                    color: "text-amber-600", 
+                    bg: "bg-amber-50",
+                    path: "vocabulary.html"
+                },
+                { 
+                    title: "Bilingual", 
+                    subtitle: "Song ngữ Anh-Việt",
+                    desc: "Đọc tin tức và truyện ngắn song ngữ giúp hiểu sâu ngữ cảnh và cấu trúc câu.",
+                    icon: "languages", 
+                    color: "text-rose-600", 
+                    bg: "bg-rose-50",
+                    path: "bilingual.html"
+                },
+                { 
+                    title: "Taboo Game", 
+                    subtitle: "Trò chơi đố chữ",
+                    desc: "Vừa chơi vừa học, giải đố từ vựng để ôn tập kiến thức một cách vui vẻ nhất.",
+                    icon: "gamepad-2", 
+                    color: "text-orange-600", 
+                    bg: "bg-orange-50",
+                    path: "taboo.html"
+                },
+            ];
+
+            return (
+                <div className="space-y-6">
+                    {/* Welcome Banner */}
+                    <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-[2rem] p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+                        <div className="relative z-10">
+                            <h2 className="text-2xl sm:text-3xl font-black mb-2">Chào, {user.name.split(' ').pop()}! 👋</h2>
+                            <p className="text-indigo-100 text-sm sm:text-base font-medium opacity-90">Hôm nay chúng ta sẽ bắt đầu kỹ năng nào?</p>
+                        </div>
+                        <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+                    </div>
+
+                    {/* Lesson Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {lessons.map((item, i) => (
+                            <div 
+                                key={i} 
+                                onClick={() => window.location.href = item.path}
+                                className="lesson-card bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col cursor-pointer active:bg-slate-50 transition-colors"
+                            >
+                                <div className="flex items-center gap-4 mb-4">
+                                    <div className={`w-12 h-12 shrink-0 ${item.bg} ${item.color} rounded-2xl flex items-center justify-center`}>
+                                        <Icon name={item.icon} size={24} />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-extrabold text-lg text-slate-800 leading-none">{item.title}</h3>
+                                        <p className="text-[10px] uppercase font-bold text-slate-400 mt-1 tracking-wider">{item.subtitle}</p>
+                                    </div>
+                                </div>
+                                <p className="text-slate-500 text-xs leading-relaxed font-medium mb-4 flex-1">
+                                    {item.desc}
+                                </p>
+                                <div className="flex items-center text-indigo-600 font-bold text-[10px] uppercase tracking-widest gap-2">
+                                    Bắt đầu học <Icon name="chevron-right" size={12} />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const AdminPanel = ({ users, setUsers }) => {
+            const [n, setN] = useState('');
+            const [u, setU] = useState('');
+            const [p, setP] = useState('');
+
+            const students = users.filter(x => x.role === 'student');
+
+            const handleAdd = (e) => {
+                e.preventDefault();
+                const newUser = { id: 'stu_' + Date.now(), name: n, username: u.trim().toLowerCase(), password: p, role: 'student' };
+                setUsers([newUser, ...users]);
+                setN(''); setU(''); setP('');
+            };
+
+            const handleDelete = (id) => {
+                if (!confirm("Xóa học viên này khỏi danh sách?")) return;
+                setUsers(users.filter(x => x.id !== id));
+            };
+
+            return (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    {/* Add User Form */}
+                    <div className="lg:col-span-5 order-2 lg:order-1">
+                        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+                            <h3 className="font-black text-lg mb-6 flex items-center gap-3">
+                                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><Icon name="user-plus" size={18} /></div>
+                                THÊM HỌC VIÊN
+                            </h3>
+                            <form onSubmit={handleAdd} className="space-y-4">
+                                <div className="space-y-1">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Tên học viên</label>
+                                    <input placeholder="Họ và tên..." value={n} onChange={e=>setN(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 text-sm" required />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Tài khoản</label>
+                                        <input placeholder="Username" value={u} onChange={e=>setU(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 text-sm" required />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Mật khẩu</label>
+                                        <input placeholder="Mật khẩu" value={p} onChange={e=>setP(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 text-sm" required />
+                                    </div>
+                                </div>
+                                <button className="w-full py-4 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 active:scale-95 transition-all text-sm shadow-lg shadow-indigo-100">
+                                    Xác nhận thêm
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    {/* User List */}
+                    <div className="lg:col-span-7 order-1 lg:order-2">
+                        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col h-[500px]">
+                            <div className="p-4 bg-slate-50/50 border-b flex justify-between items-center">
+                                <div className="flex items-center gap-2">
+                                    <Icon name="users" size={14} className="text-slate-400" />
+                                    <span className="font-black uppercase tracking-widest text-slate-400 text-[10px]">Quản lý học viên</span>
+                                </div>
+                                <span className="bg-indigo-600 text-white px-3 py-1 rounded-full text-[9px] font-black">{students.length} tài khoản</span>
+                            </div>
+                            <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
+                                {students.length === 0 ? (
+                                    <div className="h-full flex flex-col items-center justify-center opacity-20">
+                                        <Icon name="user-x" size={48} />
+                                        <p className="font-bold text-xs mt-2">Chưa có học viên</p>
+                                    </div>
+                                ) : students.map(s => (
+                                    <div key={s.id} className="p-4 flex justify-between items-center bg-white border border-slate-50 rounded-2xl active:bg-slate-50 transition-colors">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-black text-sm">{s.name.charAt(0)}</div>
+                                            <div>
+                                                <p className="font-bold text-sm text-slate-800">{s.name}</p>
+                                                <p className="text-[10px] font-mono text-slate-400">U: {s.username} | P: {s.password}</p>
+                                            </div>
+                                        </div>
+                                        <button onClick={() => handleDelete(s.id)} className="w-8 h-8 flex items-center justify-center text-slate-300 active:text-red-500 transition-colors">
+                                            <Icon name="trash-2" size={16} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

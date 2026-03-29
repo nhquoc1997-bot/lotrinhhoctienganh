@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trang học Tiếng Anh - Phong cách Elsa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f0fdf4; }
+        .card { transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer; }
+        .card:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
+        .speak-icon { cursor: pointer; color: #3b82f6; transition: all 0.2s ease; }
+        .speak-icon svg { width: 1.75rem; height: 1.75rem; }
+        .speak-icon:hover { color: #1d4ed8; transform: scale(1.1); }
+        .speak-icon.loading { animation: pulse 1s infinite; color: #9ca3af; pointer-events: none; }
+        
+        .phoneme-btn { transition: all 0.2s ease; }
+        .phoneme-btn.active { background-color: #3b82f6; color: white; transform: scale(1.05); box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.5); }
+        
+        /* Mic Animation */
+        .mic-btn { transition: all 0.3s ease; }
+        .mic-btn.recording { 
+            animation: pulse-red 1.5s infinite; 
+            background-color: #ef4444; 
+            color: white; 
+        }
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        /* Modal styling */
+        #practice-modal { display: none; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px); z-index: 50; }
+        #practice-modal.active { display: flex; }
+        
+        /* Interactive Sentence Word */
+        .interactive-word { cursor: pointer; transition: all 0.2s; border-bottom: 2px solid transparent; }
+        .interactive-word:hover { color: #3b82f6; border-bottom: 2px dashed #3b82f6; transform: translateY(-1px); }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <!-- Main Content -->
+    <div id="main-content">
+        <header class="bg-white shadow-sm border-b">
+            <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="bg-blue-600 text-white p-2 rounded-lg">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-800">English Coach</h1>
+                        <p id="welcome-message" class="text-xs text-gray-500">Sẵn sàng luyện tập!</p>
+                    </div>
+                </div>
+                
+                <!-- Theo dõi tiến độ học tập -->
+                <div class="flex items-center gap-3">
+                    <div class="text-right">
+                        <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Tiến độ</p>
+                        <p id="progress-text" class="text-sm font-extrabold text-blue-600">0 / 0 từ</p>
+                    </div>
+                    <div class="w-16 sm:w-24 h-2.5 bg-gray-100 rounded-full overflow-hidden border border-gray-200 shadow-inner">
+                        <div id="progress-bar" class="h-full bg-blue-500 transition-all duration-700 ease-out" style="width: 0%"></div>
+                    </div>
+                </div>
+
+            </div>
+        </header>
+
+        <main class="container mx-auto px-4 py-8 max-w-5xl">
+            
+            <!-- Phoneme Selector -->
+            <section class="mb-8 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                 <h2 class="text-lg font-bold mb-4 text-gray-800">Chọn âm cần luyện tập</h2>
+                 <div id="phoneme-navigation" class="space-y-6"></div>
+            </section>
+
+            <!-- Word List Area -->
+            <section id="phoneme-content-display" class="mb-12">
+                <!-- Nội dung danh sách từ sẽ hiển thị ở đây -->
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Practice Modal (Elsa Style) -->
+    <div id="practice-modal" class="fixed inset-0 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden relative flex flex-col max-h-[90vh]">
+            <!-- Close btn -->
+            <button id="close-modal" class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 bg-gray-100 rounded-full p-2 z-10">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+
+            <div class="p-8 overflow-y-auto">
+                <div class="text-center mb-8 mt-2">
+                    <span id="modal-phoneme-badge" class="inline-block bg-blue-100 text-blue-800 font-mono font-bold px-3 py-1 rounded-full text-sm mb-2">/i:/</span>
+                    <h2 id="modal-word" class="text-5xl font-extrabold text-gray-800 mb-2">sheep</h2>
+                    <p id="modal-transcription" class="text-xl text-gray-500 font-mono mb-1">/ʃiːp/</p>
+                    <p id="modal-meaning" class="text-md text-blue-600 font-medium">con cừu</p>
+                </div>
+
+                <!-- Theory Box -->
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-8">
+                    <h4 class="text-amber-800 font-bold mb-1 text-sm flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Mẹo phát âm
+                    </h4>
+                    <p id="modal-theory" class="text-amber-900 text-sm">Hướng dẫn phát âm chi tiết sẽ ở đây.</p>
+                </div>
+
+                <!-- Word Practice Section -->
+                <div class="bg-gray-50 rounded-2xl p-6 mb-6 border border-gray-100 text-center relative">
+                    <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 absolute top-4 left-4">Bước 1: Luyện Từ</h3>
+                    
+                    <div class="flex justify-center items-center gap-6 mt-6">
+                        <button id="listen-word-btn" class="speak-icon flex items-center justify-center bg-white p-4 rounded-full shadow-md border hover:border-blue-500" title="Nghe mẫu">
+                            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 0 0 1.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.66 1.905H6.44l4.5 4.5c.945.945 2.56.276 2.56-1.06V4.06ZM18.584 5.106a.75.75 0 0 1 1.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 0 1-1.06-1.06 8.25 8.25 0 0 0 0-11.668.75.75 0 0 1 0-1.06Z" /><path d="M15.932 7.757a.75.75 0 0 1 1.061 0 6 6 0 0 1 0 8.486.75.75 0 0 1-1.06-1.061 4.5 4.5 0 0 0 0-6.364.75.75 0 0 1 0-1.06Z" /></svg>
+                        </button>
+
+                        <button id="record-word-btn" class="mic-btn bg-gray-800 text-white p-5 rounded-full shadow-lg" title="Nhấn để đọc">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                        </button>
+                    </div>
+
+                    <!-- Result Area Word -->
+                    <div id="word-result-area" class="mt-6 hidden flex-col items-center w-full">
+                        <div class="inline-flex items-center justify-center w-24 h-24 rounded-full border-4 border-gray-200 mb-4 relative shadow-inner bg-white">
+                            <span id="word-score" class="text-3xl font-bold">0%</span>
+                        </div>
+                        <div id="word-detailed-feedback" class="text-3xl mb-2 tracking-wide font-medium"></div>
+                        <div id="word-analysis-box" class="w-full mt-2"></div>
+                    </div>
+                </div>
+
+                <!-- Sentence Practice Section -->
+                <div class="bg-blue-50 rounded-2xl p-6 border border-blue-100 text-center relative">
+                    <h3 class="text-sm font-bold text-blue-400 uppercase tracking-wider mb-4 absolute top-4 left-4">Bước 2: Luyện Câu</h3>
+                    
+                    <div class="mt-8 mb-6">
+                        <p id="modal-sentence" class="text-xl font-medium text-gray-800 mb-2 leading-relaxed"></p>
+                        <p id="modal-sentence-meaning" class="text-sm text-gray-500 mt-2"></p>
+                        <p class="text-xs text-blue-400 mt-3 font-medium flex justify-center items-center gap-1">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
+                            Mẹo: Chạm vào từ để nghe (Nhớ tắt công tắc Im lặng bên hông iPhone)
+                        </p>
+                    </div>
+
+                    <div class="flex justify-center items-center gap-6">
+                        <button id="listen-sentence-btn" class="speak-icon flex items-center justify-center bg-white p-4 rounded-full shadow-md border hover:border-blue-500 text-blue-600" title="Nghe cả câu">
+                            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 0 0 1.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.66 1.905H6.44l4.5 4.5c.945.945 2.56.276 2.56-1.06V4.06ZM18.584 5.106a.75.75 0 0 1 1.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 0 1-1.06-1.06 8.25 8.25 0 0 0 0-11.668.75.75 0 0 1 0-1.06Z" /><path d="M15.932 7.757a.75.75 0 0 1 1.061 0 6 6 0 0 1 0 8.486.75.75 0 0 1-1.06-1.061 4.5 4.5 0 0 0 0-6.364.75.75 0 0 1 0-1.06Z" /></svg>
+                        </button>
+
+                        <button id="record-sentence-btn" class="mic-btn bg-blue-600 text-white p-5 rounded-full shadow-lg" title="Ghi âm cả câu">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                        </button>
+                    </div>
+
+                    <!-- Result Area Sentence -->
+                    <div id="sentence-result-area" class="mt-6 hidden flex-col items-center w-full">
+                        <div class="inline-flex items-center justify-center w-20 h-20 rounded-full border-4 border-gray-200 mb-4 bg-white">
+                            <span id="sentence-score" class="text-xl font-bold">0%</span>
+                        </div>
+                        <div id="sentence-detailed-feedback" class="text-xl mb-2 tracking-wide font-medium leading-relaxed"></div>
+                        <div id="sentence-analysis-box" class="w-full mt-2"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+<script type="module">
+        // --- Core App Logic ---
+        function initializeAppContent() {
+            // --- Dữ liệu nâng cao ĐẦY ĐỦ 44 ÂM ---
+            const phoneticsData = {
+                "Nguyên âm đơn (Monophthongs)": {
+                    '/i:/': {
+                        description: 'Âm i dài: Miệng mở rộng sang hai bên như đang mỉm cười, căng cơ miệng. Âm kéo dài.',
+                        words: [ 
+                            { word: "sheep", transcription: "/ʃiːp/", meaning: "con cừu", theory: "Kéo dài âm /i:/, nhớ chu môi ở âm /ʃ/ đầu tiên.", sentence: "Look at that fluffy white sheep.", sentenceMeaning: "Nhìn con cừu trắng lông xù kia kìa." }, 
+                            { word: "eat", transcription: "/iːt/", meaning: "ăn", theory: "Căng miệng cho âm /i:/, kết thúc bằng âm /t/ nhẹ.", sentence: "I want to eat a big apple.", sentenceMeaning: "Tôi muốn ăn một quả táo lớn." },
+                            { word: "see", transcription: "/siː/", meaning: "nhìn", theory: "Xì hơi âm /s/ rồi kéo dài âm /i:/ rạng rỡ.", sentence: "I can see the ocean from here.", sentenceMeaning: "Tôi có thể nhìn thấy đại dương từ đây." },
+                            { word: "meet", transcription: "/miːt/", meaning: "gặp gỡ", theory: "Mím môi /m/ rồi căng mép kéo dài /i:/.", sentence: "It is nice to meet you.", sentenceMeaning: "Rất vui được gặp bạn." },
+                            { word: "read", transcription: "/riːd/", meaning: "đọc", theory: "Chu môi /r/, kéo dài /i:/ và rung nhẹ âm /d/.", sentence: "I read a book every night.", sentenceMeaning: "Tôi đọc sách mỗi đêm." },
+                            { word: "green", transcription: "/ɡriːn/", meaning: "màu xanh", theory: "Lướt nhanh /gr/, ngân dài /i:/ và kết thúc ở /n/ mũi.", sentence: "The grass is very green today.", sentenceMeaning: "Hôm nay cỏ rất xanh." },
+                            { word: "key", transcription: "/kiː/", meaning: "chìa khóa", theory: "Bật hơi /k/ từ cuống họng, kéo dài /i:/.", sentence: "Where is my car key?", sentenceMeaning: "Chìa khóa xe của tôi ở đâu?" },
+                            { word: "team", transcription: "/tiːm/", meaning: "đội", theory: "Bật /t/, kéo dài /i:/ và mím môi /m/ ở cuối.", sentence: "We are a great team.", sentenceMeaning: "Chúng ta là một đội tuyệt vời." }
+                        ]
+                    },
+                    '/ɪ/': {
+                        description: 'Âm i ngắn: Miệng mở tự nhiên, hơi hẹp. Âm phát ra dứt khoát, ngắn gọn.',
+                        words: [ 
+                            { word: "ship", transcription: "/ʃɪp/", meaning: "con tàu", theory: "Đọc dứt khoát âm /ɪ/, không kéo dài. Khác biệt rõ với 'sheep'.", sentence: "The ship is sailing on the ocean.", sentenceMeaning: "Con tàu đang căng buồm trên đại dương." }, 
+                            { word: "sit", transcription: "/sɪt/", meaning: "ngồi", theory: "Âm /s/ xì nhẹ, theo sau là âm /ɪ/ dứt khoát và chặn hơi âm /t/.", sentence: "Please sit down on this chair.", sentenceMeaning: "Làm ơn hãy ngồi xuống chiếc ghế này." },
+                            { word: "fish", transcription: "/fɪʃ/", meaning: "con cá", theory: "Răng cắn nhẹ môi dưới tạo âm /f/, âm /ɪ/ ngắn và xì /ʃ/.", sentence: "He caught a very big fish.", sentenceMeaning: "Anh ấy đã bắt được một con cá rất to." },
+                            { word: "big", transcription: "/bɪg/", meaning: "to lớn", theory: "Rung thanh quản ở cả /b/ và /g/, kẹp giữa là âm /ɪ/ dứt khoát.", sentence: "That is a big house.", sentenceMeaning: "Đó là một ngôi nhà lớn." },
+                            { word: "live", transcription: "/lɪv/", meaning: "sống", theory: "Âm /ɪ/ cực ngắn, răng trên cắn môi dưới rung /v/ ở cuối.", sentence: "Where do you live?", sentenceMeaning: "Bạn sống ở đâu?" },
+                            { word: "rich", transcription: "/rɪtʃ/", meaning: "giàu có", theory: "Kết thúc từ bằng cách giật mạnh môi tạo âm /tʃ/.", sentence: "He is a rich man.", sentenceMeaning: "Anh ấy là một người đàn ông giàu có." },
+                            { word: "city", transcription: "/ˈsɪti/", meaning: "thành phố", theory: "Nhấn mạnh âm /sɪ/ đầu tiên thật gọn gàng.", sentence: "I love this beautiful city.", sentenceMeaning: "Tôi yêu thành phố xinh đẹp này." },
+                            { word: "pig", transcription: "/pɪg/", meaning: "con lợn", theory: "Bật hơi /p/ mạnh, âm /ɪ/ ngắn và rung yết hầu /g/.", sentence: "The pig is eating now.", sentenceMeaning: "Con lợn đang ăn bây giờ." }
+                        ]
+                    },
+                    '/e/': {
+                        description: 'Miệng mở tự nhiên, lưỡi hạ thấp. Giống âm "e" trong tiếng Việt nhưng dứt khoát hơn.',
+                        words: [
+                            { word: "bed", transcription: "/bed/", meaning: "cái giường", theory: "Giữ miệng mở tự nhiên, phát âm /e/ ngắn dứt khoát.", sentence: "I sleep in a big bed.", sentenceMeaning: "Tôi ngủ trên một chiếc giường lớn." },
+                            { word: "pen", transcription: "/pen/", meaning: "cái bút", theory: "Bật hơi mạnh âm /p/, kết hợp âm /e/ và ngân nhẹ âm mũi /n/.", sentence: "This is my favorite pen.", sentenceMeaning: "Đây là cây bút yêu thích của tôi." },
+                            { word: "head", transcription: "/hed/", meaning: "cái đầu", theory: "Đẩy hơi nhẹ cho âm /h/, nối nhanh vào /e/ và chặn lại ở /d/.", sentence: "My head hurts today.", sentenceMeaning: "Hôm nay đầu tôi bị đau." },
+                            { word: "red", transcription: "/red/", meaning: "màu đỏ", theory: "Tròn môi âm /r/, lướt nhanh qua /e/.", sentence: "She wears a red dress.", sentenceMeaning: "Cô ấy mặc một chiếc váy đỏ." },
+                            { word: "ten", transcription: "/ten/", meaning: "số mười", theory: "Bật lưỡi mạnh /t/, vào ngay âm /e/ dứt khoát.", sentence: "I have ten apples.", sentenceMeaning: "Tôi có mười quả táo." },
+                            { word: "friend", transcription: "/frend/", meaning: "bạn bè", theory: "Tổ hợp phụ âm /fr/ cần đọc lướt nhanh trước khi vào /e/.", sentence: "He is my best friend.", sentenceMeaning: "Anh ấy là bạn thân nhất của tôi." },
+                            { word: "check", transcription: "/tʃek/", meaning: "kiểm tra", theory: "Giật môi âm /tʃ/ đầu, và khậc nhẹ âm /k/ ở cuối.", sentence: "Please check your email.", sentenceMeaning: "Vui lòng kiểm tra email của bạn." },
+                            { word: "letter", transcription: "/ˈletər/", meaning: "lá thư", theory: "Nhấn mạnh âm /le/ dứt khoát.", sentence: "I sent a letter to him.", sentenceMeaning: "Tôi đã gửi một lá thư cho anh ấy." }
+                        ]
+                    },
+                    '/æ/': {
+                        description: 'Âm a bẹt: Miệng mở rộng sang hai bên và hạ hàm dưới xuống, phát âm nửa a nửa e.',
+                        words: [
+                            { word: "cat", transcription: "/kæt/", meaning: "con mèo", theory: "Mở to miệng hết cỡ theo chiều ngang và dọc, phát âm /æ/ thật rõ.", sentence: "The black cat is sleeping.", sentenceMeaning: "Con mèo đen đang ngủ." },
+                            { word: "map", transcription: "/mæp/", meaning: "bản đồ", theory: "Mím môi /m/, mở to miệng cho /æ/ và khép môi bật hơi /p/.", sentence: "We need a map to find the way.", sentenceMeaning: "Chúng ta cần bản đồ để tìm đường." },
+                            { word: "happy", transcription: "/ˈhæpi/", meaning: "vui vẻ", theory: "Nhấn mạnh âm tiết đầu với âm /æ/ bẹt.", sentence: "I am very happy today.", sentenceMeaning: "Hôm nay tôi rất vui." },
+                            { word: "bad", transcription: "/bæd/", meaning: "tệ", theory: "Rung cổ họng âm /b/, mở to miệng âm /æ/.", sentence: "That is a bad idea.", sentenceMeaning: "Đó là một ý kiến tồi." },
+                            { word: "apple", transcription: "/ˈæpl/", meaning: "quả táo", theory: "Trọng âm ngay âm /æ/ đầu tiên, mở miệng thật lớn.", sentence: "I eat an apple daily.", sentenceMeaning: "Tôi ăn một quả táo mỗi ngày." },
+                            { word: "black", transcription: "/blæk/", meaning: "màu đen", theory: "Lướt âm /bl/ thật nhanh rồi thả hàm xuống tạo âm bẹt.", sentence: "He drives a black car.", sentenceMeaning: "Anh ấy lái chiếc xe màu đen." },
+                            { word: "family", transcription: "/ˈfæməli/", meaning: "gia đình", theory: "Răng trên chạm môi dưới /f/, miệng căng hết cỡ ra /æ/.", sentence: "I love my family.", sentenceMeaning: "Tôi yêu gia đình mình." },
+                            { word: "sad", transcription: "/sæd/", meaning: "buồn", theory: "Xì hơi /s/ rồi há to miệng, kết thúc bằng âm rung /d/.", sentence: "Do not be sad.", sentenceMeaning: "Đừng buồn nhé." }
+                        ]
+                    },
+                    '/ɑː/': {
+                        description: 'Âm a dài: Mở to miệng, lưỡi hạ thấp và lùi về sau, kéo dài âm.',
+                        words: [
+                            { word: "car", transcription: "/kɑːr/", meaning: "xe hơi", theory: "Mở to khoang miệng, kéo dài âm /ɑː/ và cong nhẹ lưỡi về sau.", sentence: "He drives a fast car.", sentenceMeaning: "Anh ấy lái một chiếc xe hơi nhanh." },
+                            { word: "star", transcription: "/stɑːr/", meaning: "ngôi sao", theory: "Bắt đầu bằng cụm /st/, há to miệng kéo dài âm /ɑː/.", sentence: "Look at the bright star.", sentenceMeaning: "Hãy nhìn ngôi sao sáng kia." },
+                            { word: "father", transcription: "/ˈfɑːðər/", meaning: "bố", theory: "Nhấn mạnh âm /ɑː/ ở từ đầu, nhớ rung thanh quản khi phát âm /ð/.", sentence: "My father is a doctor.", sentenceMeaning: "Bố tôi là một bác sĩ." },
+                            { word: "park", transcription: "/pɑːrk/", meaning: "công viên", theory: "Kéo dài âm a, cuộn lưỡi nhẹ trước khi khậc âm /k/.", sentence: "Let's walk in the park.", sentenceMeaning: "Hãy đi dạo trong công viên." },
+                            { word: "dark", transcription: "/dɑːrk/", meaning: "tối", theory: "Âm /d/ rung, há to miệng và giữ âm ngân dài.", sentence: "It is getting dark now.", sentenceMeaning: "Bây giờ trời đang tối dần." },
+                            { word: "art", transcription: "/ɑːrt/", meaning: "nghệ thuật", theory: "Há họng to ngay từ đầu chữ, kéo dài âm và bật /t/.", sentence: "I love modern art.", sentenceMeaning: "Tôi yêu nghệ thuật hiện đại." },
+                            { word: "heart", transcription: "/hɑːrt/", meaning: "trái tim", theory: "Đẩy hơi /h/ nhẹ nhàng và mở to vòm họng ra.", sentence: "Listen to your heart.", sentenceMeaning: "Hãy lắng nghe trái tim bạn." },
+                            { word: "large", transcription: "/lɑːrdʒ/", meaning: "rộng lớn", theory: "Kéo dài âm a và chốt lại bằng âm /dʒ/ giật vang.", sentence: "This room is very large.", sentenceMeaning: "Căn phòng này rất rộng lớn." }
+                        ]
+                    },
+                    '/ɒ/': {
+                        description: 'Âm o ngắn: Tròn môi, miệng mở, phát âm dứt khoát.',
+                        words: [
+                            { word: "not", transcription: "/nɒt/", meaning: "không", theory: "Hơi tròn môi, phát âm /ɒ/ thật ngắn và kết thúc bằng /t/.", sentence: "I am not tired.", sentenceMeaning: "Tôi không mệt." },
+                            { word: "box", transcription: "/bɒks/", meaning: "cái hộp", theory: "Âm /ɒ/ ngắn, chú ý cụm phụ âm đuôi /ks/ (k bật sang s).", sentence: "Put it in the box.", sentenceMeaning: "Hãy đặt nó vào trong hộp." },
+                            { word: "dog", transcription: "/dɒɡ/", meaning: "con chó", theory: "Rung thanh quản ở /d/ và /ɡ/, ở giữa là /ɒ/ cực ngắn.", sentence: "The dog is barking loudly.", sentenceMeaning: "Con chó đang sủa lớn." },
+                            { word: "hot", transcription: "/hɒt/", meaning: "nóng", theory: "Đẩy luồng hơi /h/ dứt khoát vào một âm o rất gọn.", sentence: "The tea is very hot.", sentenceMeaning: "Trà rất nóng." },
+                            { word: "job", transcription: "/dʒɒb/", meaning: "công việc", theory: "Giật môi /dʒ/, ngậm miệng ngay lại để rung /b/.", sentence: "He got a new job.", sentenceMeaning: "Anh ấy đã có một công việc mới." },
+                            { word: "stop", transcription: "/stɒp/", meaning: "dừng lại", theory: "Đừng kéo dài âm o, mím môi nhanh bật /p/.", sentence: "Please stop talking.", sentenceMeaning: "Làm ơn hãy ngừng nói." },
+                            { word: "watch", transcription: "/wɒtʃ/", meaning: "đồng hồ/xem", theory: "Chu môi /w/ và khép lại bằng một cú giật /tʃ/.", sentence: "I want to watch a movie.", sentenceMeaning: "Tôi muốn xem một bộ phim." },
+                            { word: "coffee", transcription: "/ˈkɒfi/", meaning: "cà phê", theory: "Rơi trọng âm vào /kɒ/ dứt khoát, âm sau nhẹ lướt.", sentence: "I drink coffee every morning.", sentenceMeaning: "Tôi uống cà phê mỗi sáng." }
+                        ]
+                    },
+                    '/ɔː/': {
+                        description: 'Âm o dài: Tròn môi hết cỡ, đẩy lưỡi về sau, kéo dài âm.',
+                        words: [
+                            { word: "ball", transcription: "/bɔːl/", meaning: "quả bóng", theory: "Chu môi tròn trịa kéo dài âm /ɔː/ và đẩy đầu lưỡi lên vòm họng /l/.", sentence: "He kicks the ball hard.", sentenceMeaning: "Anh ấy đá quả bóng thật mạnh." },
+                            { word: "door", transcription: "/dɔːr/", meaning: "cửa ra vào", theory: "Âm /d/ mạnh, kết hợp với âm /ɔː/ tròn môi và cong lưỡi nhẹ.", sentence: "Please close the door.", sentenceMeaning: "Làm ơn hãy đóng cửa lại." },
+                            { word: "water", transcription: "/ˈwɔːtər/", meaning: "nước", theory: "Chu môi cho âm /w/, mở miệng tròn cho /ɔː/.", sentence: "Drink plenty of water.", sentenceMeaning: "Hãy uống nhiều nước." },
+                            { word: "all", transcription: "/ɔːl/", meaning: "tất cả", theory: "Miệng tròn nhô ra trước, uốn lưỡi chạm vòm miệng cứng.", sentence: "I want to thank you all.", sentenceMeaning: "Tôi muốn cảm ơn tất cả các bạn." },
+                            { word: "tall", transcription: "/tɔːl/", meaning: "cao", theory: "Bật lưỡi /t/, ngân dài âm /ɔː/.", sentence: "He is a tall man.", sentenceMeaning: "Anh ấy là một người đàn ông cao lớn." },
+                            { word: "short", transcription: "/ʃɔːrt/", meaning: "ngắn", theory: "Chu môi thật nhiều cho cả /ʃ/ và /ɔː/.", sentence: "She has short hair.", sentenceMeaning: "Cô ấy có mái tóc ngắn." },
+                            { word: "morning", transcription: "/ˈmɔːrnɪŋ/", meaning: "buổi sáng", theory: "Mím môi /m/ rồi chu môi ra ngay để kéo dài âm o.", sentence: "Good morning everyone.", sentenceMeaning: "Chào buổi sáng mọi người." },
+                            { word: "talk", transcription: "/tɔːk/", meaning: "nói chuyện", theory: "Lưu ý chữ l bị câm, chỉ đọc /tɔː/ kéo dài rồi khậc /k/.", sentence: "Let's talk about it.", sentenceMeaning: "Hãy nói về điều đó." }
+                        ]
+                    },
+                    '/ʊ/': {
+                        description: 'Âm u ngắn: Hơi tròn môi, đẩy môi ra trước một chút, âm phát dứt khoát.',
+                        words: [
+                            { word: "book", transcription: "/bʊk/", meaning: "quyển sách", theory: "Không kéo dài âm u, đọc dứt khoát và bật nhẹ âm /k/.", sentence: "I am reading a good book.", sentenceMeaning: "Tôi đang đọc một cuốn sách hay." },
+                            { word: "foot", transcription: "/fʊt/", meaning: "bàn chân", theory: "Cắn môi dưới thổi hơi /f/, nối nhanh vào /ʊ/.", sentence: "He hurt his foot yesterday.", sentenceMeaning: "Anh ấy bị đau chân hôm qua." },
+                            { word: "look", transcription: "/lʊk/", meaning: "nhìn", theory: "Lưỡi chạm vòm miệng /l/, âm /ʊ/ ngắn và kết thúc bằng /k/.", sentence: "Look at this picture.", sentenceMeaning: "Hãy nhìn vào bức tranh này." },
+                            { word: "put", transcription: "/pʊt/", meaning: "đặt/để", theory: "Bật mạnh /p/, lướt qua /ʊ/ cực nhanh.", sentence: "Put the box on the table.", sentenceMeaning: "Đặt cái hộp lên bàn." },
+                            { word: "good", transcription: "/ɡʊd/", meaning: "tốt", theory: "Âm /g/ rung cổ, chốt lại bằng âm /d/ trầm ngâm.", sentence: "Have a good day.", sentenceMeaning: "Chúc một ngày tốt lành." },
+                            { word: "full", transcription: "/fʊl/", meaning: "đầy", theory: "Răng trên chạm môi dưới /f/, uốn lưỡi mạnh ở đuôi /l/.", sentence: "The glass is full.", sentenceMeaning: "Ly nước đã đầy." },
+                            { word: "cook", transcription: "/kʊk/", meaning: "nấu ăn", theory: "Khậc /k/ sâu trong họng hai lần.", sentence: "I love to cook dinner.", sentenceMeaning: "Tôi thích nấu bữa tối." },
+                            { word: "sugar", transcription: "/ˈʃʊɡər/", meaning: "đường", theory: "Chữ S đọc thành /ʃ/ chu môi mỏ nhọn.", sentence: "Add some sugar to the tea.", sentenceMeaning: "Thêm chút đường vào trà." }
+                        ]
+                    },
+                    '/uː/': {
+                        description: 'Âm u dài: Chu môi ra trước hết cỡ, căng cơ môi, âm kéo dài.',
+                        words: [
+                            { word: "food", transcription: "/fuːd/", meaning: "thức ăn", theory: "Chu môi kéo dài âm /uː/, nhớ rung thanh quản tạo âm /d/ ở cuối.", sentence: "This food is delicious.", sentenceMeaning: "Thức ăn này rất ngon." },
+                            { word: "school", transcription: "/skuːl/", meaning: "trường học", theory: "Phát âm /sk/ mượt, kéo dài /uː/ và đẩy đầu lưỡi lên cho âm /l/.", sentence: "I go to school every day.", sentenceMeaning: "Tôi đi học mỗi ngày." },
+                            { word: "blue", transcription: "/bluː/", meaning: "màu xanh dương", theory: "Phụ âm ghép /bl/ trượt nhanh, chu môi kéo dài âm /uː/.", sentence: "The sky is clear blue.", sentenceMeaning: "Bầu trời trong xanh." },
+                            { word: "two", transcription: "/tuː/", meaning: "số hai", theory: "Bật lưỡi /t/ thật gọn rồi chu môi hết cỡ ngân dài.", sentence: "I have two sisters.", sentenceMeaning: "Tôi có hai người chị gái." },
+                            { word: "cool", transcription: "/kuːl/", meaning: "mát mẻ/ngầu", theory: "Khậc /k/, chu môi ngân /u:/ và uốn lưỡi chữ /l/ ở vòm miệng.", sentence: "The weather is cool.", sentenceMeaning: "Thời tiết mát mẻ." },
+                            { word: "new", transcription: "/njuː/", meaning: "mới", theory: "Đừng đọc thành 'niu' mà là /n/ nối với /ju:/.", sentence: "I bought a new phone.", sentenceMeaning: "Tôi đã mua một chiếc điện thoại mới." },
+                            { word: "music", transcription: "/ˈmjuːzɪk/", meaning: "âm nhạc", theory: "Mím môi /m/ bung ra /ju:/, xì /z/ rung trước /ɪk/.", sentence: "I like listening to music.", sentenceMeaning: "Tôi thích nghe nhạc." },
+                            { word: "student", transcription: "/ˈstjuːdənt/", meaning: "học sinh", theory: "Lướt cụm /stj/ mượt mà vào /u:/ dài.", sentence: "He is a good student.", sentenceMeaning: "Cậu ấy là một học sinh giỏi." }
+                        ]
+                    },
+                    '/ʌ/': {
+                        description: 'Mở miệng tự nhiên, lưỡi hơi lùi về sau. Âm phát ra dứt khoát, gần giống âm "ă".',
+                        words: [
+                            { word: "cup", transcription: "/kʌp/", meaning: "cái cốc", theory: "Há miệng vừa phải, phát âm /ʌ/ thật gọn và mím môi bật /p/.", sentence: "Pass me the white cup.", sentenceMeaning: "Đưa cho tôi cái cốc màu trắng." },
+                            { word: "sun", transcription: "/sʌn/", meaning: "mặt trời", theory: "Âm /s/ xì hơi dài, tiếp nối /ʌ/ dứt khoát và ngân âm mũi /n/.", sentence: "The sun is shining.", sentenceMeaning: "Mặt trời đang chiếu sáng." },
+                            { word: "love", transcription: "/lʌv/", meaning: "yêu", theory: "Âm /ʌ/ ở giữa, kết thúc bằng cách răng trên chạm môi dưới rung /v/.", sentence: "I love my family.", sentenceMeaning: "Tôi yêu gia đình mình." },
+                            { word: "bus", transcription: "/bʌs/", meaning: "xe buýt", theory: "Rung /b/ đầu và xì sắc cạnh /s/ ở đuôi.", sentence: "Wait for the bus here.", sentenceMeaning: "Hãy đợi xe buýt ở đây." },
+                            { word: "come", transcription: "/kʌm/", meaning: "đến", theory: "Khậc /k/ rồi đóng ngay môi lại rung mũi /m/.", sentence: "Please come in.", sentenceMeaning: "Mời vào." },
+                            { word: "money", transcription: "/ˈmʌni/", meaning: "tiền", theory: "Nhấn mạnh âm /mʌ/ bung mạnh.", sentence: "I need some money.", sentenceMeaning: "Tôi cần một ít tiền." },
+                            { word: "mother", transcription: "/ˈmʌðər/", meaning: "mẹ", theory: "Kẹp lưỡi rung họng /ð/ sau âm /ʌ/ dứt khoát.", sentence: "My mother is cooking.", sentenceMeaning: "Mẹ tôi đang nấu ăn." },
+                            { word: "run", transcription: "/rʌn/", meaning: "chạy", theory: "Tròn môi âm /r/, lướt vào /ʌ/ và khóa miệng bằng /n/ mũi.", sentence: "He can run fast.", sentenceMeaning: "Anh ấy có thể chạy nhanh." }
+                        ]
+                    },
+                    '/ɜː/': {
+                        description: 'Âm ơ dài: Mở miệng hờ, cong lưỡi về sau, kéo dài âm.',
+                        words: [
+                            { word: "bird", transcription: "/bɜːrd/", meaning: "con chim", theory: "Há miệng nhỏ, cong lưỡi vào trong khi phát âm /ɜː/ và rung /d/.", sentence: "The bird is singing a song.", sentenceMeaning: "Con chim đang hót một bài hát." },
+                            { word: "girl", transcription: "/ɡɜːrl/", meaning: "cô gái", theory: "Âm /g/ rung ở cổ họng, cong lưỡi cho /ɜː/ và chạm vòm miệng cho /l/.", sentence: "She is a beautiful girl.", sentenceMeaning: "Cô ấy là một cô gái xinh đẹp." },
+                            { word: "work", transcription: "/wɜːrk/", meaning: "làm việc", theory: "Chu môi /w/, mở miệng cong lưỡi /ɜː/ và bật /k/ ở cuối.", sentence: "I have a lot of work to do.", sentenceMeaning: "Tôi có rất nhiều việc phải làm." },
+                            { word: "first", transcription: "/fɜːrst/", meaning: "đầu tiên", theory: "Kéo dài ơ, cuộn lưỡi nhẹ rồi xì /s/ trước khi khựng /t/.", sentence: "He won the first prize.", sentenceMeaning: "Anh ấy đã giành giải nhất." },
+                            { word: "shirt", transcription: "/ʃɜːrt/", meaning: "áo sơ mi", theory: "Chu môi nhọn /ʃ/, cong lưỡi ở giữa /ɜː/.", sentence: "I bought a new shirt.", sentenceMeaning: "Tôi đã mua một chiếc áo sơ mi mới." },
+                            { word: "learn", transcription: "/lɜːrn/", meaning: "học hỏi", theory: "Đầu lưỡi chạm vòm họng /l/ bật ra cong lưỡi luôn.", sentence: "I want to learn English.", sentenceMeaning: "Tôi muốn học tiếng Anh." },
+                            { word: "world", transcription: "/wɜːrld/", meaning: "thế giới", theory: "Phức tạp: /w/ -> /ɜː/ cuộn -> /l/ uốn vòm -> /d/ rung.", sentence: "The world is a big place.", sentenceMeaning: "Thế giới là một nơi rộng lớn." },
+                            { word: "early", transcription: "/ˈɜːrli/", meaning: "sớm", theory: "Mở đầu đã là âm ơ cuộn lưỡi kéo dài.", sentence: "I wake up early.", sentenceMeaning: "Tôi thức dậy sớm." }
+                        ]
+                    },
+                    '/ə/': {
+                        description: 'Âm schwa (ơ ngắn): Miệng thả lỏng hoàn toàn, âm rất ngắn và yếu.',
+                        words: [
+                            { word: "teacher", transcription: "/ˈtiːtʃər/", meaning: "giáo viên", theory: "Trọng âm rơi vào /ti:/, âm /tʃər/ phía sau đọc cực nhẹ và lướt nhanh.", sentence: "She is an English teacher.", sentenceMeaning: "Cô ấy là giáo viên tiếng Anh." },
+                            { word: "banana", transcription: "/bəˈnɑːnə/", meaning: "quả chuối", theory: "Chỉ nhấn mạnh âm /nɑː/ ở giữa, hai âm /ə/ ở hai bên đọc lướt và nhẹ.", sentence: "I eat a banana every day.", sentenceMeaning: "Tôi ăn một quả chuối mỗi ngày." },
+                            { word: "today", transcription: "/təˈdeɪ/", meaning: "hôm nay", theory: "Âm /tə/ không nhấn trọng âm nên đọc lướt thật nhanh thành schwa.", sentence: "What are you doing today?", sentenceMeaning: "Hôm nay bạn làm gì?" },
+                            { word: "about", transcription: "/əˈbaʊt/", meaning: "về/khoảng", theory: "Âm /ə/ đầu tiên lướt qua như cơn gió.", sentence: "Tell me about yourself.", sentenceMeaning: "Hãy nói cho tôi về bản thân bạn." },
+                            { word: "family", transcription: "/ˈfæməli/", meaning: "gia đình", theory: "Âm giữa /mə/ không được nhấn, đọc lả đi.", sentence: "My family is small.", sentenceMeaning: "Gia đình tôi thì nhỏ." },
+                            { word: "system", transcription: "/ˈsɪstəm/", meaning: "hệ thống", theory: "Phần /təm/ ở đuôi khép miệng lướt thật nhanh.", sentence: "The system is broken.", sentenceMeaning: "Hệ thống đã bị hỏng." },
+                            { word: "problem", transcription: "/ˈprɒbləm/", meaning: "vấn đề", theory: "Âm /ləm/ cuối chỉ nghe rầm rì trong miệng.", sentence: "That is not a problem.", sentenceMeaning: "Đó không phải là vấn đề." },
+                            { word: "student", transcription: "/ˈstjuːdənt/", meaning: "học sinh", theory: "Âm /dənt/ chỉ khựng ở lưỡi lướt thật mờ.", sentence: "He is a smart student.", sentenceMeaning: "Cậu bé là một học sinh thông minh." }
+                        ]
+                    }
+                },
+                "Nguyên âm đôi (Diphthongs)": {
+                    '/eɪ/': {
+                        description: 'Bắt đầu từ âm /e/ và lướt nhanh sang âm /ɪ/. Môi từ mở sang hơi hẹp.',
+                        words: [
+                            { word: "say", transcription: "/seɪ/", meaning: "nói", theory: "Chuyển động môi nhịp nhàng từ /e/ sang /ɪ/.", sentence: "What did you say?", sentenceMeaning: "Bạn đã nói gì?" },
+                            { word: "day", transcription: "/deɪ/", meaning: "ngày", theory: "Âm /d/ bật rung, kéo theo nguyên âm đôi /eɪ/.", sentence: "Have a nice day.", sentenceMeaning: "Chúc một ngày tốt lành." },
+                            { word: "make", transcription: "/meɪk/", meaning: "làm", theory: "Nhớ bật âm /k/ nhẹ ở cuối sau khi kết thúc nguyên âm đôi.", sentence: "I will make a cake.", sentenceMeaning: "Tôi sẽ làm một cái bánh." },
+                            { word: "name", transcription: "/neɪm/", meaning: "tên", theory: "Khóa âm lại bằng cách mím môi rung mũi /m/.", sentence: "My name is John.", sentenceMeaning: "Tên tôi là John." },
+                            { word: "late", transcription: "/leɪt/", meaning: "muộn", theory: "Uốn lưỡi /l/ trượt nhanh và khựng /t/ đuôi.", sentence: "Sorry I am late.", sentenceMeaning: "Xin lỗi tôi đến muộn." },
+                            { word: "wait", transcription: "/weɪt/", meaning: "chờ đợi", theory: "Chu môi âm /w/ nhả tròn sang /eɪ/.", sentence: "Please wait for me.", sentenceMeaning: "Làm ơn hãy đợi tôi." },
+                            { word: "great", transcription: "/ɡreɪt/", meaning: "tuyệt vời", theory: "Khậc /g/ rung cổ họng lướt qua /r/.", sentence: "That is a great idea.", sentenceMeaning: "Đó là một ý tưởng tuyệt vời." },
+                            { word: "train", transcription: "/treɪn/", meaning: "tàu hỏa", theory: "Phụ âm ghép /tr/ bật mạnh môi và kết thúc ngân mũi /n/.", sentence: "I will take the train.", sentenceMeaning: "Tôi sẽ đi bằng tàu hỏa." }
+                        ]
+                    },
+                    '/aɪ/': {
+                        description: 'Bắt đầu từ âm /ɑː/ (há to) và lướt nhanh sang /ɪ/.',
+                        words: [
+                            { word: "my", transcription: "/maɪ/", meaning: "của tôi", theory: "Mím môi bật /m/, sau đó há to miệng và thu gọn lại.", sentence: "This is my book.", sentenceMeaning: "Đây là sách của tôi." },
+                            { word: "high", transcription: "/haɪ/", meaning: "cao", theory: "Âm /h/ chỉ là một luồng hơi nhẹ, trọng tâm dồn vào âm /aɪ/.", sentence: "The mountain is very high.", sentenceMeaning: "Ngọn núi rất cao." },
+                            { word: "buy", transcription: "/baɪ/", meaning: "mua", theory: "Bật môi /b/ mạnh và trượt khẩu hình.", sentence: "I want to buy a new phone.", sentenceMeaning: "Tôi muốn mua điện thoại mới." },
+                            { word: "time", transcription: "/taɪm/", meaning: "thời gian", theory: "Mím chặt môi kết thúc từ để ngân tiếng /m/.", sentence: "What time is it?", sentenceMeaning: "Bây giờ là mấy giờ?" },
+                            { word: "like", transcription: "/laɪk/", meaning: "thích", theory: "Âm /k/ cuối nhả bằng một tiếng khậc sâu trong họng.", sentence: "I like listening to music.", sentenceMeaning: "Tôi thích nghe nhạc." },
+                            { word: "night", transcription: "/naɪt/", meaning: "ban đêm", theory: "Âm /n/ ngân mũi lướt qua /aɪ/ dứt khoát.", sentence: "Good night everyone.", sentenceMeaning: "Chúc mọi người ngủ ngon." },
+                            { word: "find", transcription: "/faɪnd/", meaning: "tìm kiếm", theory: "Cắn môi dưới /f/ và chốt lại bằng cụm âm đuôi /nd/.", sentence: "I cannot find my keys.", sentenceMeaning: "Tôi không tìm thấy chìa khóa." },
+                            { word: "white", transcription: "/waɪt/", meaning: "màu trắng", theory: "Chu môi /w/ nhả ra to rộng và chốt hơi ở /t/.", sentence: "He drives a white car.", sentenceMeaning: "Anh ấy lái chiếc xe trắng." }
+                        ]
+                    },
+                    '/ɔɪ/': {
+                        description: 'Bắt đầu từ /ɔː/ (tròn môi) và lướt sang /ɪ/ (dẹt môi).',
+                        words: [
+                            { word: "boy", transcription: "/bɔɪ/", meaning: "cậu bé", theory: "Bắt đầu bằng đôi môi tròn, sau đó căng nhẹ sang hai bên.", sentence: "The boy is playing football.", sentenceMeaning: "Cậu bé đang chơi bóng đá." },
+                            { word: "toy", transcription: "/tɔɪ/", meaning: "đồ chơi", theory: "Bật hơi /t/ sắc nét trước khi vào âm đôi.", sentence: "He loves his new toy.", sentenceMeaning: "Cậu bé thích đồ chơi mới của mình." },
+                            { word: "voice", transcription: "/vɔɪs/", meaning: "giọng nói", theory: "Rung môi /v/ ở đầu và nhớ xì /s/ rõ ràng ở cuối từ.", sentence: "She has a beautiful voice.", sentenceMeaning: "Cô ấy có một giọng nói đẹp." },
+                            { word: "choice", transcription: "/tʃɔɪs/", meaning: "sự lựa chọn", theory: "Giật môi /tʃ/ mạnh mẽ ở đầu và xì /s/ mượt ở đuôi.", sentence: "It is your choice.", sentenceMeaning: "Đó là lựa chọn của bạn." },
+                            { word: "noise", transcription: "/nɔɪz/", meaning: "tiếng ồn", theory: "Chữ s cuối từ đọc rung dây thanh quản /z/.", sentence: "Do not make a noise.", sentenceMeaning: "Đừng làm ồn." },
+                            { word: "coin", transcription: "/kɔɪn/", meaning: "đồng xu", theory: "Khậc nhẹ /k/ và kết thúc ngân mũi /n/.", sentence: "I found a gold coin.", sentenceMeaning: "Tôi tìm thấy một đồng tiền vàng." },
+                            { word: "join", transcription: "/dʒɔɪn/", meaning: "tham gia", theory: "Giật môi và rung yết hầu mạnh với /dʒ/.", sentence: "Can I join your team?", sentenceMeaning: "Tôi có thể tham gia đội của bạn không?" },
+                            { word: "point", transcription: "/pɔɪnt/", meaning: "điểm/chỉ trỏ", theory: "Bật /p/ và chốt âm /nt/ dứt khoát.", sentence: "He pointed at the sky.", sentenceMeaning: "Anh ấy chỉ lên bầu trời." }
+                        ]
+                    },
+                    '/əʊ/': {
+                        description: 'Lướt từ âm schwa /ə/ sang âm /ʊ/ (hơi tròn môi). Giống âm "âu".',
+                        words: [
+                            { word: "go", transcription: "/ɡəʊ/", meaning: "đi", theory: "Từ âm /g/ rung cổ họng, mở miệng hờ rồi thu tròn môi lại.", sentence: "Let's go to the park.", sentenceMeaning: "Hãy đi đến công viên nào." },
+                            { word: "home", transcription: "/həʊm/", meaning: "nhà", theory: "Kết thúc từ bằng cách mím môi lại để ngân âm /m/.", sentence: "I want to go home.", sentenceMeaning: "Tôi muốn về nhà." },
+                            { word: "phone", transcription: "/fəʊn/", meaning: "điện thoại", theory: "Răng chạm môi bật /f/, tròn môi dần /əʊ/ và ngân /n/.", sentence: "My phone is ringing.", sentenceMeaning: "Điện thoại của tôi đang reo." },
+                            { word: "boat", transcription: "/bəʊt/", meaning: "con thuyền", theory: "Bật môi /b/ rung thanh quản.", sentence: "The boat is on the river.", sentenceMeaning: "Con thuyền đang ở trên sông." },
+                            { word: "road", transcription: "/rəʊd/", meaning: "con đường", theory: "Chu môi /r/, lướt êm và rung nhẹ cổ họng /d/.", sentence: "Walk down this road.", sentenceMeaning: "Hãy đi bộ xuống con đường này." },
+                            { word: "old", transcription: "/əʊld/", meaning: "cũ/già", theory: "Uốn vòm lưỡi /l/ và bật rung /d/ đuôi.", sentence: "This car is very old.", sentenceMeaning: "Chiếc xe này rất cũ." },
+                            { word: "cold", transcription: "/kəʊld/", meaning: "lạnh", theory: "Khậc /k/ từ cổ, nhả vòng miệng sang tròn /əʊ/.", sentence: "The weather is cold today.", sentenceMeaning: "Thời tiết hôm nay lạnh." },
+                            { word: "show", transcription: "/ʃəʊ/", meaning: "buổi diễn/chỉ cho xem", theory: "Chu môi mỏ nhọn /ʃ/ xì dài trước khi mở miệng.", sentence: "Can you show me the way?", sentenceMeaning: "Bạn có thể chỉ đường cho tôi không?" }
+                        ]
+                    },
+                    '/aʊ/': {
+                        description: 'Bắt đầu há to miệng /ɑː/ rồi khép dần và tròn môi cho /ʊ/. Giống âm "ao".',
+                        words: [
+                            { word: "now", transcription: "/naʊ/", meaning: "bây giờ", theory: "Chuyển đổi khẩu hình mượt mà từ rộng sang hẹp.", sentence: "We need to leave now.", sentenceMeaning: "Chúng ta cần rời đi ngay bây giờ." },
+                            { word: "house", transcription: "/haʊs/", meaning: "ngôi nhà", theory: "Đẩy hơi /h/, trượt âm /aʊ/ và nhớ xì âm /s/ mạnh ở cuối.", sentence: "My house is big.", sentenceMeaning: "Nhà của tôi lớn." },
+                            { word: "out", transcription: "/aʊt/", meaning: "ra ngoài", theory: "Hoàn thành nguyên âm đôi trước khi đưa lưỡi chặn âm /t/.", sentence: "Let's go out for dinner.", sentenceMeaning: "Hãy ra ngoài ăn tối đi." },
+                            { word: "how", transcription: "/haʊ/", meaning: "như thế nào", theory: "Thở hắt /h/ rất nhẹ ở đầu.", sentence: "How are you today?", sentenceMeaning: "Hôm nay bạn thế nào?" },
+                            { word: "mouse", transcription: "/maʊs/", meaning: "con chuột", theory: "Mím môi bật /m/, xì răng /s/ sắc bén ở đuôi.", sentence: "I saw a small mouse.", sentenceMeaning: "Tôi đã thấy một con chuột nhỏ." },
+                            { word: "town", transcription: "/taʊn/", meaning: "thị trấn", theory: "Bật lưỡi /t/ giòn giã và ngân /n/ mũi.", sentence: "She lives in a small town.", sentenceMeaning: "Cô ấy sống trong một thị trấn nhỏ." },
+                            { word: "down", transcription: "/daʊn/", meaning: "xuống", theory: "Rung thanh quản /d/ kết hợp miệng há to khép dần.", sentence: "Please sit down.", sentenceMeaning: "Làm ơn hãy ngồi xuống." },
+                            { word: "sound", transcription: "/saʊnd/", meaning: "âm thanh", theory: "Xì /s/ răng, và chốt lại bằng cụm rung /nd/.", sentence: "That sounds like a good idea.", sentenceMeaning: "Nghe có vẻ là một ý tưởng hay." }
+                        ]
+                    },
+                    '/ɪə/': {
+                        description: 'Lướt từ âm /ɪ/ dẹt môi sang âm schwa /ə/ thả lỏng.',
+                        words: [
+                            { word: "here", transcription: "/hɪər/", meaning: "ở đây", theory: "Bắt đầu bằng /h/, miệng hơi căng sang bên rồi thả lỏng hoàn toàn ở đuôi.", sentence: "Come over here.", sentenceMeaning: "Lại đây nào." },
+                            { word: "near", transcription: "/nɪər/", meaning: "gần", theory: "Đầu lưỡi chạm vòm miệng /n/ trước khi lướt nguyên âm đôi.", sentence: "The shop is near my house.", sentenceMeaning: "Cửa hàng ở gần nhà tôi." },
+                            { word: "ear", transcription: "/ɪər/", meaning: "tai", theory: "Bắt đầu trực tiếp bằng /ɪ/ và buông lỏng tự nhiên thành /ə/.", sentence: "My ear hurts a little.", sentenceMeaning: "Tai tôi hơi đau một chút." },
+                            { word: "dear", transcription: "/dɪər/", meaning: "thân mến", theory: "Bật rung /d/ và thư giãn miệng ra đuôi.", sentence: "Oh dear, what happened?", sentenceMeaning: "Ôi trời, chuyện gì đã xảy ra?" },
+                            { word: "year", transcription: "/jɪər/", meaning: "năm", theory: "Ép lưỡi cọ sát /j/ đầu tiên rồi nhả về /ɪə/.", sentence: "Happy new year.", sentenceMeaning: "Chúc mừng năm mới." },
+                            { word: "clear", transcription: "/klɪər/", meaning: "rõ ràng", theory: "Bật cụm phụ âm /kl/ dứt khoát.", sentence: "The water is very clear.", sentenceMeaning: "Nước rất trong." },
+                            { word: "beer", transcription: "/bɪər/", meaning: "bia", theory: "Mím môi bật rung /b/ và giãn mép từ từ.", sentence: "He ordered a glass of beer.", sentenceMeaning: "Anh ấy đã gọi một ly bia." },
+                            { word: "cheer", transcription: "/tʃɪər/", meaning: "cổ vũ", theory: "Giật môi /tʃ/ thật mạnh để khởi đầu.", sentence: "They cheered for the team.", sentenceMeaning: "Họ đã cổ vũ cho đội nhà." }
+                        ]
+                    },
+                    '/eə/': {
+                        description: 'Lướt từ âm /e/ sang âm schwa /ə/ thả lỏng.',
+                        words: [
+                            { word: "hair", transcription: "/heər/", meaning: "tóc", theory: "Hơi mở miệng âm /e/ rồi rụt cằm nhẹ về /ə/.", sentence: "She has long black hair.", sentenceMeaning: "Cô ấy có mái tóc đen dài." },
+                            { word: "chair", transcription: "/tʃeər/", meaning: "cái ghế", theory: "Âm /tʃ/ giật môi mạnh, tiếp nối mượt mà vào /eə/.", sentence: "Sit on this wooden chair.", sentenceMeaning: "Hãy ngồi trên chiếc ghế gỗ này." },
+                            { word: "where", transcription: "/weər/", meaning: "ở đâu", theory: "Chu môi /w/ sau đó nhả nhanh về /eə/.", sentence: "Where are you going?", sentenceMeaning: "Bạn đang đi đâu vậy?" },
+                            { word: "air", transcription: "/eər/", meaning: "không khí", theory: "Miệng mở hờ chữ e buông thõng.", sentence: "The fresh air is good for you.", sentenceMeaning: "Không khí trong lành rất tốt cho bạn." },
+                            { word: "there", transcription: "/ðeər/", meaning: "ở đó", theory: "Kẹp lưỡi giữa răng rung /ð/ rồi nhả ra ngay.", sentence: "Put the box over there.", sentenceMeaning: "Hãy đặt cái hộp ở đằng kia." },
+                            { word: "care", transcription: "/keər/", meaning: "quan tâm", theory: "Khậc /k/ từ cổ họng bung ra miệng rộng.", sentence: "Take care of yourself.", sentenceMeaning: "Hãy chăm sóc bản thân." },
+                            { word: "share", transcription: "/ʃeər/", meaning: "chia sẻ", theory: "Chu môi nhọn /ʃ/ thổi hơi thật mạnh.", sentence: "Please share this with everyone.", sentenceMeaning: "Vui lòng chia sẻ điều này với mọi người." },
+                            { word: "wear", transcription: "/weər/", meaning: "mặc", theory: "Chu môi /w/ nhả ra lơi lỏng.", sentence: "What are you going to wear?", sentenceMeaning: "Bạn định mặc gì?" }
+                        ]
+                    },
+                    '/ʊə/': {
+                        description: 'Lướt từ âm /ʊ/ tròn môi sang âm schwa /ə/ thả lỏng.',
+                        words: [
+                            { word: "tour", transcription: "/tʊər/", meaning: "chuyến du lịch", theory: "Từ tư thế tròn môi /ʊ/ nhả lỏng miệng ra /ə/.", sentence: "We took a city tour.", sentenceMeaning: "Chúng tôi đã tham gia một chuyến tham quan thành phố." },
+                            { word: "poor", transcription: "/pʊər/", meaning: "nghèo", theory: "Mím môi bật hơi /p/ rồi duy trì độ tròn môi cho /ʊə/.", sentence: "He wants to help poor people.", sentenceMeaning: "Anh ấy muốn giúp đỡ người nghèo." },
+                            { word: "sure", transcription: "/ʃʊər/", meaning: "chắc chắn", theory: "Âm /ʃ/ phải chu môi và cong lưỡi xì hơi dài trước khi vào âm chính.", sentence: "Are you sure about that?", sentenceMeaning: "Bạn có chắc về điều đó không?" },
+                            { word: "pure", transcription: "/pjʊər/", meaning: "tinh khiết", theory: "Lướt qua âm /j/ (dờ) trước khi đến /ʊə/.", sentence: "This is pure gold.", sentenceMeaning: "Đây là vàng nguyên chất." },
+                            { word: "cure", transcription: "/kjʊər/", meaning: "chữa trị", theory: "Bật /k/ và nối /j/ rất điệu đà.", sentence: "They found a cure for the disease.", sentenceMeaning: "Họ đã tìm ra phương pháp chữa trị căn bệnh này." },
+                            { word: "tourist", transcription: "/ˈtʊərɪst/", meaning: "du khách", theory: "Nhấn mạnh âm tiết đầu, xì /st/ cuối thật gọn.", sentence: "The tourist took many photos.", sentenceMeaning: "Khách du lịch đã chụp rất nhiều ảnh." },
+                            { word: "furious", transcription: "/ˈfjʊəriəs/", meaning: "giận dữ", theory: "Răng chạm môi /f/, kéo nguyên âm kép.", sentence: "He was furious with the result.", sentenceMeaning: "Anh ta đã rất tức giận với kết quả đó." },
+                            { word: "mature", transcription: "/məˈtʃʊər/", meaning: "trưởng thành", theory: "Trọng âm rơi vào /tʃʊər/ giật môi rung hậu.", sentence: "He is a mature young man.", sentenceMeaning: "Cậu ấy là một chàng trai trưởng thành." }
+                        ]
+                    }
+                },
+                "Phụ âm (Consonants)": {
+                    '/p/': {
+                        description: 'Âm vô thanh. Mím chặt hai môi, nén hơi lại sau đó bật mạnh ra.',
+                        words: [
+                            { word: "pen", transcription: "/pen/", meaning: "cái bút", theory: "Đặt giấy trước miệng, khi phát âm /p/ tờ giấy phải rung bật lên.", sentence: "I write with a blue pen.", sentenceMeaning: "Tôi viết bằng bút xanh." },
+                            { word: "pig", transcription: "/pɪg/", meaning: "con lợn", theory: "Bật mạnh hơi, chú ý không để dây thanh quản rung.", sentence: "The pig is eating.", sentenceMeaning: "Con lợn đang ăn." },
+                            { word: "stop", transcription: "/stɒp/", meaning: "dừng lại", theory: "Âm /p/ ở cuối từ vẫn phải mím môi và nhả hơi nhẹ.", sentence: "Please stop talking.", sentenceMeaning: "Làm ơn hãy ngừng nói." },
+                            { word: "happy", transcription: "/ˈhæpi/", meaning: "vui vẻ", theory: "Giữ hai môi chạm nhau dứt khoát trước khi mở ra.", sentence: "She looks very happy.", sentenceMeaning: "Cô ấy trông rất vui." },
+                            { word: "park", transcription: "/pɑːrk/", meaning: "công viên", theory: "Bật môi mạnh mở đầu kết hợp với âm /ɑː/ sâu.", sentence: "Let's walk in the park.", sentenceMeaning: "Hãy đi dạo trong công viên." },
+                            { word: "apple", transcription: "/ˈæpl/", meaning: "quả táo", theory: "Chữ p kép ở giữa từ chỉ bật một lần dứt khoát.", sentence: "I eat an apple daily.", sentenceMeaning: "Tôi ăn một quả táo mỗi ngày." },
+                            { word: "map", transcription: "/mæp/", meaning: "bản đồ", theory: "Chốt từ bằng cách mím môi tạo tiếng púp nhỏ.", sentence: "We need a map.", sentenceMeaning: "Chúng ta cần bản đồ." },
+                            { word: "play", transcription: "/pleɪ/", meaning: "chơi", theory: "Bật /p/ chuyển ngay sang cong lưỡi chữ /l/.", sentence: "They play football.", sentenceMeaning: "Họ chơi bóng đá." }
+                        ]
+                    },
+                    '/b/': {
+                        description: 'Âm hữu thanh. Khẩu hình giống /p/ nhưng phải rung dây thanh quản ở cổ họng.',
+                        words: [
+                            { word: "book", transcription: "/bʊk/", meaning: "quyển sách", theory: "Mím môi và phát ra tiếng từ cổ họng (rung cổ) trước khi nhả môi.", sentence: "Read this good book.", sentenceMeaning: "Hãy đọc cuốn sách hay này." },
+                            { word: "big", transcription: "/bɪg/", meaning: "to lớn", theory: "Rung thanh quản mạnh ngay từ đầu chữ b.", sentence: "That is a big house.", sentenceMeaning: "Đó là một ngôi nhà lớn." },
+                            { word: "job", transcription: "/dʒɒb/", meaning: "công việc", theory: "Khi /b/ đứng cuối, mím môi lại và giữ tiếng rung nhẹ trong họng.", sentence: "He got a new job.", sentenceMeaning: "Anh ấy đã nhận một công việc mới." },
+                            { word: "baby", transcription: "/ˈbeɪbi/", meaning: "em bé", theory: "Hai âm /b/ liên tiếp đều phải rung họng ồm ồm.", sentence: "The baby is sleeping.", sentenceMeaning: "Em bé đang ngủ." },
+                            { word: "boy", transcription: "/bɔɪ/", meaning: "cậu bé", theory: "Rung họng kết hợp chu môi của âm /ɔɪ/.", sentence: "The boy is playing.", sentenceMeaning: "Cậu bé đang chơi." },
+                            { word: "bank", transcription: "/bæŋk/", meaning: "ngân hàng", theory: "Bật /b/ mạnh vào ngay âm bẹt.", sentence: "I need to go to the bank.", sentenceMeaning: "Tôi cần đến ngân hàng." },
+                            { word: "club", transcription: "/klʌb/", meaning: "câu lạc bộ", theory: "Đừng quên rung môi nhẹ khi kết thúc từ này.", sentence: "He joined a chess club.", sentenceMeaning: "Cậu ấy đã tham gia câu lạc bộ cờ vua." },
+                            { word: "table", transcription: "/ˈteɪbl/", meaning: "cái bàn", theory: "Rung /b/ lướt nhẹ sang âm uốn lưỡi /l/.", sentence: "Put it on the table.", sentenceMeaning: "Đặt nó lên bàn." }
+                        ]
+                    },
+                    '/t/': {
+                        description: 'Âm vô thanh. Đặt đầu lưỡi chạm vào lợi trên, dồn hơi rồi hạ lưỡi bật mạnh ra.',
+                        words: [
+                            { word: "tea", transcription: "/tiː/", meaning: "trà", theory: "Không đọc thành chữ 'tờ' của tiếng Việt, mà là luồng hơi bật ra.", sentence: "Would you like some tea?", sentenceMeaning: "Bạn có muốn dùng chút trà không?" },
+                            { word: "ten", transcription: "/ten/", meaning: "số mười", theory: "Bật hơi dứt khoát /t/ và lập tức chuyển sang /en/.", sentence: "I have ten apples.", sentenceMeaning: "Tôi có mười quả táo." },
+                            { word: "hot", transcription: "/hɒt/", meaning: "nóng", theory: "Khi đứng cuối, chỉ cần đưa lưỡi lên lợi trên để chặn luồng hơi.", sentence: "The weather is very hot.", sentenceMeaning: "Thời tiết rất nóng." },
+                            { word: "water", transcription: "/ˈwɔːtər/", meaning: "nước", theory: "Âm /t/ đứng giữa có thể đọc lướt thành 'soft d' (tiếng Anh-Mỹ).", sentence: "Drink plenty of water.", sentenceMeaning: "Hãy uống nhiều nước." },
+                            { word: "time", transcription: "/taɪm/", meaning: "thời gian", theory: "Bật đầu lưỡi mạnh mẽ trước khi vào nguyên âm đôi.", sentence: "What time is it?", sentenceMeaning: "Bây giờ là mấy giờ?" },
+                            { word: "tall", transcription: "/tɔːl/", meaning: "cao", theory: "Bật hơi /t/ sắc bén.", sentence: "He is a tall man.", sentenceMeaning: "Anh ấy là một người cao." },
+                            { word: "cat", transcription: "/kæt/", meaning: "con mèo", theory: "Chặn lưỡi tạo tiếng click khô khốc ở cuối.", sentence: "The cat is sleeping.", sentenceMeaning: "Con mèo đang ngủ." },
+                            { word: "train", transcription: "/treɪn/", meaning: "tàu hỏa", theory: "Đánh lưỡi /t/ liền mạch với độ chu môi của /r/.", sentence: "The train is arriving.", sentenceMeaning: "Tàu đang đến." }
+                        ]
+                    },
+                    '/d/': {
+                        description: 'Âm hữu thanh. Khẩu hình giống /t/ nhưng phải rung dây thanh quản.',
+                        words: [
+                            { word: "day", transcription: "/deɪ/", meaning: "ngày", theory: "Đầu lưỡi chạm lợi trên, tạo độ rung trong cổ họng rồi mới bật ra.", sentence: "It is a beautiful day.", sentenceMeaning: "Đó là một ngày tuyệt đẹp." },
+                            { word: "dog", transcription: "/dɒɡ/", meaning: "con chó", theory: "Cả âm đầu và âm cuối đều là âm rung, giữ giọng trầm.", sentence: "The dog runs fast.", sentenceMeaning: "Con chó chạy rất nhanh." },
+                            { word: "good", transcription: "/ɡʊd/", meaning: "tốt", theory: "Đứng cuối từ, ngân nhẹ tiếng rung trong vòm miệng.", sentence: "He is a good boy.", sentenceMeaning: "Cậu bé là một đứa trẻ ngoan." },
+                            { word: "bad", transcription: "/bæd/", meaning: "tệ", theory: "Chặn lưỡi lại rung thanh quản khi kết thúc từ.", sentence: "That is a bad idea.", sentenceMeaning: "Đó là một ý kiến tồi." },
+                            { word: "door", transcription: "/dɔːr/", meaning: "cửa", theory: "Rung /d/ ồm ồm ở đầu từ.", sentence: "Open the door.", sentenceMeaning: "Mở cửa ra." },
+                            { word: "deep", transcription: "/diːp/", meaning: "sâu", theory: "Rung /d/ kéo dài vào âm /i:/.", sentence: "The ocean is deep.", sentenceMeaning: "Đại dương rất sâu." },
+                            { word: "food", transcription: "/fuːd/", meaning: "thức ăn", theory: "Khóa âm lại bằng cách ép lưỡi rung cổ.", sentence: "The food is tasty.", sentenceMeaning: "Thức ăn rất ngon." },
+                            { word: "address", transcription: "/əˈdres/", meaning: "địa chỉ", theory: "Trọng âm ngay tại chữ /d/ rền vang.", sentence: "What is your address?", sentenceMeaning: "Địa chỉ của bạn là gì?" }
+                        ]
+                    },
+                    '/k/': {
+                        description: 'Âm vô thanh. Cuống lưỡi nâng lên chặn ngạc mềm, luồng hơi bị dồn lại rồi bật mạnh.',
+                        words: [
+                            { word: "key", transcription: "/kiː/", meaning: "chìa khóa", theory: "Bật hơi sắc bén từ sâu trong họng, không rung dây thanh quản.", sentence: "Where is my key?", sentenceMeaning: "Chìa khóa của tôi ở đâu?" },
+                            { word: "car", transcription: "/kɑːr/", meaning: "xe hơi", theory: "Há to miệng và bật hơi /k/ rõ ràng trước khi vào /ɑː/.", sentence: "Park the car here.", sentenceMeaning: "Đỗ xe ở đây." },
+                            { word: "book", transcription: "/bʊk/", meaning: "sách", theory: "Khi đứng ở cuối, chặn hơi bằng cuống lưỡi và nhả ra một âm khậc nhẹ.", sentence: "Open your book.", sentenceMeaning: "Mở sách của bạn ra." },
+                            { word: "school", transcription: "/skuːl/", meaning: "trường học", theory: "Chữ /k/ đi sau /s/ sẽ bớt bật hơi đi một chút.", sentence: "I go to school every day.", sentenceMeaning: "Tôi đi học mỗi ngày." },
+                            { word: "cat", transcription: "/kæt/", meaning: "con mèo", theory: "Bật /k/ khô khốc mở mồm chữ A bẹt.", sentence: "The cat is cute.", sentenceMeaning: "Con mèo rất dễ thương." },
+                            { word: "keep", transcription: "/kiːp/", meaning: "giữ", theory: "Bật sâu từ yết hầu đẩy hơi mạnh ra ngoài.", sentence: "Keep the change.", sentenceMeaning: "Giữ lại tiền lẻ nhé." },
+                            { word: "look", transcription: "/lʊk/", meaning: "nhìn", theory: "Kết thúc bằng một cú khậc nhẹ trong cổ.", sentence: "Look at the sky.", sentenceMeaning: "Nhìn lên bầu trời kìa." },
+                            { word: "quick", transcription: "/kwɪk/", meaning: "nhanh", theory: "Chữ Q đọc là /kw/, bật /k/ rồi chu môi /w/.", sentence: "Be quick.", sentenceMeaning: "Nhanh lên nào." }
+                        ]
+                    },
+                    '/ɡ/': {
+                        description: 'Âm hữu thanh. Khẩu hình giống /k/ nhưng phải rung cổ họng.',
+                        words: [
+                            { word: "go", transcription: "/ɡəʊ/", meaning: "đi", theory: "Cảm nhận độ rung ở yết hầu khi bạn bật cuống lưỡi.", sentence: "Let's go home.", sentenceMeaning: "Cùng về nhà thôi." },
+                            { word: "get", transcription: "/ɡet/", meaning: "lấy, nhận", theory: "Phát âm giống chữ 'g' tiếng Việt nhưng sâu và mạnh hơn.", sentence: "I need to get some sleep.", sentenceMeaning: "Tôi cần phải ngủ một lát." },
+                            { word: "big", transcription: "/bɪg/", meaning: "to lớn", theory: "Âm đuôi /g/ rất quan trọng, giữ độ ngân trong yết hầu.", sentence: "He has a big smile.", sentenceMeaning: "Anh ấy có một nụ cười tươi." },
+                            { word: "green", transcription: "/ɡriːn/", meaning: "màu xanh lá", theory: "Bật rung /g/ lướt vào cuộn lưỡi /r/ mượt mà.", sentence: "The grass is green.", sentenceMeaning: "Cỏ màu xanh." },
+                            { word: "girl", transcription: "/ɡɜːrl/", meaning: "cô gái", theory: "Rung thanh quản sâu kéo theo âm ơ dài.", sentence: "She is a smart girl.", sentenceMeaning: "Cô ấy là một cô gái thông minh." },
+                            { word: "game", transcription: "/ɡeɪm/", meaning: "trò chơi", theory: "Bật /g/ dứt khoát rền vang.", sentence: "Let's play a game.", sentenceMeaning: "Cùng chơi một trò chơi nhé." },
+                            { word: "dog", transcription: "/dɒɡ/", meaning: "con chó", theory: "Khóa âm /g/ ở đuôi, giữ tiếng ồm trong cổ.", sentence: "I have a pet dog.", sentenceMeaning: "Tôi có một con chó cưng." },
+                            { word: "again", transcription: "/əˈɡen/", meaning: "lần nữa", theory: "Nhấn mạnh âm /g/ ở giữa từ.", sentence: "Try it again.", sentenceMeaning: "Hãy thử lại lần nữa." }
+                        ]
+                    },
+                    '/f/': {
+                        description: 'Âm vô thanh. Răng cửa trên chạm nhẹ vào môi dưới, thổi luồng hơi ra liên tục.',
+                        words: [
+                            { word: "five", transcription: "/faɪv/", meaning: "số năm", theory: "Tạo tiếng xì xào của gió đi qua khe răng và môi.", sentence: "I have five dollars.", sentenceMeaning: "Tôi có năm đô la." },
+                            { word: "food", transcription: "/fuːd/", meaning: "thức ăn", theory: "Thổi hơi mạnh /f/ kéo dài sang âm u.", sentence: "This food is very spicy.", sentenceMeaning: "Thức ăn này rất cay." },
+                            { word: "laugh", transcription: "/læf/", meaning: "cười", theory: "Đuôi 'gh' được phát âm là /f/. Răng cắn môi thổi hơi kết thúc từ.", sentence: "You make me laugh.", sentenceMeaning: "Bạn làm tôi cười." },
+                            { word: "coffee", transcription: "/ˈkɒfi/", meaning: "cà phê", theory: "Kẹp giữa 2 nguyên âm nhưng vẫn phải mài răng vào môi dưới.", sentence: "I drink coffee every day.", sentenceMeaning: "Tôi uống cà phê mỗi ngày." },
+                            { word: "fish", transcription: "/fɪʃ/", meaning: "con cá", theory: "Răng trên tỳ nhẹ môi dưới đẩy luồng hơi mảnh.", sentence: "Fish live in water.", sentenceMeaning: "Cá sống ở trong nước." },
+                            { word: "find", transcription: "/faɪnd/", meaning: "tìm", theory: "Thổi hơi mạnh tay chữ F ở đầu.", sentence: "I cannot find it.", sentenceMeaning: "Tôi không thể tìm thấy nó." },
+                            { word: "half", transcription: "/hɑːf/", meaning: "một nửa", theory: "Chữ l câm, kết thúc bằng tiếng thổi hơi /f/.", sentence: "Give me half of it.", sentenceMeaning: "Đưa cho tôi một nửa." },
+                            { word: "photo", transcription: "/ˈfəʊtəʊ/", meaning: "bức ảnh", theory: "Chữ 'ph' phát âm là /f/.", sentence: "Take a photo of us.", sentenceMeaning: "Hãy chụp cho chúng tôi một bức ảnh." }
+                        ]
+                    },
+                    '/v/': {
+                        description: 'Âm hữu thanh. Khẩu hình giống /f/ nhưng dây thanh quản rung lên.',
+                        words: [
+                            { word: "very", transcription: "/ˈveri/", meaning: "rất", theory: "Cắn môi dưới và tạo tiếng rền vang (như tiếng ong bay) ở cổ họng.", sentence: "She is very beautiful.", sentenceMeaning: "Cô ấy rất xinh đẹp." },
+                            { word: "voice", transcription: "/vɔɪs/", meaning: "giọng nói", theory: "Rung mạnh ngay từ đầu, sau đó chuyển sang nguyên âm đôi.", sentence: "Listen to my voice.", sentenceMeaning: "Hãy nghe giọng nói của tôi." },
+                            { word: "live", transcription: "/lɪv/", meaning: "sống", theory: "Âm /v/ cuối từ: răng trên cắn môi dưới và rung nhẹ thanh quản.", sentence: "Where do you live?", sentenceMeaning: "Bạn sống ở đâu?" },
+                            { word: "love", transcription: "/lʌv/", meaning: "yêu", theory: "Rung môi khi kết thúc từ để từ không bị hẫng.", sentence: "I love my family.", sentenceMeaning: "Tôi yêu gia đình mình." },
+                            { word: "view", transcription: "/vjuː/", meaning: "quang cảnh", theory: "Rung môi /v/ mượt mà lướt qua /j/.", sentence: "The view is amazing.", sentenceMeaning: "Quang cảnh thật tuyệt vời." },
+                            { word: "visit", transcription: "/ˈvɪzɪt/", meaning: "thăm", theory: "Bắt đầu với độ rung môi sắc nét.", sentence: "I will visit you soon.", sentenceMeaning: "Tôi sẽ đến thăm bạn sớm." },
+                            { word: "have", transcription: "/hæv/", meaning: "có", theory: "Chốt từ bằng cách mài răng vào môi dưới tạo độ rung vang.", sentence: "I have a question.", sentenceMeaning: "Tôi có một câu hỏi." },
+                            { word: "seven", transcription: "/ˈsevn/", meaning: "số bảy", theory: "Âm /v/ ở giữa từ cần rền vang nhẹ.", sentence: "I wake up at seven.", sentenceMeaning: "Tôi thức dậy lúc bảy giờ." }
+                        ]
+                    },
+                    '/θ/': {
+                        description: 'Âm TH vô thanh. Đặt đầu lưỡi vươn ra GIỮA hai hàm răng cửa, thổi luồng hơi ra.',
+                        words: [
+                            { word: "think", transcription: "/θɪŋk/", meaning: "nghĩ", theory: "Đừng đọc là 't' hay 'th' Việt Nam. Lưỡi kẹp giữa răng và xì hơi.", sentence: "I think it is good.", sentenceMeaning: "Tôi nghĩ điều đó tốt." },
+                            { word: "three", transcription: "/θriː/", meaning: "số ba", theory: "Thổi hơi qua kẽ răng-lưỡi rồi rụt lưỡi lại cuộn âm /r/.", sentence: "I count to three.", sentenceMeaning: "Tôi đếm đến ba." },
+                            { word: "month", transcription: "/mʌnθ/", meaning: "tháng", theory: "Phát âm xong /n/ thì thè lưỡi ra thổi hơi để tạo đuôi /θ/.", sentence: "See you next month.", sentenceMeaning: "Hẹn gặp bạn vào tháng sau." },
+                            { word: "thanks", transcription: "/θæŋks/", meaning: "cảm ơn", theory: "Xì lưỡi giữa răng rồi hạ hàm ngay ra âm bẹt.", sentence: "Thanks for your help.", sentenceMeaning: "Cảm ơn sự giúp đỡ của bạn." },
+                            { word: "thin", transcription: "/θɪn/", meaning: "mỏng/gầy", theory: "Đẩy hơi mảnh qua đầu lưỡi đang kẹp.", sentence: "The book is thin.", sentenceMeaning: "Cuốn sách rất mỏng." },
+                            { word: "throw", transcription: "/θrəʊ/", meaning: "ném", theory: "Thổi hơi xong rụt lưỡi thật nhanh cuộn /r/.", sentence: "Throw the ball to me.", sentenceMeaning: "Ném quả bóng cho tôi." },
+                            { word: "math", transcription: "/mæθ/", meaning: "toán", theory: "Đừng quên thè lưỡi thổi hơi ở cuối chữ.", sentence: "Math is my favorite subject.", sentenceMeaning: "Toán là môn học yêu thích của tôi." },
+                            { word: "both", transcription: "/bəʊθ/", meaning: "cả hai", theory: "Ngân âm âu xong đưa lưỡi ra thổi hơi.", sentence: "I like both of them.", sentenceMeaning: "Tôi thích cả hai thứ." }
+                        ]
+                    },
+                    '/ð/': {
+                        description: 'Âm TH hữu thanh. Lưỡi kẹp giữa răng nhưng tạo độ rung rền ở cổ họng.',
+                        words: [
+                            { word: "this", transcription: "/ðɪs/", meaning: "cái này", theory: "Kẹp lưỡi giữa răng, phát ra tiếng rung như con ong từ cổ họng.", sentence: "This is my car.", sentenceMeaning: "Đây là xe của tôi." },
+                            { word: "mother", transcription: "/ˈmʌðər/", meaning: "mẹ", theory: "Âm rung nằm ở giữa từ, lướt qua mượt mà.", sentence: "My mother is cooking.", sentenceMeaning: "Mẹ tôi đang nấu ăn." },
+                            { word: "with", transcription: "/wɪð/", meaning: "với", theory: "Âm /ð/ đuôi phải để lại một độ rung vang nhẹ lúc kết thúc.", sentence: "Come with me.", sentenceMeaning: "Hãy đi cùng tôi." },
+                            { word: "that", transcription: "/ðæt/", meaning: "kia", theory: "Bắt đầu bằng tiếng rền /ð/ và chặn hơi bằng âm /t/.", sentence: "Look at that bird.", sentenceMeaning: "Nhìn con chim kia kìa." },
+                            { word: "they", transcription: "/ðeɪ/", meaning: "họ", theory: "Rung lưỡi giữa răng chuyển trơn tru vào /eɪ/.", sentence: "They are my friends.", sentenceMeaning: "Họ là bạn của tôi." },
+                            { word: "there", transcription: "/ðeər/", meaning: "ở đó", theory: "Âm rền ong ong bật ra đầu câu.", sentence: "Look over there.", sentenceMeaning: "Nhìn qua đằng kia kìa." },
+                            { word: "weather", transcription: "/ˈweðər/", meaning: "thời tiết", theory: "Rung lưỡi nhẹ kẹp giữa hai đoạn nguyên âm.", sentence: "The weather is nice.", sentenceMeaning: "Thời tiết rất đẹp." },
+                            { word: "breathe", transcription: "/briːð/", meaning: "hít thở", theory: "Động từ này có âm E cuối nên đọc âm /ð/ rung vang đuôi.", sentence: "Breathe in deeply.", sentenceMeaning: "Hít vào thật sâu." }
+                        ]
+                    },
+                    '/s/': {
+                        description: 'Âm vô thanh. Hai hàm răng khép lại, đầu lưỡi đặt ngay sau răng cửa dưới, xì hơi mạnh.',
+                        words: [
+                            { word: "see", transcription: "/siː/", meaning: "nhìn", theory: "Kéo căng mép sang hai bên, xì hơi sắc nét như tiếng rắn des.", sentence: "I can see you.", sentenceMeaning: "Tôi có thể nhìn thấy bạn." },
+                            { word: "sun", transcription: "/sʌn/", meaning: "mặt trời", theory: "Luồng hơi phải đi qua khe nhỏ giữa hai hàm răng đang khép.", sentence: "The sun is hot.", sentenceMeaning: "Mặt trời rất nóng." },
+                            { word: "bus", transcription: "/bʌs/", meaning: "xe buýt", theory: "Xì đuôi /s/ thật rõ ràng để không bị nhầm với từ khác.", sentence: "Wait for the bus.", sentenceMeaning: "Hãy đợi xe buýt." },
+                            { word: "nice", transcription: "/naɪs/", meaning: "tốt, đẹp", theory: "Phải để lại tiếng xì răng rõ ở cuối từ.", sentence: "Have a nice day.", sentenceMeaning: "Chúc một ngày tốt lành." },
+                            { word: "say", transcription: "/seɪ/", meaning: "nói", theory: "Xì dứt khoát trước khi trượt khẩu hình.", sentence: "What did you say?", sentenceMeaning: "Bạn đã nói gì?" },
+                            { word: "city", transcription: "/ˈsɪti/", meaning: "thành phố", theory: "Chữ c đi với i,e,y đọc là /s/.", sentence: "I live in a big city.", sentenceMeaning: "Tôi sống ở một thành phố lớn." },
+                            { word: "house", transcription: "/haʊs/", meaning: "ngôi nhà", theory: "Xì đuôi mạnh để không nhầm với chữ How.", sentence: "My house is near here.", sentenceMeaning: "Nhà tôi ở gần đây." },
+                            { word: "place", transcription: "/pleɪs/", meaning: "địa điểm", theory: "Chữ ce ở đuôi cũng xì /s/.", sentence: "This is a beautiful place.", sentenceMeaning: "Đây là một nơi tuyệt đẹp." }
+                        ]
+                    },
+                    '/z/': {
+                        description: 'Âm hữu thanh. Khẩu hình hoàn toàn giống /s/ nhưng rung dây thanh quản.',
+                        words: [
+                            { word: "zoo", transcription: "/zuː/", meaning: "sở thú", theory: "Khép răng, tạo tiếng kêu rền rĩ như muỗi bay 'zzzzz'.", sentence: "We went to the zoo.", sentenceMeaning: "Chúng tôi đã đi đến sở thú." },
+                            { word: "easy", transcription: "/ˈiːzi/", meaning: "dễ dàng", theory: "Chữ 's' ở giữa đọc là /z/ rung thanh quản.", sentence: "The test is very easy.", sentenceMeaning: "Bài kiểm tra rất dễ." },
+                            { word: "is", transcription: "/ɪz/", meaning: "là", theory: "Âm /z/ cuối từ cực kỳ quan trọng trong tiếng Anh.", sentence: "He is my friend.", sentenceMeaning: "Anh ấy là bạn của tôi." },
+                            { word: "lazy", transcription: "/ˈleɪzi/", meaning: "lười biếng", theory: "Tiếp tục tạo độ rền của muỗi ở giữa câu.", sentence: "Do not be lazy.", sentenceMeaning: "Đừng lười biếng." },
+                            { word: "zero", transcription: "/ˈzɪərəʊ/", meaning: "số không", theory: "Rung thanh quản mạnh ngay chữ z đầu.", sentence: "The score is zero.", sentenceMeaning: "Tỷ số là 0." },
+                            { word: "music", transcription: "/ˈmjuːzɪk/", meaning: "âm nhạc", theory: "Chữ s nằm giữa đọc /z/ rung cổ.", sentence: "Listen to the music.", sentenceMeaning: "Hãy nghe nhạc." },
+                            { word: "was", transcription: "/wɒz/", meaning: "đã là (Qk)", theory: "Nhớ rung đuôi /z/ để câu tiếng Anh tự nhiên.", sentence: "I was at home yesterday.", sentenceMeaning: "Hôm qua tôi ở nhà." },
+                            { word: "boys", transcription: "/bɔɪz/", meaning: "những cậu bé", theory: "Số nhiều S sau âm hữu thanh đọc là /z/.", sentence: "The boys are playing.", sentenceMeaning: "Những cậu bé đang chơi." }
+                        ]
+                    },
+                    '/ʃ/': {
+                        description: 'Âm S nặng (vô thanh). Chu môi ra phía trước, đầu lưỡi cong lên hướng về vòm cứng, xì hơi mạnh.',
+                        words: [
+                            { word: "she", transcription: "/ʃiː/", meaning: "cô ấy", theory: "Giống âm 's' của người miền Nam, nhưng môi phải chu ra trước nhiều hơn.", sentence: "She is reading a book.", sentenceMeaning: "Cô ấy đang đọc sách." },
+                            { word: "ship", transcription: "/ʃɪp/", meaning: "tàu thuyền", theory: "Tạo tiếng 'shh' (như bảo ai đó giữ im lặng) mạnh mẽ.", sentence: "The ship left the port.", sentenceMeaning: "Con tàu đã rời cảng." },
+                            { word: "wash", transcription: "/wɒʃ/", meaning: "rửa", theory: "Kết thúc từ bằng cách chu môi xì hơi dày.", sentence: "Wash your hands.", sentenceMeaning: "Hãy rửa tay của bạn." },
+                            { word: "sure", transcription: "/ʃʊər/", meaning: "chắc chắn", theory: "Chữ S đọc thành /ʃ/, chu môi gắt gao.", sentence: "Are you sure?", sentenceMeaning: "Bạn có chắc không?" },
+                            { word: "shoe", transcription: "/ʃuː/", meaning: "chiếc giày", theory: "Chu môi dài theo cả âm u phía sau.", sentence: "My shoe is broken.", sentenceMeaning: "Giày của tôi bị hỏng rồi." },
+                            { word: "shop", transcription: "/ʃɒp/", meaning: "cửa hàng", theory: "Bật tiếng shh mạnh mở đầu.", sentence: "Let's go to the shop.", sentenceMeaning: "Cùng đến cửa hàng nào." },
+                            { word: "fish", transcription: "/fɪʃ/", meaning: "con cá", theory: "Đuôi sh chu môi tạo âm thanh dày.", sentence: "I eat fish.", sentenceMeaning: "Tôi ăn cá." },
+                            { word: "nation", transcription: "/ˈneɪʃn/", meaning: "quốc gia", theory: "Đuôi -tion luôn đọc là /ʃn/.", sentence: "It is a great nation.", sentenceMeaning: "Đó là một quốc gia vĩ đại." }
+                        ]
+                    },
+                    '/ʒ/': {
+                        description: 'Âm hữu thanh. Khẩu hình giống /ʃ/ (chu môi, cong lưỡi) nhưng rung dây thanh quản.',
+                        words: [
+                            { word: "television", transcription: "/ˈtelɪvɪʒn/", meaning: "ti vi", theory: "Chu môi lên và tạo tiếng rung sâu trong yết hầu.", sentence: "I watch television.", sentenceMeaning: "Tôi xem tivi." },
+                            { word: "measure", transcription: "/ˈmeʒər/", meaning: "đo lường", theory: "Âm /ʒ/ kết nối mượt mà giữa âm e và âm ơ.", sentence: "Measure the length.", sentenceMeaning: "Hãy đo chiều dài." },
+                            { word: "usual", transcription: "/ˈjuːʒuəl/", meaning: "thông thường", theory: "Giữ môi chu ra khi rung âm này.", sentence: "As usual, he is late.", sentenceMeaning: "Như thường lệ, anh ấy đến muộn." },
+                            { word: "Asia", transcription: "/ˈeɪʒə/", meaning: "châu Á", theory: "Rung thanh quản tạo âm z kéo dài ở vòm cong.", sentence: "We live in Asia.", sentenceMeaning: "Chúng ta sống ở châu Á." },
+                            { word: "vision", transcription: "/ˈvɪʒn/", meaning: "tầm nhìn", theory: "Đuôi -sion sau nguyên âm đọc là /ʒn/.", sentence: "He has a great vision.", sentenceMeaning: "Anh ấy có tầm nhìn xa." },
+                            { word: "pleasure", transcription: "/ˈpleʒər/", meaning: "sự hân hạnh", theory: "Rung sâu trong cổ, âm thanh dày và trầm.", sentence: "It is my pleasure.", sentenceMeaning: "Đó là vinh hạnh của tôi." },
+                            { word: "massage", transcription: "/məˈsɑːʒ/", meaning: "mát xa", theory: "Trọng âm và âm rung chốt đuôi cuối câu.", sentence: "I need a massage.", sentenceMeaning: "Tôi cần được mát-xa." },
+                            { word: "decision", transcription: "/dɪˈsɪʒn/", meaning: "quyết định", theory: "Giữ âm rung đi liền với âm n cuối.", sentence: "Make a decision now.", sentenceMeaning: "Hãy đưa ra quyết định ngay." }
+                        ]
+                    },
+                    '/tʃ/': {
+                        description: 'Âm vô thanh. Bắt đầu bằng vị trí của âm /t/ sau đó bật mạnh ra thành âm /ʃ/. Giống âm CH bật hơi.',
+                        words: [
+                            { word: "chair", transcription: "/tʃeər/", meaning: "cái ghế", theory: "Chặn hơi ở lưỡi rồi giật mạnh môi ra trước (kết hợp t và sh).", sentence: "Sit on the chair.", sentenceMeaning: "Hãy ngồi lên ghế." },
+                            { word: "cheese", transcription: "/tʃiːz/", meaning: "phô mai", theory: "Giật âm mạnh, không đọc thành chữ ch trơn tuột của tiếng Việt.", sentence: "I like extra cheese.", sentenceMeaning: "Tôi thích thêm phô mai." },
+                            { word: "watch", transcription: "/wɒtʃ/", meaning: "xem", theory: "Khi đứng cuối, vẫn phải chu môi và giật âm mạnh.", sentence: "I watch a movie.", sentenceMeaning: "Tôi xem một bộ phim." },
+                            { word: "catch", transcription: "/kætʃ/", meaning: "bắt lấy", theory: "Giật môi cực dứt khoát ở đuôi câu.", sentence: "Catch the ball.", sentenceMeaning: "Bắt lấy quả bóng." },
+                            { word: "child", transcription: "/tʃaɪld/", meaning: "đứa trẻ", theory: "Bật mạnh /tʃ/ mở đầu.", sentence: "The child is crying.", sentenceMeaning: "Đứa trẻ đang khóc." },
+                            { word: "choose", transcription: "/tʃuːz/", meaning: "lựa chọn", theory: "Giật môi rồi chu môi tiếp /u:/.", sentence: "Choose your favorite color.", sentenceMeaning: "Chọn màu yêu thích của bạn." },
+                            { word: "teach", transcription: "/tiːtʃ/", meaning: "dạy học", theory: "Khóa đuôi bằng tiếng ch giật.", sentence: "She teaches English.", sentenceMeaning: "Cô ấy dạy tiếng Anh." },
+                            { word: "match", transcription: "/mætʃ/", meaning: "trận đấu", theory: "Bật âm thật kêu ở cuối.", sentence: "We won the match.", sentenceMeaning: "Chúng tôi đã thắng trận đấu." }
+                        ]
+                    },
+                    '/dʒ/': {
+                        description: 'Âm hữu thanh. Bắt đầu ở vị trí âm /d/ sau đó bật ra /ʒ/ (rung họng).',
+                        words: [
+                            { word: "job", transcription: "/dʒɒb/", meaning: "công việc", theory: "Giật môi giống /tʃ/ nhưng phải rền giọng từ trong cổ họng.", sentence: "He loves his job.", sentenceMeaning: "Anh ấy yêu công việc của mình." },
+                            { word: "jump", transcription: "/dʒʌmp/", meaning: "nhảy", theory: "Tạo độ rung sâu và mạnh khi bắt đầu từ.", sentence: "Jump over the box.", sentenceMeaning: "Hãy nhảy qua cái hộp." },
+                            { word: "large", transcription: "/lɑːrdʒ/", meaning: "rộng lớn", theory: "Khi ở cuối, giữ độ rung nhẹ trong yết hầu.", sentence: "It is a large room.", sentenceMeaning: "Đó là một căn phòng rộng lớn." },
+                            { word: "age", transcription: "/eɪdʒ/", meaning: "tuổi", theory: "Khựng lại cuối từ bằng một độ rền âm.", sentence: "What is your age?", sentenceMeaning: "Bạn bao nhiêu tuổi?" },
+                            { word: "juice", transcription: "/dʒuːs/", meaning: "nước ép", theory: "Giật môi rung cổ ngay chữ j.", sentence: "I drink orange juice.", sentenceMeaning: "Tôi uống nước cam." },
+                            { word: "enjoy", transcription: "/ɪnˈdʒɔɪ/", meaning: "thưởng thức", theory: "Âm /dʒ/ bật mạnh ở âm tiết thứ hai.", sentence: "Enjoy your meal.", sentenceMeaning: "Chúc bạn ngon miệng." },
+                            { word: "page", transcription: "/peɪdʒ/", meaning: "trang sách", theory: "Đuôi 'ge' thường đọc là /dʒ/.", sentence: "Turn to page ten.", sentenceMeaning: "Mở sang trang 10." },
+                            { word: "bridge", transcription: "/brɪdʒ/", meaning: "cây cầu", theory: "Đuôi 'dge' đọc là /dʒ/ giật rền vang.", sentence: "Cross the bridge.", sentenceMeaning: "Băng qua cây cầu." }
+                        ]
+                    },
+                    '/m/': {
+                        description: 'Âm mũi hữu thanh. Hai môi ngậm chặt, đẩy luồng hơi đi ra đường mũi.',
+                        words: [
+                            { word: "me", transcription: "/miː/", meaning: "tôi", theory: "Ngậm môi, cảm nhận độ rung nhẹ trên mũi và môi trước khi mở ra.", sentence: "Look at me.", sentenceMeaning: "Hãy nhìn tôi." },
+                            { word: "man", transcription: "/mæn/", meaning: "đàn ông", theory: "Rung âm mũi /m/ rồi thả vào /æ/.", sentence: "He is a good man.", sentenceMeaning: "Anh ấy là một người đàn ông tốt." },
+                            { word: "some", transcription: "/sʌm/", meaning: "một vài", theory: "Khi đứng cuối, mím môi lại và ngân nhẹ trong mũi.", sentence: "I want some water.", sentenceMeaning: "Tôi muốn một chút nước." },
+                            { word: "time", transcription: "/taɪm/", meaning: "thời gian", theory: "Rất hay bị bỏ quên. Nhớ mím môi ngân đuôi.", sentence: "What time is it?", sentenceMeaning: "Bây giờ là mấy giờ?" },
+                            { word: "make", transcription: "/meɪk/", meaning: "làm", theory: "Mím chặt rồi bung ra.", sentence: "I will make it.", sentenceMeaning: "Tôi sẽ làm được." },
+                            { word: "more", transcription: "/mɔːr/", meaning: "nhiều hơn", theory: "Rung mũi chuyển luôn sang cong môi âm O.", sentence: "I need more time.", sentenceMeaning: "Tôi cần thêm thời gian." },
+                            { word: "room", transcription: "/ruːm/", meaning: "căn phòng", theory: "Đóng miệng chữ M để kết thúc từ.", sentence: "Clean your room.", sentenceMeaning: "Hãy dọn dẹp phòng của bạn." },
+                            { word: "name", transcription: "/neɪm/", meaning: "tên", theory: "Chốt bằng /m/ ngân mũi nhẹ.", sentence: "My name is Peter.", sentenceMeaning: "Tên tôi là Peter." }
+                        ]
+                    },
+                    '/n/': {
+                        description: 'Âm mũi hữu thanh. Mở môi, đầu lưỡi chạm vào phần lợi sau răng cửa trên, đẩy hơi qua mũi.',
+                        words: [
+                            { word: "no", transcription: "/nəʊ/", meaning: "không", theory: "Chặn khí bằng đầu lưỡi, rung mũi.", sentence: "I have no money.", sentenceMeaning: "Tôi không có tiền." },
+                            { word: "name", transcription: "/neɪm/", meaning: "tên", theory: "Âm /n/ đầu ngân mũi, âm /m/ cuối mím môi ngân.", sentence: "My name is John.", sentenceMeaning: "Tên của tôi là John." },
+                            { word: "sun", transcription: "/sʌn/", meaning: "mặt trời", theory: "Đặt lưỡi lên vòm trên và ngân mũi để kết thúc từ.", sentence: "The sun is hot.", sentenceMeaning: "Mặt trời rất nóng." },
+                            { word: "now", transcription: "/naʊ/", meaning: "bây giờ", theory: "Lưỡi chạm trên, ngân mũi và bung to khẩu hình.", sentence: "Do it right now.", sentenceMeaning: "Hãy làm việc đó ngay bây giờ." },
+                            { word: "new", transcription: "/njuː/", meaning: "mới", theory: "Đầu lưỡi đập trên lợi.", sentence: "I have a new car.", sentenceMeaning: "Tôi có xe mới." },
+                            { word: "know", transcription: "/nəʊ/", meaning: "biết", theory: "Chữ k câm, chỉ đọc âm /n/.", sentence: "I do not know.", sentenceMeaning: "Tôi không biết." },
+                            { word: "ten", transcription: "/ten/", meaning: "mười", theory: "Kết thúc ngân N rõ ràng.", sentence: "I have ten fingers.", sentenceMeaning: "Tôi có 10 ngón tay." },
+                            { word: "man", transcription: "/mæn/", meaning: "đàn ông", theory: "Mở a bẹt rồi khóa bằng chữ n.", sentence: "He is a tall man.", sentenceMeaning: "Ông ấy là một người cao." }
+                        ]
+                    },
+                    '/ŋ/': {
+                        description: 'Âm mũi ngạc mềm (hữu thanh). Cuống lưỡi chạm ngạc mềm chặn hơi trong miệng, hơi thoát ra đường mũi.',
+                        words: [
+                            { word: "sing", transcription: "/sɪŋ/", meaning: "hát", theory: "Giống âm 'ng' tiếng Việt, nhưng kéo dài độ ngân ở phía trong mũi.", sentence: "She can sing well.", sentenceMeaning: "Cô ấy có thể hát rất hay." },
+                            { word: "long", transcription: "/lɒŋ/", meaning: "dài", theory: "Không bật âm g ở cuối, chỉ giữ lưỡi nghẹn ở cuống họng.", sentence: "It is a long road.", sentenceMeaning: "Đó là một con đường dài." },
+                            { word: "morning", transcription: "/ˈmɔːrnɪŋ/", meaning: "buổi sáng", theory: "Kết thúc ngân dài phần mũi ở âm /ɪŋ/.", sentence: "Good morning everyone.", sentenceMeaning: "Chào buổi sáng mọi người." },
+                            { word: "song", transcription: "/sɒŋ/", meaning: "bài hát", theory: "Hát ngân âm mũi ở đuôi.", sentence: "Play a nice song.", sentenceMeaning: "Hãy mở một bài hát hay." },
+                            { word: "ring", transcription: "/rɪŋ/", meaning: "chiếc nhẫn/rung chuông", theory: "Cuống lưỡi dính chặt vòm trên, đẩy khí qua mũi.", sentence: "The phone is ringing.", sentenceMeaning: "Điện thoại đang reo." },
+                            { word: "king", transcription: "/kɪŋ/", meaning: "vua", theory: "Bật /k/ rồi nghẹn mũi /ng/.", sentence: "He is the king.", sentenceMeaning: "Ông ấy là vua." },
+                            { word: "thing", transcription: "/θɪŋ/", meaning: "thứ, vật", theory: "Thè lưỡi /θ/ rồi thụt lại ngân /ŋ/.", sentence: "What is this thing?", sentenceMeaning: "Cái này là thứ gì?" },
+                            { word: "young", transcription: "/jʌŋ/", meaning: "trẻ", theory: "Ngân dài âm ở đuôi.", sentence: "She is very young.", sentenceMeaning: "Cô ấy còn rất trẻ." }
+                        ]
+                    },
+                    '/h/': {
+                        description: 'Âm vô thanh. Chỉ là một luồng hơi thở ra từ thanh quản, miệng mở tự nhiên.',
+                        words: [
+                            { word: "he", transcription: "/hiː/", meaning: "anh ấy", theory: "Đẩy hơi dứt khoát như tiếng thở dài, không tạo âm thanh sắc.", sentence: "He is my brother.", sentenceMeaning: "Anh ấy là anh trai tôi." },
+                            { word: "hot", transcription: "/hɒt/", meaning: "nóng", theory: "Há miệng và tống hơi ra phía ngoài.", sentence: "The tea is hot.", sentenceMeaning: "Trà rất nóng." },
+                            { word: "home", transcription: "/həʊm/", meaning: "nhà", theory: "Đẩy hơi /h/ hòa quyện luôn vào nguyên âm theo sau.", sentence: "I am going home.", sentenceMeaning: "Tôi đang về nhà." },
+                            { word: "happy", transcription: "/ˈhæpi/", meaning: "vui vẻ", theory: "Thở hơi /h/ dứt khoát.", sentence: "Be happy.", sentenceMeaning: "Hãy vui vẻ lên." },
+                            { word: "house", transcription: "/haʊs/", meaning: "ngôi nhà", theory: "Luồng khí đi nhẹ nhàng.", sentence: "This is my house.", sentenceMeaning: "Đây là nhà tôi." },
+                            { word: "high", transcription: "/haɪ/", meaning: "cao", theory: "Chỉ phát âm h ở đầu, gh câm.", sentence: "The mountain is high.", sentenceMeaning: "Ngọn núi này cao." },
+                            { word: "help", transcription: "/help/", meaning: "giúp đỡ", theory: "Thở mạnh chữ h.", sentence: "Can you help me?", sentenceMeaning: "Bạn có thể giúp tôi không?" },
+                            { word: "here", transcription: "/hɪər/", meaning: "ở đây", theory: "Hơi thoát ra mượt mà.", sentence: "I am right here.", sentenceMeaning: "Tôi ở ngay đây." }
+                        ]
+                    },
+                    '/l/': {
+                        description: 'Âm hữu thanh. Đầu lưỡi chạm chặt vào lợi sau răng trên, hơi thoát ra hai bên lưỡi.',
+                        words: [
+                            { word: "love", transcription: "/lʌv/", meaning: "yêu", theory: "Đẩy thẳng lưỡi lên lợi rồi bật nhả xuống để đọc các âm l đầu.", sentence: "I love learning English.", sentenceMeaning: "Tôi thích học tiếng Anh." },
+                            { word: "like", transcription: "/laɪk/", meaning: "thích", theory: "Giọng thanh, trong, lưỡi đập dứt khoát.", sentence: "I like ice cream.", sentenceMeaning: "Tôi thích kem." },
+                            { word: "school", transcription: "/skuːl/", meaning: "trường học", theory: "Âm l đuôi (Dark L): Ồn trong họng, đầu lưỡi cong lên chạm vòm.", sentence: "School ends at 5.", sentenceMeaning: "Trường học kết thúc lúc 5 giờ." },
+                            { word: "little", transcription: "/ˈlɪtl/", meaning: "nhỏ bé", theory: "Cả hai chữ L đều phải đánh lưỡi đứt khoát.", sentence: "A little bird flew by.", sentenceMeaning: "Một con chim nhỏ vừa bay ngang qua." },
+                            { word: "look", transcription: "/lʊk/", meaning: "nhìn", theory: "Bật lưỡi mạnh xuống mồm.", sentence: "Look at the sky.", sentenceMeaning: "Nhìn lên trời đi." },
+                            { word: "live", transcription: "/lɪv/", meaning: "sống", theory: "Đánh lưỡi nhanh và nhẹ.", sentence: "I live in Vietnam.", sentenceMeaning: "Tôi sống ở Việt Nam." },
+                            { word: "all", transcription: "/ɔːl/", meaning: "tất cả", theory: "Đẩy lưỡi lên ngạc trên để tạo âm ồn.", sentence: "Take it all.", sentenceMeaning: "Lấy hết đi." },
+                            { word: "tall", transcription: "/tɔːl/", meaning: "cao", theory: "Khóa câu bằng chữ l uốn cong.", sentence: "He is very tall.", sentenceMeaning: "Anh ấy rất cao." }
+                        ]
+                    },
+                    '/r/': {
+                        description: 'Âm hữu thanh. Môi hơi tròn, cong đầu lưỡi lên và kéo lùi về sau (không chạm vòm trên).',
+                        words: [
+                            { word: "red", transcription: "/red/", meaning: "màu đỏ", theory: "Tròn môi trước khi phát âm, lưỡi cuộn sâu vào trong.", sentence: "She wears a red dress.", sentenceMeaning: "Cô ấy mặc một chiếc váy đỏ." },
+                            { word: "read", transcription: "/riːd/", meaning: "đọc", theory: "Lưỡi tuyệt đối không được chạm vào lợi hay vòm miệng trên.", sentence: "I read a book.", sentenceMeaning: "Tôi đọc một cuốn sách." },
+                            { word: "car", transcription: "/kɑːr/", meaning: "xe hơi", theory: "Với Anh-Mỹ, âm /r/ cuối cuộn lưỡi làm âm thanh rất trầm ấm.", sentence: "Get in the car.", sentenceMeaning: "Vào trong xe đi." },
+                            { word: "right", transcription: "/raɪt/", meaning: "đúng/bên phải", theory: "Chu môi uốn cong lưỡi sâu trong vòm họng.", sentence: "Turn right here.", sentenceMeaning: "Hãy rẽ phải ở đây." },
+                            { word: "run", transcription: "/rʌn/", meaning: "chạy", theory: "Chu môi và cuộn lưỡi bật ra.", sentence: "Run as fast as you can.", sentenceMeaning: "Chạy nhanh nhất có thể đi." },
+                            { word: "room", transcription: "/ruːm/", meaning: "phòng", theory: "Chữ r ghép với âm u chu môi.", sentence: "This is my room.", sentenceMeaning: "Đây là phòng của tôi." },
+                            { word: "star", transcription: "/stɑːr/", meaning: "ngôi sao", theory: "Cuốn lưỡi r cuối.", sentence: "Look at the star.", sentenceMeaning: "Hãy nhìn ngôi sao kia." },
+                            { word: "far", transcription: "/fɑːr/", meaning: "xa", theory: "Âm r rền trong họng.", sentence: "It is not far.", sentenceMeaning: "Nó không xa đâu." }
+                        ]
+                    },
+                    '/w/': {
+                        description: 'Âm hữu thanh. Chu tròn môi ra phía trước hết cỡ, rung thanh quản và mở dần ra (giống u-ơ).',
+                        words: [
+                            { word: "we", transcription: "/wiː/", meaning: "chúng tôi", theory: "Khởi đầu bằng đôi môi chụm chặt như hút sáo, rồi mở ngay ra.", sentence: "We are a team.", sentenceMeaning: "Chúng tôi là một đội." },
+                            { word: "what", transcription: "/wɒt/", meaning: "cái gì", theory: "Bật từ hình dáng môi tròn u-oát thật nhanh.", sentence: "What is your name?", sentenceMeaning: "Tên của bạn là gì?" },
+                            { word: "work", transcription: "/wɜːrk/", meaning: "làm việc", theory: "Môi đang tròn liền chu thêm để vào luôn âm /ɜː/.", sentence: "I start work at 8.", sentenceMeaning: "Tôi bắt đầu làm việc lúc 8 giờ." },
+                            { word: "when", transcription: "/wen/", meaning: "khi nào", theory: "Trượt môi tròn qua /e/.", sentence: "When will you come?", sentenceMeaning: "Khi nào bạn sẽ đến?" },
+                            { word: "want", transcription: "/wɒnt/", meaning: "muốn", theory: "Mỏ nhọn chu ra chữ w.", sentence: "I want an apple.", sentenceMeaning: "Tôi muốn một quả táo." },
+                            { word: "wait", transcription: "/weɪt/", meaning: "đợi", theory: "Bật âm thật rõ khẩu hình.", sentence: "Please wait for me.", sentenceMeaning: "Làm ơn chờ tôi." },
+                            { word: "window", transcription: "/ˈwɪndəʊ/", meaning: "cửa sổ", theory: "Bật chữ w hai lần ở hai âm tiết.", sentence: "Open the window.", sentenceMeaning: "Mở cửa sổ ra." },
+                            { word: "water", transcription: "/ˈwɔːtər/", meaning: "nước", theory: "Tròn môi lướt êm.", sentence: "I drink water.", sentenceMeaning: "Tôi uống nước." }
+                        ]
+                    },
+                    '/j/': {
+                        description: 'Âm hữu thanh. Mặt lưỡi nâng cao ép gần sát ngạc cứng, lướt nhanh sang âm tiếp theo (giống "d" nhẹ).',
+                        words: [
+                            { word: "yes", transcription: "/jes/", meaning: "vâng, đúng", theory: "Tạo sự cọ xát nhẹ ở mặt lưỡi, âm thanh nghe như 'diét-s'.", sentence: "Yes, I agree.", sentenceMeaning: "Vâng, tôi đồng ý." },
+                            { word: "you", transcription: "/juː/", meaning: "bạn", theory: "Miệng căng rồi thu tròn môi lại theo âm u.", sentence: "You are very kind.", sentenceMeaning: "Bạn rất tốt bụng." },
+                            { word: "young", transcription: "/jʌŋ/", meaning: "trẻ", theory: "Phát âm dứt khoát, lướt mượt mà.", sentence: "She is very young.", sentenceMeaning: "Cô ấy còn rất trẻ." },
+                            { word: "year", transcription: "/jɪər/", meaning: "năm", theory: "Lướt mặt lưỡi /j/ ngay vào nguyên âm kép /ɪə/.", sentence: "Happy new year.", sentenceMeaning: "Chúc mừng năm mới." },
+                            { word: "yellow", transcription: "/ˈjeləʊ/", meaning: "màu vàng", theory: "Đẩy mặt lưỡi cọ sát tạo âm.", sentence: "The sun is yellow.", sentenceMeaning: "Mặt trời màu vàng." },
+                            { word: "use", transcription: "/juːz/", meaning: "sử dụng", theory: "Âm /j/ đi liền âm /u:/.", sentence: "I use my computer.", sentenceMeaning: "Tôi sử dụng máy tính của mình." },
+                            { word: "student", transcription: "/ˈstjuːdənt/", meaning: "học sinh", theory: "Âm /j/ kẹp giữa t và u.", sentence: "He is a smart student.", sentenceMeaning: "Cậu ấy là học sinh thông minh." },
+                            { word: "music", transcription: "/ˈmjuːzɪk/", meaning: "âm nhạc", theory: "Lướt mượt mà sau chữ m.", sentence: "I love this music.", sentenceMeaning: "Tôi yêu bài nhạc này." }
+                        ]
+                    }
+                }
+            };
+
+            let currentWordData = null;
+            let currentPhonemeContext = null; // Lưu lại âm đang học để đánh giá
+            let expectedText = "";
+
+            // --- QUẢN LÝ TIẾN ĐỘ ---
+            let totalWordsCount = 0;
+            let completedWords = JSON.parse(localStorage.getItem('elsa_completed_words') || '[]');
+
+            for (const category in phoneticsData) {
+                for (const phoneme in phoneticsData[category]) {
+                    totalWordsCount += phoneticsData[category][phoneme].words.length;
+                }
+            }
+
+            function updateProgressUI() {
+                const progressText = document.getElementById('progress-text');
+                const progressBar = document.getElementById('progress-bar');
+                if (progressText && progressBar) {
+                    progressText.textContent = `${completedWords.length} / ${totalWordsCount} từ`;
+                    const percentage = totalWordsCount === 0 ? 0 : Math.round((completedWords.length / totalWordsCount) * 100);
+                    progressBar.style.width = `${percentage}%`;
+                }
+            }
+            
+            updateProgressUI();
+
+            // --- HỆ THỐNG AUDIO NATIVE TỐI ƯU CHO ĐIỆN THOẠI ---
+            const speechService = {
+                isReady: false,
+                selectedVoice: null,
+                init: function() {
+                    if(typeof window === 'undefined' || !window.speechSynthesis) return;
+                    const loadVoices = () => {
+                        const voices = window.speechSynthesis.getVoices();
+                        if(voices.length === 0) return;
+                        // Ưu tiên giọng bản địa của điện thoại (Siri trên iOS, Google TTS trên Android)
+                        // Đây là mấu chốt để không bị lỗi kết nối/CORS khi deploy lên Github Pages
+                        this.selectedVoice =
+                            voices.find(v => v.name.includes("Siri") && v.lang === "en-US") ||
+                            voices.find(v => v.name === "Samantha" && v.lang === "en-US") ||
+                            voices.find(v => v.name === "Google US English") ||
+                            voices.find(v => v.lang === "en-US") || voices[0];
+                        this.isReady = true;
+                    };
+                    loadVoices();
+                    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+                        window.speechSynthesis.onvoiceschanged = loadVoices;
+                    }
+                },
+                speak: function(text, buttonElement){
+                    if(!this.isReady || !window.speechSynthesis) return false;
+
+                    try {
+                        // Bắt buộc cancel trước để fix lỗi kẹt audio trên iOS Safari
+                        window.speechSynthesis.cancel();
+
+                        const utterance = new SpeechSynthesisUtterance(text);
+                        if(this.selectedVoice) utterance.voice = this.selectedVoice;
+                        utterance.lang = 'en-US';
+                        utterance.rate = 0.9; // Đọc chậm lại một chút để học viên dễ nghe
+
+                        if(buttonElement) {
+                            buttonElement.classList.add('loading');
+                            utterance.onend = () => buttonElement.classList.remove('loading');
+                            utterance.onerror = (e) => {
+                                console.error("SpeechSynthesis Error:", e);
+                                buttonElement.classList.remove('loading');
+                            };
+                        }
+
+                        window.speechSynthesis.speak(utterance);
+                        return true;
+                    } catch(err) {
+                        console.error("Speech API failed:", err);
+                        return false;
+                    }
+                }
+            };
+            speechService.init();
+
+            // Khởi tạo Audio Element toàn cục làm dự phòng (nếu điện thoại hỏng Native TTS)
+            const fallbackAudioPlayer = new Audio();
+
+            window.playUnifiedAudio = function(text, buttonElement = null) {
+                const cleanText = text.replace(/[.,!?]/g, '').trim();
+
+                // 1. LUÔN ƯU TIÊN DÙNG SPEECH SYNTHESIS CỦA THIẾT BỊ (NATIVE)
+                // Hoạt động 100% offline, không bị Github Pages chặn, gọi trực tiếp từ phần cứng.
+                const success = speechService.speak(cleanText, buttonElement);
+
+                // 2. NẾU NATIVE TTS LỖI (rất hiếm), DÙNG API GOOGLE LÀM DỰ PHÒNG CHÓT
+                if (!success) {
+                    if(buttonElement) buttonElement.classList.add('loading');
+                    try {
+                        const encodedText = encodeURIComponent(cleanText);
+                        fallbackAudioPlayer.src = `https://translate.googleapis.com/translate_tts?client=gtx&ie=UTF-8&tl=en-US&q=${encodedText}`;
+
+                        fallbackAudioPlayer.onended = () => { if(buttonElement) buttonElement.classList.remove('loading'); };
+                        fallbackAudioPlayer.onerror = () => {
+                            if(buttonElement) buttonElement.classList.remove('loading');
+                        };
+
+                        const playPromise = fallbackAudioPlayer.play();
+                        if (playPromise !== undefined) {
+                            playPromise.catch(e => {
+                                console.error("Lỗi phát audio fallback:", e);
+                                if(buttonElement) buttonElement.classList.remove('loading');
+                            });
+                        }
+                    } catch(e) {
+                        if(buttonElement) buttonElement.classList.remove('loading');
+                    }
+                }
+            };
+
+            // --- WEB SPEECH API ---
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            let recognition = null;
+            let isRecording = false;
+
+            if (SpeechRecognition) {
+                recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.lang = 'en-US';
+                recognition.interimResults = false;
+                recognition.maxAlternatives = 1;
+
+                recognition.onstart = function() {
+                    isRecording = true;
+                };
+
+                recognition.onresult = function(event) {
+                    const transcript = event.results[0][0].transcript;
+                    handleRecognitionResult(transcript);
+                };
+
+                recognition.onerror = function(event) {
+                    console.error("Speech recognition error", event.error);
+                    stopRecordingUI();
+                    
+                    let errorMsg = "Không thể nhận diện giọng nói. Vui lòng kiểm tra micro.";
+                    if(event.error === 'not-allowed') {
+                        errorMsg = "Trình duyệt đang chặn Micro của bạn. Vui lòng cấp quyền (Allow) cho Micro trong thanh địa chỉ.";
+                    }
+                    alert(errorMsg);
+                };
+
+                recognition.onend = function() {
+                    isRecording = false;
+                    stopRecordingUI();
+                };
+            } else {
+                console.warn("Trình duyệt không hỗ trợ Web Speech API.");
+            }
+
+            // --- LOGIC CHẤM ĐIỂM & PHÂN TÍCH LỖI CHI TIẾT (PHIÊN BẢN CHỐNG LỆCH NHỊP) ---
+            function getDetailedFeedback(expected, spoken, targetPhoneme, wordData, isSentence) {
+                const expWords = expected.replace(/[.,!?]/g, "").toLowerCase().split(/\s+/);
+                const spoWords = spoken.replace(/[.,!?]/g, "").toLowerCase().split(/\s+/);
+                const originalDisplayWords = expected.split(/\s+/);
+                
+                let resultHtml = "";
+                let correctCount = 0;
+                let spoIdx = 0; // Con trỏ theo dõi từ người dùng đã đọc
+                let errorDetails = [];
+
+                // Hàm tính khoảng cách Levenshtein để so sánh độ giống nhau của 2 từ
+                const getLevenshtein = (a, b) => {
+                    if(!a || !b) return 99;
+                    const matrix = [];
+                    for(let i = 0; i <= b.length; i++) matrix[i] = [i];
+                    for(let j = 0; j <= a.length; j++) matrix[0][j] = j;
+                    for(let i = 1; i <= b.length; i++) {
+                        for(let j = 1; j <= a.length; j++) {
+                            if(b.charAt(i-1) == a.charAt(j-1)) {
+                                matrix[i][j] = matrix[i-1][j-1];
+                            } else {
+                                matrix[i][j] = Math.min(matrix[i-1][j-1] + 1, Math.min(matrix[i][j-1] + 1, matrix[i-1][j] + 1));
+                            }
+                        }
+                    }
+                    return matrix[b.length][a.length];
+                };
+
+                for (let i = 0; i < expWords.length; i++) {
+                    let expectedWord = expWords[i];
+                    let displayWord = originalDisplayWords[i];
+                    let isTarget = (expectedWord === wordData.word.toLowerCase());
+
+                    let matched = false;
+
+                    // 1. Tìm kiếm xem từ mong muốn có xuất hiện trong các từ người dùng vừa đọc không (Window lookahead = 3)
+                    for (let k = 0; k < 3 && (spoIdx + k) < spoWords.length; k++) {
+                        if (expectedWord === spoWords[spoIdx + k]) {
+                            matched = true;
+                            spoIdx = spoIdx + k + 1; // Di chuyển con trỏ qua từ đã khớp
+                            break;
+                        }
+                    }
+
+                    if (matched) {
+                        resultHtml += `<span class="text-green-500">${displayWord}</span> `;
+                        correctCount++;
+                    } else {
+                        resultHtml += `<span class="text-red-500 font-bold underline decoration-red-400 decoration-2 bg-red-50 px-1 rounded mx-1">${displayWord}</span> `;
+                        
+                        let analysis = "";
+                        let currentSpo = spoWords[spoIdx];
+
+                        if (!currentSpo) {
+                            // Người dùng đọc quá ngắn, hết từ để so sánh
+                            analysis = `Bạn <strong>đọc sót</strong> hoặc đọc quá nhỏ, không nghe thấy từ này.`;
+                        } else {
+                            // KIỂM TRA ĐỌC SÓT (SKIP):
+                            // Xem từ người dùng đang đọc (currentSpo) có phải là từ mong muốn ở TƯƠNG LAI không?
+                            let nextExpMatchedCurrentSpo = false;
+                            for(let nextExp = i + 1; nextExp < Math.min(i + 3, expWords.length); nextExp++) {
+                                if (expWords[nextExp] === currentSpo) {
+                                    nextExpMatchedCurrentSpo = true;
+                                    break;
+                                }
+                            }
+
+                            if (nextExpMatchedCurrentSpo) {
+                                // Nếu đúng, nghĩa là người dùng đã BỎ QUA từ hiện tại và đọc lẹm sang từ tiếp theo
+                                analysis = `Bạn đã <strong>đọc sót (bỏ qua)</strong> từ này.`;
+                                // KHÔNG tăng spoIdx để từ hiện tại của người dùng được khớp với expWord tiếp theo
+                            } else {
+                                // Người dùng ĐỌC SAI (phát âm nhầm từ này thành từ khác)
+                                let spokenSubstitute = currentSpo;
+                                
+                                let missingEnding = "";
+                                let missingConsonants = [];
+                                let missingVowels = [];
+                                const vowels = ['a','e','i','o','u','y'];
+
+                                // Phân tích âm cuối
+                                let expEnd = expectedWord.slice(-1);
+                                let spoEnd = spokenSubstitute.slice(-1);
+                                if (!vowels.includes(expEnd) && expEnd !== spoEnd) {
+                                    missingEnding = expEnd;
+                                }
+
+                                // Phân tích phụ âm/nguyên âm
+                                let expChars = expectedWord.split('');
+                                let spoChars = spokenSubstitute.split('');
+                                expChars.forEach(c => {
+                                    if (!spoChars.includes(c)) {
+                                        if (vowels.includes(c) && !missingVowels.includes(c)) missingVowels.push(c);
+                                        else if (!vowels.includes(c) && !missingConsonants.includes(c)) missingConsonants.push(c);
+                                    }
+                                });
+
+                                analysis = `Nghe thành <span class="font-bold text-gray-800 italic">"${spokenSubstitute}"</span>. `;
+
+                                let errorList = [];
+                                if (missingEnding) {
+                                    errorList.push(`<span class="text-red-600 font-bold bg-red-100 px-1 rounded">Mất âm cuối: /${missingEnding}/</span>`);
+                                    missingConsonants = missingConsonants.filter(c => c !== missingEnding);
+                                }
+                                if (missingConsonants.length > 0) {
+                                    errorList.push(`Thiếu phụ âm: <span class="font-bold text-red-600">${missingConsonants.join(', ').toUpperCase()}</span>`);
+                                }
+                                if (missingVowels.length > 0) {
+                                    errorList.push(`Sai nguyên âm: <span class="font-bold text-orange-600">${missingVowels.join(', ').toUpperCase()}</span>`);
+                                }
+
+                                if(errorList.length > 0) {
+                                    analysis += `<br/><span class="text-sm mt-1 inline-block">👉 Lỗi: ` + errorList.join(' | ') + `</span>`;
+                                } else if (getLevenshtein(expectedWord, spokenSubstitute) > 3) {
+                                     analysis += `<br/><span class="text-sm mt-1 inline-block text-gray-500">Phát âm chưa rõ ràng.</span>`;
+                                }
+
+                                if (isTarget) {
+                                    analysis += `<br/>🎯 <strong class="text-blue-700 bg-blue-100 px-1 mt-1 inline-block rounded">Trọng tâm âm /${targetPhoneme}/:</strong> <span class="text-sm text-gray-600">${wordData.theory}</span>`;
+                                }
+
+                                spoIdx++; // Tăng con trỏ vì từ này đã được dùng để so sánh (dù sai)
+                            }
+                        }
+
+                        if(isSentence || isTarget) {
+                            errorDetails.push({
+                                word: expectedWord,
+                                analysis: analysis
+                            });
+                        }
+                    }
+                }
+                
+                const score = Math.round((correctCount / expWords.length) * 100);
+
+                // Khối UI hiển thị chi tiết lỗi
+                let analysisHtml = "";
+                if (correctCount < expWords.length && errorDetails.length > 0) {
+                    let errorsList = errorDetails.map(err => `
+                        <li class="bg-white p-3 rounded-lg border-l-4 border-red-500 shadow-sm relative">
+                            <span class="font-bold text-red-800 text-lg uppercase">${err.word}</span>
+                            <p class="text-gray-700 text-sm mt-1 leading-relaxed">${err.analysis}</p>
+                        </li>
+                    `).join('');
+
+                    analysisHtml = `
+                    <div class="mt-4 p-5 bg-red-50/80 rounded-2xl border border-red-200 text-left shadow-sm w-full animate-fade-in">
+                        <h4 class="font-black text-red-800 text-sm uppercase tracking-wider mb-3 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                            Phân tích lỗi phát âm chi tiết
+                        </h4>
+                        <p class="text-xs text-gray-500 mb-4 pb-2 border-b border-red-100 italic">🎙️ Dữ liệu thu được: "${spoken || '(không nhận diện được)'}"</p>
+                        <ul class="space-y-3">
+                            ${errorsList}
+                        </ul>
+                    </div>`;
+                }
+
+                return { html: resultHtml.trim(), score: score, analysisHtml: analysisHtml };
+            }
+
+            function getScoreColorClass(score) {
+                if (score >= 80) return "border-green-500 text-green-600 bg-green-50";
+                if (score >= 50) return "border-orange-400 text-orange-500 bg-orange-50";
+                return "border-red-500 text-red-600 bg-red-50";
+            }
+
+            // --- UI RENDERING ---
+            function renderPhonemeNavigation() {
+                const navContainer = document.getElementById('phoneme-navigation');
+                navContainer.innerHTML = '';
+                for (const category in phoneticsData) {
+                    let categoryHtml = `<div>
+                        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">${category}</h3>
+                        <div class="flex flex-wrap gap-3">`;
+                    for (const phoneme in phoneticsData[category]) {
+                        categoryHtml += `<button class="phoneme-btn font-mono text-xl bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 text-gray-700 font-bold py-3 px-6 rounded-xl" data-category="${category}" data-phoneme="${phoneme}">${phoneme}</button>`;
+                    }
+                    categoryHtml += `</div></div>`;
+                    navContainer.innerHTML += categoryHtml;
+                }
+            }
+
+            function displayWordList(category, phoneme) {
+                const data = phoneticsData[category][phoneme];
+                const contentContainer = document.getElementById('phoneme-content-display');
+                if (!data || !contentContainer) return;
+
+                let wordsHtml = data.words.map((item, index) => {
+                    const isCompleted = completedWords.includes(item.word);
+                    const checkmarkBadge = isCompleted 
+                        ? `<div class="absolute top-0 right-0 bg-green-500 text-white text-[10px] uppercase font-bold px-2 py-1 rounded-bl-lg rounded-tr-xl flex items-center gap-1">
+                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                             Đã thuộc
+                           </div>
+                           <div class="absolute inset-0 border-2 border-green-400 rounded-2xl pointer-events-none opacity-40"></div>` 
+                        : '';
+
+                    return `
+                    <div class="card bg-white p-5 rounded-2xl border ${isCompleted ? 'border-green-200 bg-green-50' : 'border-gray-100'} shadow-sm flex items-center justify-between group relative" data-idx="${index}">
+                        ${checkmarkBadge}
+                        <div class="relative z-10">
+                            <h4 class="text-2xl font-bold ${isCompleted ? 'text-green-800' : 'text-gray-800'} mb-1">${item.word}</h4>
+                            <p class="${isCompleted ? 'text-green-600' : 'text-gray-500'} font-mono text-sm">${item.transcription}</p>
+                        </div>
+                        <div class="${isCompleted ? 'bg-green-100 text-green-700 group-hover:bg-green-600' : 'bg-blue-50 text-blue-600 group-hover:bg-blue-600'} px-4 py-2 rounded-lg font-medium group-hover:text-white transition-colors relative z-10">
+                            Luyện tập
+                        </div>
+                    </div>`;
+                }).join('');
+
+                contentContainer.innerHTML = `
+                    <div class="mb-6 flex items-center gap-4">
+                        <div>
+                            <h3 class="text-4xl font-black text-gray-800 mb-2 font-mono flex items-center gap-3">
+                                ${phoneme}
+                                <button onclick="window.playUnifiedAudio('${data.words[0].word}')" class="text-blue-500 hover:text-blue-700 bg-blue-50 p-2 rounded-full cursor-pointer transition-colors">
+                                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 0 0 1.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.66 1.905H6.44l4.5 4.5c.945.945 2.56.276 2.56-1.06V4.06ZM18.584 5.106a.75.75 0 0 1 1.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 0 1-1.06-1.06 8.25 8.25 0 0 0 0-11.668.75.75 0 0 1 0-1.06Z" /><path d="M15.932 7.757a.75.75 0 0 1 1.061 0 6 6 0 0 1 0 8.486.75.75 0 0 1-1.06-1.061 4.5 4.5 0 0 0 0-6.364.75.75 0 0 1 0-1.06Z" /></svg>
+                                </button>
+                            </h3>
+                            <p class="text-gray-600 text-lg">${data.description}</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        ${wordsHtml}
+                    </div>
+                `;
+
+                contentContainer.querySelectorAll('.card').forEach(card => {
+                    card.addEventListener('click', () => {
+                        const idx = card.dataset.idx;
+                        openPracticeModal(phoneme, data.words[idx]);
+                    });
+                });
+            }
+
+            // --- Modal Luyện Tập ---
+            const modal = document.getElementById('practice-modal');
+            let activeRecordType = null;
+
+            function openPracticeModal(phoneme, wordData) {
+                currentPhonemeContext = phoneme;
+                currentWordData = wordData;
+                
+                document.getElementById('modal-phoneme-badge').textContent = phoneme;
+                document.getElementById('modal-word').textContent = wordData.word;
+                document.getElementById('modal-transcription').textContent = wordData.transcription;
+                document.getElementById('modal-meaning').textContent = wordData.meaning;
+                document.getElementById('modal-theory').textContent = wordData.theory || "Hãy cố gắng phát âm thật rõ ràng.";
+                
+                const sentenceWords = (wordData.sentence || "").split(" ");
+                const interactiveSentenceHtml = sentenceWords.map(w => {
+                    const cleanWord = w.replace(/[^a-zA-Z]/g, '');
+                    return `<span class="interactive-word inline-block mr-1" onclick="window.playUnifiedAudio('${cleanWord}')" title="Nghe từ: ${cleanWord}">${w}</span>`;
+                }).join("");
+                
+                document.getElementById('modal-sentence').innerHTML = interactiveSentenceHtml;
+                document.getElementById('modal-sentence-meaning').textContent = wordData.sentenceMeaning || "";
+
+                document.getElementById('word-result-area').classList.add('hidden');
+                document.getElementById('sentence-result-area').classList.add('hidden');
+                
+                modal.classList.add('active');
+            }
+
+            document.getElementById('close-modal').addEventListener('click', () => {
+                if(isRecording && recognition) recognition.stop();
+                if(speechSynthesis) speechSynthesis.cancel();
+                modal.classList.remove('active');
+            });
+
+            document.getElementById('listen-word-btn').addEventListener('click', (e) => {
+                window.playUnifiedAudio(currentWordData.word, e.currentTarget);
+            });
+
+            document.getElementById('listen-sentence-btn').addEventListener('click', (e) => {
+                window.playUnifiedAudio(currentWordData.sentence, e.currentTarget);
+            });
+
+            function startRecording(type) {
+                if (!recognition) {
+                    alert("Trình duyệt hoặc điện thoại của bạn không hỗ trợ nhận diện giọng nói (Web Speech API). Nếu dùng iOS, hãy nâng cấp lên iOS 14.5+ hoặc dùng Chrome trên Android.");
+                    return;
+                }
+                if (isRecording) {
+                    recognition.stop();
+                    return;
+                }
+                
+                activeRecordType = type;
+                expectedText = type === 'word' ? currentWordData.word : currentWordData.sentence;
+                
+                document.getElementById(`record-${type}-btn`).classList.add('recording');
+
+                try {
+                    recognition.start();
+                } catch(e) {
+                    stopRecordingUI();
+                }
+            }
+
+            document.getElementById('record-word-btn').addEventListener('click', () => startRecording('word'));
+            document.getElementById('record-sentence-btn').addEventListener('click', () => startRecording('sentence'));
+
+            function stopRecordingUI() {
+                document.getElementById('record-word-btn').classList.remove('recording');
+                document.getElementById('record-sentence-btn').classList.remove('recording');
+            }
+
+            function handleRecognitionResult(transcript) {
+                const isSentence = activeRecordType === 'sentence';
+                // Áp dụng thuật toán phân tích chi tiết mới
+                const feedback = getDetailedFeedback(expectedText, transcript, currentPhonemeContext, currentWordData, isSentence);
+                const colorClass = getScoreColorClass(feedback.score);
+                
+                const type = activeRecordType;
+                const area = document.getElementById(`${type}-result-area`);
+                const scoreCircle = area.querySelector('div');
+                const scoreText = document.getElementById(`${type}-score`);
+                const feedbackDisplay = document.getElementById(`${type}-detailed-feedback`);
+                const analysisBox = document.getElementById(`${type}-analysis-box`);
+                
+                area.classList.remove('hidden');
+                area.classList.add('flex');
+                
+                // Reset style & apply new
+                scoreCircle.className = `inline-flex items-center justify-center w-${type==='word'?'24':'20'} h-${type==='word'?'24':'20'} rounded-full border-4 mb-4 relative shadow-inner ${colorClass}`;
+                scoreText.textContent = `${feedback.score}%`;
+                scoreText.className = `text-${type==='word'?'3xl':'xl'} font-bold ${colorClass.split(' ')[1]}`; 
+                
+                feedbackDisplay.innerHTML = feedback.html;
+                
+                // Hiển thị phần phân tích nếu có lỗi
+                analysisBox.innerHTML = feedback.analysisHtml;
+
+                if (feedback.score >= 50 && currentWordData) {
+                    if (!completedWords.includes(currentWordData.word)) {
+                        completedWords.push(currentWordData.word);
+                        localStorage.setItem('elsa_completed_words', JSON.stringify(completedWords));
+                        updateProgressUI();
+                        
+                        const activeBtn = document.querySelector('.phoneme-btn.active');
+                        if (activeBtn) displayWordList(activeBtn.dataset.category, activeBtn.dataset.phoneme);
+                    }
+                }
+            }
+
+            // --- Initialization ---
+            function addPhonemeNavListeners() {
+                const buttons = document.querySelectorAll('.phoneme-btn');
+                buttons.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        buttons.forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        displayWordList(btn.dataset.category, btn.dataset.phoneme);
+                    });
+                });
+            }
+            
+            renderPhonemeNavigation();
+            addPhonemeNavListeners();
+            
+            const firstButton = document.querySelector('.phoneme-btn');
+            if(firstButton) firstButton.click();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeAppContent);
+    </script>
+</body>
+</html>
