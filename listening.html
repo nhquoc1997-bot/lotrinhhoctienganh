@@ -248,18 +248,57 @@
             },
 
             compareSentences(target, input) {
-                const targetWords = this.cleanText(target).split(" ");
-                const inputWords = this.cleanText(input).split(" ");
-                let correctCount = 0;
-                
-                const result = targetWords.map((tWord, i) => {
-                    const iWord = inputWords[i] || "";
-                    const isCorrect = tWord === iWord;
-                    if (isCorrect) correctCount++;
-                    return { word: tWord, inputWord: iWord, isCorrect };
-                });
+                const targetWords = this.cleanText(target).split(" ").filter(w => w.length > 0);
+                const inputWords = this.cleanText(input).split(" ").filter(w => w.length > 0);
 
-                const accuracy = Math.round((correctCount / targetWords.length) * 100) || 0;
+                const n = targetWords.length;
+                const m = inputWords.length;
+                
+                // Thuật toán Quy hoạch động (Dynamic Programming) gióng hàng từng từ
+                const dp = Array(n + 1).fill(null).map(() => Array(m + 1).fill(0));
+
+                for (let i = 0; i <= n; i++) dp[i][0] = i;
+                for (let j = 0; j <= m; j++) dp[0][j] = j;
+
+                for (let i = 1; i <= n; i++) {
+                    for (let j = 1; j <= m; j++) {
+                        if (targetWords[i - 1] === inputWords[j - 1]) {
+                            dp[i][j] = dp[i - 1][j - 1]; // Trùng khớp
+                        } else {
+                            dp[i][j] = Math.min(
+                                dp[i - 1][j - 1] + 1, // Thay thế (Sai từ)
+                                dp[i][j - 1] + 1,     // Dư thừa (Thêm từ)
+                                dp[i - 1][j] + 1      // Bị thiếu (Mất từ)
+                            );
+                        }
+                    }
+                }
+
+                // Truy vết ngược để xây dựng giao diện sửa lỗi chi tiết
+                let i = n;
+                let j = m;
+                const result = [];
+                let correctCount = 0;
+
+                while (i > 0 || j > 0) {
+                    if (i > 0 && j > 0 && targetWords[i - 1] === inputWords[j - 1]) {
+                        result.unshift({ type: 'match', target: targetWords[i - 1], input: inputWords[j - 1] });
+                        correctCount++;
+                        i--; j--;
+                    } else if (i > 0 && j > 0 && dp[i][j] === dp[i - 1][j - 1] + 1) {
+                        result.unshift({ type: 'sub', target: targetWords[i - 1], input: inputWords[j - 1] });
+                        i--; j--;
+                    } else if (j > 0 && (i === 0 || dp[i][j] === dp[i][j - 1] + 1)) {
+                        result.unshift({ type: 'ins', target: '', input: inputWords[j - 1] });
+                        j--;
+                    } else if (i > 0 && (j === 0 || dp[i][j] === dp[i - 1][j] + 1)) {
+                        result.unshift({ type: 'del', target: targetWords[i - 1], input: '' });
+                        i--;
+                    }
+                }
+
+                // Tính % trên tổng số từ của câu gốc
+                const accuracy = n > 0 ? Math.round((correctCount / n) * 100) : 0;
                 return { result, accuracy };
             },
 
@@ -471,18 +510,36 @@
                 const correctText = document.getElementById('correct-sentence-text');
 
                 // Reset classes
-                box.className = `p-5 md:p-6 rounded-2xl border-2 mb-6 shadow-sm ${accuracy === 100 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`;
-                title.className = `text-xl font-black mb-4 flex items-center gap-2 ${accuracy === 100 ? 'text-emerald-600' : 'text-red-600'}`;
+                box.className = `p-4 md:p-6 rounded-2xl border-2 mb-4 md:mb-6 shadow-sm ${accuracy === 100 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`;
+                title.className = `text-lg md:text-xl font-black mb-3 flex items-center gap-2 ${accuracy === 100 ? 'text-emerald-600' : 'text-red-600'}`;
                 
                 title.innerHTML = `${accuracy === 100 ? '<i class="fa-solid fa-circle-check text-2xl"></i>' : '<i class="fa-solid fa-circle-xmark text-2xl"></i>'} Độ chính xác: ${accuracy}%`;
 
-                // Render diff
+                // Render diff nâng cao
                 let html = "";
                 result.forEach(item => {
-                    if (item.isCorrect) {
-                        html += `<span class="inline-block mr-1 mb-1 px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800">${item.word}</span>`;
-                    } else {
-                        html += `<span class="inline-block mr-1 mb-1 px-1.5 py-0.5 rounded-md bg-red-100 text-red-800 underline decoration-red-500 decoration-2">${item.inputWord || "_thiếu_"}</span>`;
+                    if (item.type === 'match') {
+                        // Nhập ĐÚNG
+                        html += `<span class="inline-block mr-1.5 mb-2 px-2 py-1.5 rounded-md bg-emerald-100 text-emerald-800 font-bold border border-emerald-200">${item.target}</span>`;
+                    } else if (item.type === 'sub') {
+                        // Nhập SAI TỪ
+                        html += `<span class="inline-flex items-center gap-1.5 mr-1.5 mb-2 px-2 py-1.5 rounded-md bg-red-50 border border-red-200 shadow-sm">
+                            <del class="text-red-400 text-sm font-medium">${item.input}</del>
+                            <i class="fa-solid fa-arrow-right text-slate-400 text-xs"></i>
+                            <span class="text-emerald-600 font-bold">${item.target}</span>
+                        </span>`;
+                    } else if (item.type === 'del') {
+                        // THIẾU TỪ
+                        html += `<span class="inline-flex items-center gap-1.5 mr-1.5 mb-2 px-2 py-1.5 rounded-md bg-orange-50 border border-orange-200 shadow-sm">
+                            <span class="text-[10px] uppercase font-black text-orange-500 bg-orange-100 px-1 rounded">Thiếu</span>
+                            <span class="font-bold text-orange-600">${item.target}</span>
+                        </span>`;
+                    } else if (item.type === 'ins') {
+                        // THỪA TỪ
+                        html += `<span class="inline-flex items-center gap-1.5 mr-1.5 mb-2 px-2 py-1.5 rounded-md bg-slate-100 border border-slate-300 shadow-sm">
+                            <del class="text-slate-500 font-medium">${item.input}</del>
+                            <span class="text-[10px] uppercase font-black text-slate-500 bg-slate-200 px-1 rounded">Thừa</span>
+                        </span>`;
                     }
                 });
                 resultDiv.innerHTML = html;
