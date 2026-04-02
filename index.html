@@ -278,33 +278,33 @@
             // Nếu đang chọn một bài học, hiển thị giao diện bài học toàn màn hình
             if (activeLesson) {
                 return (
-                    <div className="fixed inset-0 z-[100] bg-slate-50 flex flex-col animate-fade-in">
-                        {/* Thanh công cụ phía trên cùng nút Quay Lại */}
-                        <div className="h-14 sm:h-16 bg-white border-b border-slate-200 flex items-center px-4 sm:px-6 shadow-sm shrink-0 z-10">
+                    <div className="fixed inset-0 z-[9999] bg-white flex flex-col animate-fade-in" style={{ height: '100dvh' }}>
+                        {/* Thanh công cụ tối giản, dính sát trên cùng để tiết kiệm diện tích */}
+                        <div className="h-12 sm:h-14 bg-white border-b border-slate-200 flex items-center px-4 shrink-0 shadow-sm relative z-10">
                             <button 
                                 onClick={() => setActiveLesson(null)}
-                                className="flex items-center gap-2 text-indigo-600 font-bold hover:text-indigo-800 transition-colors bg-indigo-50 px-3 py-2 rounded-xl active:scale-95"
+                                className="flex items-center gap-1.5 text-slate-600 hover:text-red-600 font-bold transition-colors active:scale-95 z-20"
                             >
-                                <Icon name="arrow-left" size={18} /> <span className="hidden sm:inline">Quay lại danh sách</span>
+                                <Icon name="arrow-left" size={20} /> 
+                                <span className="text-sm">Thoát</span>
                             </button>
                             
-                            <div className="flex-1 flex items-center justify-center gap-2">
-                                <div className={`w-8 h-8 rounded-lg ${activeLesson.bg} ${activeLesson.color} flex items-center justify-center`}>
-                                    <Icon name={activeLesson.icon} size={16} />
-                                </div>
-                                <h2 className="text-base sm:text-lg font-black text-slate-800 truncate max-w-[200px] sm:max-w-md">{activeLesson.title}</h2>
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-20">
+                                <span className="font-black text-slate-800 text-sm sm:text-base truncate flex items-center gap-2">
+                                    <Icon name={activeLesson.icon} size={16} className={activeLesson.color} />
+                                    {activeLesson.title}
+                                </span>
                             </div>
-                            
-                            <div className="w-[120px] sm:w-[150px]"></div> {/* Spacer để cân bằng, giữ tiêu đề ở giữa */}
                         </div>
 
-                        {/* Khu vực nhúng file thực tế (Full màn hình 100%) */}
-                        <div className="flex-1 w-full relative">
+                        {/* Khu vực nhúng file (Tràn viền 100% không có padding, tự xử lý cuộn) */}
+                        <div className="flex-1 w-full bg-white relative overflow-hidden">
                             <iframe 
                                 src={activeLesson.path} 
-                                className="absolute inset-0 w-full h-full border-0 bg-white"
+                                className="absolute top-0 left-0 w-full h-full border-0"
                                 title={activeLesson.title}
                                 allow="camera; microphone; fullscreen; autoplay"
+                                style={{ display: 'block' }}
                             ></iframe>
                         </div>
                     </div>
