@@ -11,11 +11,6 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    
-    <!-- Firebase SDK (Optional/Placeholders) -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
@@ -34,8 +29,11 @@
             -webkit-backdrop-filter: blur(12px);
         }
 
-        .animate-fade-up { animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-up { animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+        
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
         .lesson-card {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -58,12 +56,7 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // --- 1. FIREBASE CONFIG (Placeholder) ---
-        const DEFAULT_CONFIG = { apiKey: "" };
-        const isConfigValid = DEFAULT_CONFIG.apiKey !== "";
-        const APP_IDENTIFIER = 'bob-english-v4';
-
-        // --- 2. COMPONENTS ---
+        // --- COMPONENTS ---
         const Icon = ({ name, size = 20, className = "" }) => {
             const iconRef = useRef(null);
             useEffect(() => {
@@ -77,15 +70,38 @@
             return <i ref={iconRef} data-lucide={name} style={{ width: size, height: size }}></i>;
         };
 
-        // --- 3. MAIN APP ---
+        // --- MAIN APP ---
         function App() {
-            const [user, setUser] = useState(null);
-            const [usersList, setUsersList] = useState([
+            // Khởi tạo state từ LocalStorage để không bị mất dữ liệu khi F5
+            const defaultUsers = [
                 { id: 'admin_root', username: 'admin', password: '123', role: 'admin', name: 'Quản trị viên' },
                 { id: 'stu_demo', username: 'hocvien', password: '123', role: 'student', name: 'Nguyễn Văn A' }
-            ]);
-            const [loading, setLoading] = useState(false);
+            ];
+
+            const [usersList, setUsersList] = useState(() => {
+                const savedUsers = localStorage.getItem('bob_users');
+                return savedUsers ? JSON.parse(savedUsers) : defaultUsers;
+            });
+
+            const [user, setUser] = useState(() => {
+                const savedUser = localStorage.getItem('bob_currentUser');
+                return savedUser ? JSON.parse(savedUser) : null;
+            });
+
             const [error, setError] = useState('');
+
+            // Lưu dữ liệu mỗi khi có thay đổi
+            useEffect(() => {
+                localStorage.setItem('bob_users', JSON.stringify(usersList));
+            }, [usersList]);
+
+            useEffect(() => {
+                if (user) {
+                    localStorage.setItem('bob_currentUser', JSON.stringify(user));
+                } else {
+                    localStorage.removeItem('bob_currentUser');
+                }
+            }, [user]);
 
             const handleLogin = (u, p) => {
                 const found = usersList.find(x => x.username.toLowerCase() === u.trim().toLowerCase() && x.password === p.trim());
@@ -97,26 +113,30 @@
                 }
             };
 
+            const handleLogout = () => {
+                setUser(null);
+            };
+
             return (
                 <div className="min-h-screen pb-10">
                     {!user ? (
                         <LoginScreen onLogin={handleLogin} error={error} />
                     ) : (
-                        <div className="animate-fade-up">
+                        <div className="animate-fade-in">
                             {/* Navigation Bar */}
                             <nav className="glass-nav sticky top-0 z-50 border-b border-slate-200/60 px-4 sm:px-6 h-16 flex items-center justify-between">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.location.reload()}>
                                     <div className="w-9 h-9 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-lg">
                                         <Icon name="graduation-cap" size={20} />
                                     </div>
-                                    <span className="text-xl font-black text-indigo-600 tracking-tight">BobEnglish</span>
+                                    <span className="text-xl font-black text-indigo-600 tracking-tight hidden sm:block">BobEnglish</span>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <div className="text-right hidden xs:block">
+                                    <div className="text-right">
                                         <p className="text-xs font-bold leading-none">{user.name}</p>
                                         <p className="text-[9px] uppercase font-black text-indigo-500 mt-1">{user.role}</p>
                                     </div>
-                                    <button onClick={() => setUser(null)} className="w-9 h-9 flex items-center justify-center bg-slate-100 text-slate-500 rounded-xl active:bg-red-50 active:text-red-500 transition-colors">
+                                    <button onClick={handleLogout} className="w-9 h-9 flex items-center justify-center bg-slate-100 text-slate-500 rounded-xl active:bg-red-50 active:text-red-500 transition-colors">
                                         <Icon name="log-out" size={16} />
                                     </button>
                                 </div>
@@ -135,6 +155,7 @@
             );
         }
 
+        // --- LOGIN COMPONENT ---
         const LoginScreen = ({ onLogin, error }) => {
             const [u, setU] = useState('');
             const [p, setP] = useState('');
@@ -153,7 +174,7 @@
                             
                             <form onSubmit={e => { e.preventDefault(); onLogin(u, p); }} className="space-y-4">
                                 {error && (
-                                    <div className="p-3 bg-red-50 text-red-600 text-xs font-bold rounded-xl border border-red-100 flex items-center gap-2">
+                                    <div className="p-3 bg-red-50 text-red-600 text-xs font-bold rounded-xl border border-red-100 flex items-center gap-2 animate-fade-in">
                                         <Icon name="alert-circle" size={14} /> {error}
                                     </div>
                                 )}
@@ -175,8 +196,20 @@
             );
         };
 
+        // --- STUDENT HUB COMPONENT (SPA Routing included) ---
         const StudentHub = ({ user }) => {
+            const [activeLesson, setActiveLesson] = useState(null);
+
             const lessons = [
+                { 
+                    title: "200 Conversations", 
+                    subtitle: "Giao tiếp thực tế",
+                    desc: "Học qua 200 đoạn hội thoại tiếng Anh giao tiếp thông dụng nhất trong mọi tình huống đời sống.",
+                    icon: "messages-square", 
+                    color: "text-cyan-600", 
+                    bg: "bg-cyan-50",
+                    path: "200conversation.html" 
+                },
                 { 
                     title: "Reading", 
                     subtitle: "Luyện đọc hiểu",
@@ -242,8 +275,52 @@
                 },
             ];
 
+            // Nếu đang chọn một bài học, hiển thị giao diện bài học
+            if (activeLesson) {
+                return (
+                    <div className="animate-fade-up">
+                        {/* Nút Quay Lại */}
+                        <button 
+                            onClick={() => setActiveLesson(null)}
+                            className="flex items-center gap-2 text-indigo-600 font-bold mb-6 hover:text-indigo-800 transition-colors bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-100 w-fit"
+                        >
+                            <Icon name="arrow-left" size={18} /> Quay lại danh sách
+                        </button>
+
+                        {/* Khung hiển thị nội dung bài học */}
+                        <div className="bg-white rounded-[2rem] p-6 sm:p-8 shadow-sm border border-slate-100 min-h-[60vh] flex flex-col">
+                            <div className="flex items-center gap-4 mb-6 pb-6 border-b border-slate-100">
+                                <div className={`w-14 h-14 shrink-0 ${activeLesson.bg} ${activeLesson.color} rounded-2xl flex items-center justify-center`}>
+                                    <Icon name={activeLesson.icon} size={28} />
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-black text-slate-800">{activeLesson.title}</h2>
+                                    <p className="text-slate-500 text-sm mt-1">{activeLesson.desc}</p>
+                                </div>
+                            </div>
+                            
+                            {/* Khu vực mô phỏng hiển thị nội dung file con */}
+                            <div className="flex-1 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center p-8 text-center">
+                                <Icon name="file-code-2" size={48} className="text-slate-300 mb-4" />
+                                <h3 className="text-lg font-bold text-slate-700 mb-2">Đang nạp file: {activeLesson.path}</h3>
+                                <p className="text-sm text-slate-500 max-w-md">
+                                    Nội dung của bài học <strong>{activeLesson.title}</strong> sẽ được load vào khu vực này. Trạng thái người dùng được giữ nguyên không cần tải lại trang.
+                                </p>
+                                <button 
+                                    onClick={() => alert(`Trong thực tế, hệ thống sẽ mở module hoặc iframe trỏ tới: ${activeLesson.path}`)}
+                                    className="mt-6 px-6 py-2 bg-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-300 transition-colors text-sm"
+                                >
+                                    Chạy thử dữ liệu
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            // Nếu không, hiển thị danh sách bài học
             return (
-                <div className="space-y-6">
+                <div className="space-y-6 animate-fade-in">
                     {/* Welcome Banner */}
                     <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-[2rem] p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
                         <div className="relative z-10">
@@ -258,7 +335,7 @@
                         {lessons.map((item, i) => (
                             <div 
                                 key={i} 
-                                onClick={() => window.location.href = item.path}
+                                onClick={() => setActiveLesson(item)}
                                 className="lesson-card bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col cursor-pointer active:bg-slate-50 transition-colors"
                             >
                                 <div className="flex items-center gap-4 mb-4">
@@ -274,7 +351,7 @@
                                     {item.desc}
                                 </p>
                                 <div className="flex items-center text-indigo-600 font-bold text-[10px] uppercase tracking-widest gap-2">
-                                    Bắt đầu học <Icon name="chevron-right" size={12} />
+                                    Vào học ngay <Icon name="chevron-right" size={12} />
                                 </div>
                             </div>
                         ))}
@@ -283,6 +360,7 @@
             );
         };
 
+        // --- ADMIN PANEL ---
         const AdminPanel = ({ users, setUsers }) => {
             const [n, setN] = useState('');
             const [u, setU] = useState('');
@@ -292,6 +370,11 @@
 
             const handleAdd = (e) => {
                 e.preventDefault();
+                // Kiểm tra trùng username
+                if(users.some(x => x.username.toLowerCase() === u.trim().toLowerCase())) {
+                    alert("Tên tài khoản này đã tồn tại!");
+                    return;
+                }
                 const newUser = { id: 'stu_' + Date.now(), name: n, username: u.trim().toLowerCase(), password: p, role: 'student' };
                 setUsers([newUser, ...users]);
                 setN(''); setU(''); setP('');
@@ -303,7 +386,7 @@
             };
 
             return (
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-in">
                     {/* Add User Form */}
                     <div className="lg:col-span-5 order-2 lg:order-1">
                         <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
@@ -326,7 +409,7 @@
                                         <input placeholder="Mật khẩu" value={p} onChange={e=>setP(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 text-sm" required />
                                     </div>
                                 </div>
-                                <button className="w-full py-4 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 active:scale-95 transition-all text-sm shadow-lg shadow-indigo-100">
+                                <button className="w-full py-4 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 active:scale-95 transition-all text-sm shadow-lg shadow-indigo-100 mt-2">
                                     Xác nhận thêm
                                 </button>
                             </form>
@@ -350,15 +433,17 @@
                                         <p className="font-bold text-xs mt-2">Chưa có học viên</p>
                                     </div>
                                 ) : students.map(s => (
-                                    <div key={s.id} className="p-4 flex justify-between items-center bg-white border border-slate-50 rounded-2xl active:bg-slate-50 transition-colors">
+                                    <div key={s.id} className="p-4 flex justify-between items-center bg-white border border-slate-50 rounded-2xl hover:shadow-md transition-all">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-black text-sm">{s.name.charAt(0)}</div>
                                             <div>
                                                 <p className="font-bold text-sm text-slate-800">{s.name}</p>
-                                                <p className="text-[10px] font-mono text-slate-400">U: {s.username} | P: {s.password}</p>
+                                                <p className="text-[10px] font-mono text-slate-400 bg-slate-50 px-2 py-0.5 rounded mt-1 inline-block border border-slate-100">
+                                                    U: {s.username} <span className="mx-1 text-slate-300">|</span> P: {s.password}
+                                                </p>
                                             </div>
                                         </div>
-                                        <button onClick={() => handleDelete(s.id)} className="w-8 h-8 flex items-center justify-center text-slate-300 active:text-red-500 transition-colors">
+                                        <button onClick={() => handleDelete(s.id)} className="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
                                             <Icon name="trash-2" size={16} />
                                         </button>
                                     </div>

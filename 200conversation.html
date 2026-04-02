@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BobSpeaker - Luyện Nói Tiếng Anh</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        /* Custom animations for smooth interactions */
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .animate-pulse-ring {
+            animation: pulse-ring 2s infinite;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-900 font-sans antialiased">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // ==========================================
+        // ICONS (Thay thế cho lucide-react để chạy offline 1 file)
+        // ==========================================
+        const IconBase = ({ children, size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {children}
+            </svg>
+        );
+        const Mic = (props) => <IconBase {...props}><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></IconBase>;
+        const Volume2 = (props) => <IconBase {...props}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></IconBase>;
+        const Volume1 = (props) => <IconBase {...props}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></IconBase>;
+        const ChevronRight = (props) => <IconBase {...props}><path d="m9 18 6-6-6-6"/></IconBase>;
+        const AlertCircle = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></IconBase>;
+        const RefreshCw = (props) => <IconBase {...props}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></IconBase>;
+        const CheckCircle2 = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></IconBase>;
+        const Info = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></IconBase>;
+        const ArrowLeft = (props) => <IconBase {...props}><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></IconBase>;
+        const BookOpen = (props) => <IconBase {...props}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></IconBase>;
+        const Award = (props) => <IconBase {...props}><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></IconBase>;
+        const Trophy = (props) => <IconBase {...props}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></IconBase>;
+
+        // ==========================================
+        // DỮ LIỆU KHÓA HỌC (20 CÂU/PHẦN)
+        // ==========================================
+        const COURSE_DATA = [
+        {
+            id: 1, title: "Phần 1: Giao tiếp Cơ bản", desc: "Chào hỏi, giới thiệu bản thân và các câu hỏi thông dụng.",
+            lessons: [
+            { vn: "Chào buổi sáng, hôm nay bạn thế nào?", en: "Good morning, how are you today?", hint: "Một lời chào tiêu chuẩn và lịch sự." },
+            { vn: "Tên tôi là John, rất vui được gặp bạn.", en: "My name is John, nice to meet you.", hint: "Dùng 'nice to meet you' trong lần đầu gặp mặt." },
+            { vn: "Bạn đến từ đâu?", en: "Where are you from?", hint: "Hỏi về quê quán hoặc quốc tịch." },
+            { vn: "Tôi đến từ Việt Nam.", en: "I am from Vietnam.", hint: "Câu trả lời cơ bản về xuất xứ." },
+            { vn: "Bạn bao nhiêu tuổi?", en: "How old are you?", hint: "Hỏi tuổi tác (lưu ý ngữ điệu xuống ở cuối câu)." },
+            { vn: "Bạn làm nghề gì?", en: "What do you do for a living?", hint: "Cách hỏi nghề nghiệp phổ biến của người bản xứ." },
+            { vn: "Tôi là một sinh viên.", en: "I am a student.", hint: "Đừng quên mạo từ 'a' trước danh từ đếm được." },
+            { vn: "Bạn có thích nghe nhạc không?", en: "Do you like listening to music?", hint: "Like + V-ing: Thích làm gì đó." },
+            { vn: "Sở thích của bạn là gì?", en: "What are your hobbies?", hint: "Sử dụng số nhiều 'hobbies' nếu có nhiều sở thích." },
+            { vn: "Bạn có thể giúp tôi một chút được không?", en: "Can you help me a little bit?", hint: "Một cách nhờ vả nhẹ nhàng." },
+            { vn: "Cảm ơn bạn rất nhiều.", en: "Thank you very much.", hint: "Phát âm rõ âm /θ/ trong từ 'Thank'." },
+            { vn: "Không có chi.", en: "You are welcome.", hint: "Câu đáp lại phổ biến nhất khi được cảm ơn." },
+            { vn: "Xin lỗi, tôi không hiểu.", en: "Sorry, I do not understand.", hint: "Đừng ngại dùng câu này khi bạn chưa nghe rõ." },
+            { vn: "Bạn có thể lặp lại được không?", en: "Could you repeat that please?", hint: "Dùng 'Could' để câu lịch sự hơn." },
+            { vn: "Hẹn gặp lại bạn sau nhé.", en: "See you later.", hint: "Lời chào tạm biệt thân thiện." },
+            { vn: "Bạn có anh chị em nào không?", en: "Do you have any brothers or sisters?", hint: "Cách hỏi về anh chị em trong gia đình." },
+            { vn: "Số điện thoại của bạn là gì?", en: "What is your phone number?", hint: "Hỏi thông tin liên lạc." },
+            { vn: "Bạn có dùng mạng xã hội không?", en: "Do you use social media?", hint: "Social media: mạng xã hội." },
+            { vn: "Tôi phải đi bây giờ.", en: "I have to go now.", hint: "Cách xin phép rời đi." },
+            { vn: "Chúc bạn một ngày tốt lành.", en: "Have a good day.", hint: "Lời chúc lịch sự khi tạm biệt." }
+            ]
+        },
+        {
+            id: 2, title: "Phần 2: Nhà hàng & Ăn uống", desc: "Cách đặt bàn, gọi món và thanh toán tại nhà hàng.",
+            lessons: [
+            { vn: "Tôi muốn đặt một bàn cho hai người.", en: "I would like to book a table for two.", hint: "Dùng 'I would like to' lịch sự hơn 'I want to'." },
+            { vn: "Cho tôi xem thực đơn được không?", en: "Could I see the menu please?", hint: "Luôn thêm 'please' khi yêu cầu phục vụ." },
+            { vn: "Món đặc biệt hôm nay là gì?", en: "What is the chef special today?", hint: "Hỏi món ngon nhất trong ngày của quán." },
+            { vn: "Tôi bị dị ứng với đậu phộng.", en: "I am allergic to peanuts.", hint: "Cấu trúc: Be allergic to + [thứ bị dị ứng]." },
+            { vn: "Cho tôi một phần gà rán.", en: "I will have a portion of fried chicken.", hint: "Dùng 'I will have' khi gọi món." },
+            { vn: "Đồ ăn rất ngon.", en: "The food is very delicious.", hint: "Một lời khen dành cho đầu bếp." },
+            { vn: "Bạn có thể lấy thêm nước không?", en: "Can you get me some more water?", hint: "Xin thêm đồ uống." },
+            { vn: "Món này hơi mặn đối với tôi.", en: "This dish is a bit salty for me.", hint: "Salty: mặn. Có thể thay bằng sweet, spicy..." },
+            { vn: "Chúng tôi muốn gọi đồ tráng miệng.", en: "We would like to order some dessert.", hint: "Dessert (tráng miệng) nhấn âm 2, khác với Desert (sa mạc)." },
+            { vn: "Cho tôi xin hóa đơn nhé.", en: "Could I have the bill please?", hint: "Ở Mỹ thường dùng từ 'check' thay vì 'bill'." },
+            { vn: "Bạn có nhận thẻ tín dụng không?", en: "Do you accept credit cards?", hint: "Hỏi phương thức thanh toán." },
+            { vn: "Tôi sẽ trả bằng tiền mặt.", en: "I will pay in cash.", hint: "Pay in cash: Trả bằng tiền mặt." },
+            { vn: "Không cần trả lại tiền thừa đâu.", en: "Keep the change.", hint: "Dùng khi bạn muốn cho tiền boa (tip)." },
+            { vn: "Cho tôi gói mang về nhé.", en: "Can I get this to go?", hint: "Cụm 'to go' nghĩa là mang đi." },
+            { vn: "Cạn ly nào!", en: "Cheers, bottom up!", hint: "Lời chúc khi cụng ly." },
+            { vn: "Cho tôi xem thực đơn đồ uống nhé.", en: "Show me the drink menu please.", hint: "Drink menu: thực đơn đồ uống." },
+            { vn: "Món này mất bao lâu để chuẩn bị?", en: "How long does this dish take?", hint: "Hỏi thời gian đợi món." },
+            { vn: "Tôi ăn chay.", en: "I am a vegetarian.", hint: "Vegetarian: người ăn chay." },
+            { vn: "Cho tôi thêm một ít giấy ăn.", en: "Can I get some extra napkins?", hint: "Napkins: giấy ăn." },
+            { vn: "Bạn có thể gói phần thừa lại không?", en: "Could you pack the leftovers?", hint: "Leftovers: đồ ăn thừa." }
+            ]
+        },
+        {
+            id: 3, title: "Phần 3: Mua sắm & Trả giá", desc: "Mặc cả, hỏi kích cỡ và đổi trả hàng hóa.",
+            lessons: [
+            { vn: "Giá của chiếc áo này là bao nhiêu?", en: "How much is this shirt?", hint: "Cấu trúc hỏi giá cơ bản." },
+            { vn: "Nó hơi đắt, có giảm giá không?", en: "It is a bit expensive, is there any discount?", hint: "Discount: Giảm giá." },
+            { vn: "Bạn có cái này màu khác không?", en: "Do you have this in a different color?", hint: "Giới từ 'in' đi với màu sắc." },
+            { vn: "Tôi đang tìm kích cỡ M.", en: "I am looking for size M.", hint: "Be looking for: Đang tìm kiếm." },
+            { vn: "Phòng thử đồ ở đâu vậy?", en: "Where is the fitting room?", hint: "Fitting room: Phòng thử đồ." },
+            { vn: "Nó vừa vặn hoàn hảo.", en: "It fits me perfectly.", hint: "Động từ 'fit' đi thẳng với tân ngữ." },
+            { vn: "Nó hơi chật một chút.", en: "It is a bit tight.", hint: "Tight (chật) >< Loose (rộng)." },
+            { vn: "Tôi chỉ đang xem thử thôi, cảm ơn.", en: "I am just looking, thank you.", hint: "Câu từ chối khéo khi nhân viên hỏi bạn cần gì." },
+            { vn: "Tôi sẽ lấy cái này.", en: "I will take this one.", hint: "Chốt mua hàng." },
+            { vn: "Tôi có thể trả lại món này không?", en: "Can I return this item?", hint: "Return: Trả lại hàng." },
+            { vn: "Nó bị lỗi rồi.", en: "It is defective.", hint: "Defective: Bị lỗi sản xuất." },
+            { vn: "Cửa hàng mở cửa đến mấy giờ?", en: "What time does the store close?", hint: "Hỏi giờ đóng cửa." },
+            { vn: "Cho tôi xin biên lai nhé.", en: "Can I have the receipt please?", hint: "Receipt: Biên lai (chữ 'p' bị câm)." },
+            { vn: "Sản phẩm này đã hết hàng.", en: "This product is out of stock.", hint: "Out of stock: Hết hàng." },
+            { vn: "Mua một tặng một.", en: "Buy one get one free.", hint: "Câu slogan khuyến mãi kinh điển." },
+            { vn: "Cái này đang được giảm giá phải không?", en: "Is this on sale?", hint: "On sale: đang được giảm giá." },
+            { vn: "Tôi có thể thanh toán ở đâu?", en: "Where can I pay?", hint: "Hỏi quầy thanh toán." },
+            { vn: "Nó đắt quá, tôi không mua nổi.", en: "It is too expensive I cannot afford it.", hint: "Afford: có đủ khả năng chi trả." },
+            { vn: "Nó có bảo hành không?", en: "Does it come with a warranty?", hint: "Warranty: bảo hành." },
+            { vn: "Vui lòng gói quà giúp tôi.", en: "Please gift wrap it for me.", hint: "Gift wrap: gói quà." }
+            ]
+        },
+        {
+            id: 4, title: "Phần 4: Đi lại & Hỏi đường", desc: "Cách bắt xe, chỉ đường và xử lý khi đi lạc.",
+            lessons: [
+            { vn: "Bạn có thể chỉ đường đến bảo tàng được không?", en: "Could you show me the way to the museum?", hint: "Cấu trúc hỏi đường cơ bản." },
+            { vn: "Trạm tàu điện ngầm gần nhất ở đâu?", en: "Where is the nearest subway station?", hint: "Nearest: Gần nhất." },
+            { vn: "Đi thẳng rồi rẽ trái ở ngã tư.", en: "Go straight then turn left at the intersection.", hint: "Intersection: Ngã tư." },
+            { vn: "Nó nằm ngay cạnh ngân hàng.", en: "It is right next to the bank.", hint: "Next to: Ngay bên cạnh." },
+            { vn: "Từ đây đến đó bao xa?", en: "How far is it from here?", hint: "How far: Bao xa." },
+            { vn: "Mất khoảng mười phút đi bộ.", en: "It takes about ten minutes to walk.", hint: "Cấu trúc: It takes + thời gian." },
+            { vn: "Tôi có thể bắt xe buýt số 5 ở đâu?", en: "Where can I catch bus number five?", hint: "Catch a bus: Bắt xe buýt." },
+            { vn: "Cho tôi một vé đi đến sân bay.", en: "I would like a ticket to the airport.", hint: "A ticket to + [địa điểm]." },
+            { vn: "Chuyến tàu tiếp theo khởi hành lúc mấy giờ?", en: "What time does the next train leave?", hint: "Leave: Rời đi, khởi hành." },
+            { vn: "Xin lỗi, tôi đến muộn vì tắc đường.", en: "Sorry I am late because of the traffic.", hint: "Because of + Cụm danh từ." },
+            { vn: "Hãy gọi cho tôi một chiếc taxi.", en: "Please call a taxi for me.", hint: "Call someone a taxi: Gọi taxi cho ai." },
+            { vn: "Làm ơn lái xe chậm lại.", en: "Please drive a little slower.", hint: "Slower: Chậm hơn." },
+            { vn: "Dừng lại ở góc phố kia nhé.", en: "Stop at that corner please.", hint: "Corner: Góc phố." },
+            { vn: "Tôi bị lạc đường rồi.", en: "I am lost.", hint: "Cụm từ quan trọng khi đi du lịch." },
+            { vn: "Bạn có bản đồ không?", en: "Do you have a map?", hint: "Map: Bản đồ." },
+            { vn: "Đừng đi quá nhanh.", en: "Do not walk too fast.", hint: "Nhắc nhở giảm tốc độ." },
+            { vn: "Bạn có thể chỉ trên bản đồ được không?", en: "Can you point it out on the map?", hint: "Point out: chỉ ra." },
+            { vn: "Tôi nên xuống ở bến nào?", en: "Which stop should I get off at?", hint: "Get off: xuống xe." },
+            { vn: "Cửa hàng tiện lợi gần nhất ở đâu?", en: "Where is the nearest convenience store?", hint: "Convenience store: cửa hàng tiện lợi." },
+            { vn: "Đi theo tôi, tôi sẽ dẫn bạn đến đó.", en: "Follow me I will take you there.", hint: "Đề nghị dẫn đường." }
+            ]
+        },
+        {
+            id: 5, title: "Phần 5: Công việc & Văn phòng", desc: "Giao tiếp nơi công sở, họp hành và email.",
+            lessons: [
+            { vn: "Cuộc họp sẽ bắt đầu lúc hai giờ chiều.", en: "The meeting will start at two PM.", hint: "Start at + thời gian." },
+            { vn: "Bạn đã gửi email cho khách hàng chưa?", en: "Have you sent the email to the client?", hint: "Thì hiện tại hoàn thành." },
+            { vn: "Hạn chót cho dự án này là ngày mai.", en: "The deadline for this project is tomorrow.", hint: "Deadline: Hạn chót." },
+            { vn: "Sếp của tôi đang đi vắng.", en: "My boss is out of the office.", hint: "Out of the office: Không có ở văn phòng." },
+            { vn: "Tôi sẽ gọi lại cho bạn sau nhé.", en: "I will call you back later.", hint: "Call someone back: Gọi lại cho ai." },
+            { vn: "Hợp đồng đã sẵn sàng để ký chưa?", en: "Is the contract ready to sign?", hint: "Contract: Hợp đồng." },
+            { vn: "Chúng ta cần làm việc nhóm tốt hơn.", en: "We need to improve our teamwork.", hint: "Improve: Cải thiện." },
+            { vn: "Bạn nghĩ sao về ý tưởng này?", en: "What do you think about this idea?", hint: "Hỏi ý kiến đồng nghiệp." },
+            { vn: "Tôi hoàn toàn đồng ý với bạn.", en: "I completely agree with you.", hint: "Completely: Hoàn toàn." },
+            { vn: "Tôi không nghĩ đó là ý hay.", en: "I do not think that is a good idea.", hint: "Cách phản đối lịch sự." },
+            { vn: "Máy in lại bị hỏng rồi.", en: "The printer is broken again.", hint: "Broken: Bị hỏng." },
+            { vn: "Mấy giờ bạn nghỉ trưa?", en: "What time is your lunch break?", hint: "Lunch break: Giờ nghỉ trưa." },
+            { vn: "Hôm nay tôi phải làm thêm giờ.", en: "I have to work overtime today.", hint: "Work overtime: Làm thêm giờ." },
+            { vn: "Cô ấy vừa được thăng chức.", en: "She just got a promotion.", hint: "Get a promotion: Được thăng chức." },
+            { vn: "Anh ấy đã nộp đơn xin nghỉ việc.", en: "He has resigned from his job.", hint: "Resign: Từ chức, nghỉ việc." },
+            { vn: "Bạn có thể gửi lại tệp đính kèm không?", en: "Can you resend the attachment?", hint: "Attachment: tệp đính kèm." },
+            { vn: "Tôi sẽ xem xét vấn đề này.", en: "I will look into this matter.", hint: "Look into: xem xét, điều tra." },
+            { vn: "Chúng ta đang bị chậm tiến độ.", en: "We are behind schedule.", hint: "Behind schedule: chậm tiến độ." },
+            { vn: "Làm tốt lắm, mọi người!", en: "Great job everyone!", hint: "Lời khen ngợi nhóm." },
+            { vn: "Khi nào bạn có thời gian rảnh?", en: "When are you available?", hint: "Available: rảnh rỗi, có mặt." }
+            ]
+        },
+        {
+            id: 6, title: "Phần 6: Sở thích & Giải trí", desc: "Nói về những gì bạn thích làm vào thời gian rảnh.",
+            lessons: [
+            { vn: "Bạn thích làm gì vào thời gian rảnh?", en: "What do you like to do in your free time?", hint: "Free time: thời gian rảnh rỗi." },
+            { vn: "Tôi rất thích đọc sách và xem phim.", en: "I really enjoy reading books and watching movies.", hint: "Enjoy + V-ing: Thích làm gì." },
+            { vn: "Bạn có chơi môn thể thao nào không?", en: "Do you play any sports?", hint: "Play sports: chơi thể thao." },
+            { vn: "Tôi thường đi bơi vào cuối tuần.", en: "I usually go swimming on the weekends.", hint: "Go + V-ing dùng cho các hoạt động." },
+            { vn: "Loại nhạc yêu thích của bạn là gì?", en: "What is your favorite type of music?", hint: "Favorite: yêu thích nhất." },
+            { vn: "Tôi là một người hâm mộ lớn của nhạc pop.", en: "I am a big fan of pop music.", hint: "Be a big fan of: là người hâm mộ lớn của..." },
+            { vn: "Cuối tuần trước bạn đã làm gì?", en: "What did you do last weekend?", hint: "Dùng trợ động từ 'did' cho thì quá khứ." },
+            { vn: "Chúng tôi đã đi cắm trại ở trên núi.", en: "We went camping in the mountains.", hint: "Went là quá khứ của Go." },
+            { vn: "Bạn có biết chơi nhạc cụ nào không?", en: "Can you play any musical instruments?", hint: "Musical instruments: nhạc cụ." },
+            { vn: "Tôi có thể chơi guitar một chút.", en: "I can play the guitar a little bit.", hint: "Dùng mạo từ 'the' trước tên nhạc cụ." },
+            { vn: "Bộ phim này thực sự rất thú vị.", en: "This movie is really interesting.", hint: "Interesting: thú vị." },
+            { vn: "Bạn có hay đi xem hòa nhạc không?", en: "Do you often go to concerts?", hint: "Concert: buổi hòa nhạc." },
+            { vn: "Tôi thích dành thời gian cho gia đình.", en: "I love spending time with my family.", hint: "Spend time: dành thời gian." },
+            { vn: "Trò chơi điện tử là niềm đam mê của tôi.", en: "Video games are my passion.", hint: "Passion: niềm đam mê." },
+            { vn: "Hãy cùng nhau đi dạo ở công viên nhé.", en: "Let us go for a walk in the park together.", hint: "Go for a walk: đi dạo." },
+            { vn: "Bạn có thích đọc truyện tranh không?", en: "Do you like reading comic books?", hint: "Comic books: truyện tranh." },
+            { vn: "Tôi thích nướng bánh vào cuối tuần.", en: "I enjoy baking on the weekends.", hint: "Baking: nướng bánh." },
+            { vn: "Bạn có phải là người thích tập thể dục không?", en: "Are you a fitness enthusiast?", hint: "Fitness enthusiast: người đam mê thể hình." },
+            { vn: "Tôi đang học cách nấu ăn.", en: "I am learning how to cook.", hint: "Learning how to: học cách làm gì đó." },
+            { vn: "Tôi thích chụp ảnh phong cảnh.", en: "I love taking landscape photos.", hint: "Landscape: phong cảnh." }
+            ]
+        },
+        {
+            id: 7, title: "Phần 7: Sức khỏe & Y tế", desc: "Cách diễn đạt các triệu chứng và nói chuyện với bác sĩ.",
+            lessons: [
+            { vn: "Bạn trông có vẻ mệt mỏi, bạn ổn chứ?", en: "You look tired, are you okay?", hint: "Look + tính từ: trông có vẻ..." },
+            { vn: "Tôi cảm thấy không được khỏe lắm.", en: "I am not feeling very well.", hint: "Cụm từ thông dụng khi muốn báo bị ốm." },
+            { vn: "Tôi bị đau đầu kinh khủng.", en: "I have a terrible headache.", hint: "Headache: đau đầu." },
+            { vn: "Tôi nghĩ mình đã bị cảm lạnh rồi.", en: "I think I have caught a cold.", hint: "Catch a cold: bị cảm lạnh." },
+            { vn: "Bạn đã uống thuốc chưa?", en: "Have you taken any medicine yet?", hint: "Take medicine: uống thuốc." },
+            { vn: "Bạn nên đi khám bác sĩ đi.", en: "You should go see a doctor.", hint: "Go see a doctor: đi khám bệnh." },
+            { vn: "Tôi cần đặt lịch hẹn với nha sĩ.", en: "I need to make an appointment with the dentist.", hint: "Make an appointment: đặt lịch hẹn." },
+            { vn: "Cổ họng của tôi rất đau.", en: "My throat is very sore.", hint: "Sore throat: đau họng." },
+            { vn: "Bạn có triệu chứng gì khác không?", en: "Do you have any other symptoms?", hint: "Symptom: triệu chứng bệnh." },
+            { vn: "Tôi bị sốt cao từ đêm qua.", en: "I have had a high fever since last night.", hint: "High fever: sốt cao." },
+            { vn: "Hãy nghỉ ngơi và uống nhiều nước nhé.", en: "Get some rest and drink plenty of water.", hint: "Plenty of: nhiều." },
+            { vn: "Huyết áp của bạn là bao nhiêu?", en: "What is your blood pressure?", hint: "Blood pressure: huyết áp." },
+            { vn: "Tôi bị dị ứng với hải sản.", en: "I am allergic to seafood.", hint: "Allergic to: bị dị ứng với thứ gì đó." },
+            { vn: "Bác sĩ bảo tôi cần phải phẫu thuật.", en: "The doctor said I need to have surgery.", hint: "Have surgery: tiến hành phẫu thuật." },
+            { vn: "Chúc bạn mau chóng bình phục nhé.", en: "I wish you a speedy recovery.", hint: "Speedy recovery: sự bình phục nhanh chóng." },
+            { vn: "Tôi bị đau bụng.", en: "I have a stomachache.", hint: "Stomachache: đau bụng." },
+            { vn: "Tôi cảm thấy hơi chóng mặt.", en: "I am feeling a bit dizzy.", hint: "Dizzy: chóng mặt." },
+            { vn: "Gần đây tôi bị mất ngủ.", en: "I have been suffering from insomnia lately.", hint: "Insomnia: chứng mất ngủ." },
+            { vn: "Tôi cần mua vài cái băng gạc.", en: "I need to buy some bandages.", hint: "Bandages: băng gạc." },
+            { vn: "Răng của tôi đang bị chảy máu.", en: "My tooth is bleeding.", hint: "Bleed: chảy máu." }
+            ]
+        },
+        {
+            id: 8, title: "Phần 8: Khách sạn & Chỗ ở", desc: "Check-in khách sạn, yêu cầu dịch vụ và phàn nàn.",
+            lessons: [
+            { vn: "Tôi đã đặt phòng dưới tên John.", en: "I have a reservation under the name John.", hint: "Reservation: sự đặt trước." },
+            { vn: "Xin vui lòng cho tôi xem hộ chiếu của bạn.", en: "Please show me your passport.", hint: "Passport: hộ chiếu." },
+            { vn: "Bữa sáng được phục vụ từ mấy giờ?", en: "What time is breakfast served?", hint: "Dùng dạng bị động 'is served'." },
+            { vn: "Phòng của tôi ở tầng mấy?", en: "Which floor is my room on?", hint: "Floor: tầng, luôn dùng với giới từ 'on'." },
+            { vn: "Có kết nối wifi miễn phí trong phòng không?", en: "Is there free wifi connection in the room?", hint: "Connection: sự kết nối." },
+            { vn: "Mật khẩu wifi ở đây là gì vậy?", en: "What is the wifi password here?", hint: "Password: mật khẩu." },
+            { vn: "Tôi có thể xin thêm một cái gối không?", en: "Could I ask for an extra pillow?", hint: "Extra pillow: thêm một chiếc gối." },
+            { vn: "Điều hòa trong phòng tôi không hoạt động.", en: "The air conditioner in my room is not working.", hint: "Air conditioner: máy điều hòa." },
+            { vn: "Dịch vụ dọn phòng có mỗi ngày không?", en: "Is there housekeeping service every day?", hint: "Housekeeping: dọn dẹp phòng." },
+            { vn: "Mấy giờ tôi phải trả phòng?", en: "What time is check out?", hint: "Check out: trả phòng (Check in: nhận phòng)." },
+            { vn: "Tôi có thể để lại hành lý ở đây không?", en: "Can I leave my luggage here?", hint: "Luggage là danh từ không đếm được." },
+            { vn: "Bạn có thể gọi cho tôi một chiếc taxi không?", en: "Could you call a taxi for me?", hint: "Call someone a taxi: gọi taxi cho ai đó." },
+            { vn: "Phòng này có tầm nhìn ra biển rất đẹp.", en: "This room has a beautiful ocean view.", hint: "Ocean view: hướng nhìn ra biển." },
+            { vn: "Tôi muốn đổi sang một phòng yên tĩnh hơn.", en: "I would like to change to a quieter room.", hint: "Quieter: yên tĩnh hơn." },
+            { vn: "Cảm ơn vì dịch vụ tuyệt vời của các bạn.", en: "Thank you for your excellent service.", hint: "Excellent: xuất sắc, tuyệt vời." },
+            { vn: "Có thang máy ở đây không?", en: "Is there an elevator here?", hint: "Elevator: thang máy." },
+            { vn: "Cửa phòng tôi bị khóa trái rồi.", en: "I am locked out of my room.", hint: "Locked out: bị khóa bên ngoài." },
+            { vn: "Bạn có thể dọn phòng cho tôi bây giờ được không?", en: "Could you make up my room now?", hint: "Make up a room: dọn phòng." },
+            { vn: "Phòng tập thể dục nằm ở tầng một.", en: "The gym is located on the first floor.", hint: "Located on: nằm ở." },
+            { vn: "Có nhà hàng nào gần khách sạn không?", en: "Are there any restaurants near the hotel?", hint: "Near: gần." }
+            ]
+        },
+        {
+            id: 9, title: "Phần 9: Thời tiết & Môi trường", desc: "Hỏi thăm thời tiết và câu chuyện làm quà xã giao.",
+            lessons: [
+            { vn: "Thời tiết hôm nay thế nào?", en: "What is the weather like today?", hint: "Cấu trúc kinh điển để hỏi thời tiết: What is... like?" },
+            { vn: "Trời đang mưa rất to ở bên ngoài.", en: "It is raining heavily outside.", hint: "Heavily: một cách nặng hạt." },
+            { vn: "Dự báo thời tiết nói ngày mai sẽ nắng.", en: "The weather forecast says it will be sunny tomorrow.", hint: "Weather forecast: dự báo thời tiết." },
+            { vn: "Tôi rất ghét thời tiết ẩm ướt thế này.", en: "I really hate this humid weather.", hint: "Humid: ẩm thấp, ẩm ướt." },
+            { vn: "Có vẻ như sắp có bão đến.", en: "It looks like a storm is coming.", hint: "Storm: cơn bão." },
+            { vn: "Nhiệt độ hôm nay là bao nhiêu độ?", en: "What is the temperature today?", hint: "Temperature: nhiệt độ." },
+            { vn: "Trời lạnh quá, tôi bị nổi da gà.", en: "It is so cold, I have goosebumps.", hint: "Goosebumps: nổi da gà." },
+            { vn: "Nhớ mang theo ô phòng khi trời mưa nhé.", en: "Remember to bring an umbrella in case it rains.", hint: "In case: phòng khi." },
+            { vn: "Mùa yêu thích của bạn trong năm là gì?", en: "What is your favorite season of the year?", hint: "Season: mùa." },
+            { vn: "Tôi thích mùa thu vì lá đổi màu.", en: "I like autumn because the leaves change color.", hint: "Autumn / Fall: mùa thu." },
+            { vn: "Mùa đông ở đây thường có tuyết rơi.", en: "It usually snows here in winter.", hint: "Snow vừa là danh từ vừa là động từ." },
+            { vn: "Không khí ở thành phố này rất ô nhiễm.", en: "The air in this city is very polluted.", hint: "Polluted: bị ô nhiễm." },
+            { vn: "Chúng ta cần bảo vệ môi trường nhiều hơn.", en: "We need to protect the environment more.", hint: "Protect: bảo vệ." },
+            { vn: "Hãy tắt đèn khi rời khỏi phòng.", en: "Please turn off the lights when you leave the room.", hint: "Turn off: tắt (thiết bị điện)." },
+            { vn: "Biến đổi khí hậu là một vấn đề nghiêm trọng.", en: "Climate change is a serious problem.", hint: "Climate change: biến đổi khí hậu." },
+            { vn: "Trời đang quang mây.", en: "The sky is clearing up.", hint: "Clear up: quang mây, tạnh mưa." },
+            { vn: "Có một cơn gió nhẹ rất mát mẻ.", en: "There is a very cool breeze.", hint: "Breeze: cơn gió nhẹ." },
+            { vn: "Hôm nay độ ẩm rất cao.", en: "The humidity is very high today.", hint: "Humidity: độ ẩm." },
+            { vn: "Tôi thích nghe tiếng mưa rơi.", en: "I like listening to the sound of rain.", hint: "Sound of rain: tiếng mưa." },
+            { vn: "Chúng ta nên tái chế đồ nhựa.", en: "We should recycle plastic items.", hint: "Recycle: tái chế." }
+            ]
+        },
+        {
+            id: 10, title: "Phần 10: Cảm xúc & Mối quan hệ", desc: "Nói về cảm xúc, bạn bè và người thân trong gia đình.",
+            lessons: [
+            { vn: "Hôm nay tôi cảm thấy rất tuyệt vời.", en: "I feel absolutely wonderful today.", hint: "Absolutely: vô cùng, hoàn toàn." },
+            { vn: "Chuyện gì làm bạn buồn vậy?", en: "What is making you so sad?", hint: "Make + someone + tính từ." },
+            { vn: "Tôi đang rất lo lắng về bài kiểm tra ngày mai.", en: "I am very nervous about the test tomorrow.", hint: "Nervous about: hồi hộp, lo lắng về." },
+            { vn: "Cô ấy thực sự tức giận với tôi.", en: "She was really angry with me.", hint: "Angry with: tức giận với ai đó." },
+            { vn: "Đừng lo lắng, mọi chuyện sẽ ổn thôi.", en: "Do not worry, everything will be fine.", hint: "Lời động viên rất phổ biến." },
+            { vn: "Tôi rất tự hào về những gì bạn đã làm.", en: "I am very proud of what you have done.", hint: "Proud of: tự hào về." },
+            { vn: "Chúng tôi đã là bạn thân từ khi còn nhỏ.", en: "We have been best friends since childhood.", hint: "Childhood: thời thơ ấu." },
+            { vn: "Bạn có đang hẹn hò với ai không?", en: "Are you dating anyone right now?", hint: "Date someone: hẹn hò với ai." },
+            { vn: "Bố mẹ tôi rất nghiêm khắc nhưng yêu thương tôi.", en: "My parents are very strict but loving.", hint: "Strict: nghiêm khắc." },
+            { vn: "Tôi có một gia đình lớn với nhiều anh chị em.", en: "I have a large family with many siblings.", hint: "Siblings: anh chị em ruột." },
+            { vn: "Tôi thực sự xin lỗi vì đã làm bạn tổn thương.", en: "I am truly sorry for hurting you.", hint: "Truly sorry: thực sự xin lỗi." },
+            { vn: "Bạn có thể tha thứ cho tôi được không?", en: "Can you forgive me?", hint: "Forgive: tha thứ." },
+            { vn: "Tôi rất biết ơn sự giúp đỡ của bạn.", en: "I am very grateful for your help.", hint: "Grateful for: biết ơn về điều gì." },
+            { vn: "Tôi nhớ bạn rất nhiều khi bạn đi vắng.", en: "I missed you so much when you were away.", hint: "Be away: đi vắng, đi xa." },
+            { vn: "Tình yêu có thể chinh phục mọi thứ.", en: "Love can conquer all things.", hint: "Conquer: chinh phục, chiến thắng." },
+            { vn: "Tôi thực sự thất vọng về điều đó.", en: "I am really disappointed about that.", hint: "Disappointed: thất vọng." },
+            { vn: "Cô ấy đang có tâm trạng tồi tệ.", en: "She is in a bad mood.", hint: "In a bad mood: tâm trạng không tốt." },
+            { vn: "Tôi rất háo hức cho chuyến đi sắp tới.", en: "I am so excited for the upcoming trip.", hint: "Excited: hào hứng, háo hức." },
+            { vn: "Chúng ta hãy làm hòa nhé.", en: "Let us make up.", hint: "Make up: làm hòa." },
+            { vn: "Anh ấy luôn ủng hộ tôi.", en: "He always supports me.", hint: "Support: ủng hộ." }
+            ]
+        }
+        ];
+
+        // ==========================================
+        // MAIN APP COMPONENT
+        // ==========================================
+        const App = () => {
+        // --- STATES ỨNG DỤNG ---
+        const [screen, setScreen] = useState('MENU'); // 'MENU', 'LEARN', 'TEST', 'RESULT'
+        const [activePartIdx, setActivePartIdx] = useState(0);
+        const [currentLessonIdx, setCurrentLessonIdx] = useState(0);
+        const [testQuestions, setTestQuestions] = useState([]);
+        const [testScore, setTestScore] = useState(0);
+        const [testCurrentIdx, setTestCurrentIdx] = useState(0);
+        const [testEvaluated, setTestEvaluated] = useState(false);
+
+        const [isListening, setIsListening] = useState(false);
+        const [transcript, setTranscript] = useState('');
+        const [showHint, setShowHint] = useState(false);
+        const [evaluation, setEvaluation] = useState(null); 
+        const [error, setError] = useState('');
+
+        const recognitionRef = useRef(null);
+
+        // --- THIẾT LẬP APP (MIC & AUDIO) ---
+        useEffect(() => {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (SpeechRecognition) {
+            const recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.lang = 'en-US';
+            recognition.interimResults = false;
+            recognitionRef.current = recognition;
+            } else {
+            setError('Trình duyệt không hỗ trợ nhận diện giọng nói. Hãy dùng Chrome hoặc Edge.');
+            }
+
+            if (window.speechSynthesis) {
+            window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
+            }
+        }, []);
+
+        // --- HÀM PHÁT ÂM (OFFLINE TTS TÍCH HỢP) ---
+        const playTTS = (text, rate = 0.85) => {
+            if (!window.speechSynthesis) return;
+            window.speechSynthesis.cancel(); // Dừng nếu đang đọc câu khác
+            const utterance = new SpeechSynthesisUtterance(text);
+            
+            // Tìm giọng nữ tiếng Anh (ưu tiên giọng dễ nghe của hệ điều hành)
+            const voices = window.speechSynthesis.getVoices();
+            let enVoice = voices.find(v => v.lang.startsWith('en-US') && (v.name.includes('Samantha') || v.name.includes('Zira') || v.name.includes('Female') || v.name.includes('Google')));
+            if (!enVoice) enVoice = voices.find(v => v.lang.startsWith('en')); // Nếu không có, lấy giọng tiếng Anh bất kỳ
+            if (enVoice) utterance.voice = enVoice;
+
+            utterance.lang = 'en-US'; 
+            utterance.rate = rate; 
+            window.speechSynthesis.speak(utterance);
+        };
+
+        // Đọc 1 từ cụ thể khi click
+        const playWord = (word) => {
+            const cleanWord = word.replace(/[.,!?]/g, '');
+            playTTS(cleanWord, 0.7); // Đọc chậm hơn một chút để nghe rõ từ
+        };
+
+        // --- TÍNH ĐIỂM ---
+        const calculateScore = (spoken, target) => {
+            const cleanWord = (w) => w.toLowerCase().replace(/[.,!?]/g, '').trim();
+            const targetWords = target.split(' ').map(w => ({ original: w, clean: cleanWord(w) }));
+            const spokenWords = spoken.split(' ').map(cleanWord);
+            
+            let correctCount = 0;
+            const wordFeedback = targetWords.map(tw => {
+            const isCorrect = spokenWords.includes(tw.clean);
+            if (isCorrect) correctCount++;
+            return { word: tw.original, isCorrect };
+            });
+
+            const score = Math.round((correctCount / targetWords.length) * 100);
+            return { score, wordFeedback };
+        };
+
+        // --- BẮT ĐẦU NGHE (MICRO) ---
+        const handleListen = async (targetText) => {
+            if (!recognitionRef.current) return;
+            setError(''); 
+            setTranscript(''); 
+            setEvaluation(null); 
+            setTestEvaluated(false); 
+            if(window.speechSynthesis) window.speechSynthesis.cancel(); // Tắt giọng đọc mẫu nếu đang đọc
+            
+            // Khởi động Nhận diện giọng nói (Chấm điểm)
+            recognitionRef.current.onresult = (event) => {
+            const spokenText = event.results[0][0].transcript;
+            setTranscript(spokenText);
+            const result = calculateScore(spokenText, targetText);
+            setEvaluation(result);
+            setIsListening(false);
+
+            if (screen === 'TEST') {
+                setTestEvaluated(true);
+                if (result.score >= 80) setTestScore(prev => prev + 1);
+            }
+            };
+
+            recognitionRef.current.onerror = (event) => {
+            if (event.error !== 'aborted') setError('Không nghe được giọng nói. Thử lại nhé.');
+            setIsListening(false);
+            };
+            recognitionRef.current.onend = () => {
+            setIsListening(false);
+            };
+
+            try { 
+            recognitionRef.current.start(); 
+            setIsListening(true); 
+            } catch (e) { 
+            console.log('Mic is busy'); 
+            }
+        };
+
+        // --- ĐIỀU HƯỚNG ---
+        const goHome = () => { setScreen('MENU'); resetStates(); };
+        const startLearn = (partIdx) => { setActivePartIdx(partIdx); setCurrentLessonIdx(0); resetStates(); setScreen('LEARN'); };
+        const startTest = (partIdx) => {
+            const shuffled = [...COURSE_DATA[partIdx].lessons].sort(() => 0.5 - Math.random());
+            setActivePartIdx(partIdx); setTestQuestions(shuffled); setTestCurrentIdx(0); setTestScore(0); resetStates(); setScreen('TEST');
+        };
+        const resetStates = () => { 
+            setTranscript(''); setEvaluation(null); setShowHint(false); setError(''); 
+            setTestEvaluated(false); 
+            if(window.speechSynthesis) window.speechSynthesis.cancel();
+        };
+        const handleRetry = () => {
+            // Hàm gọi khi bấm nút "Thử lại", reset trạng thái để có thể thu âm lại
+            setTranscript(''); 
+            setEvaluation(null); 
+            setError(''); 
+            if(window.speechSynthesis) window.speechSynthesis.cancel();
+        };
+        const handleNextLearn = () => { if (currentLessonIdx < COURSE_DATA[activePartIdx].lessons.length - 1) { setCurrentLessonIdx(currentLessonIdx + 1); resetStates(); } };
+        const handleNextTest = () => { if (testCurrentIdx < testQuestions.length - 1) { setTestCurrentIdx(testCurrentIdx + 1); resetStates(); } else { setScreen('RESULT'); } };
+
+        // --- RENDER MÀN HÌNH CHÍNH (MENU) ---
+        if (screen === 'MENU') {
+            return (
+            <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4 font-sans sm:py-8">
+                <div className="w-full max-w-[400px] h-[800px] max-h-[90vh] bg-gray-50 rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col border-[8px] border-gray-800">
+                <div className="bg-amber-400 p-6 pt-10 pb-8 text-gray-900 rounded-b-3xl shadow-sm relative">
+                    <h1 className="text-3xl font-black mb-1">BobSpeaker</h1>
+                    <p className="font-medium opacity-80 flex items-center gap-1.5">Luyện Phát Âm Tiếng Anh</p>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 pb-8">
+                    {COURSE_DATA.map((part, idx) => (
+                    <div key={part.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-3">
+                        <div className="flex items-start gap-3">
+                        <div className="bg-amber-100 text-amber-600 p-3 rounded-xl shrink-0"><BookOpen size={24} /></div>
+                        <div>
+                            <h3 className="font-bold text-gray-800 text-lg leading-tight">{part.title}</h3>
+                            <p className="text-sm text-gray-500 line-clamp-2 mt-1">{part.desc}</p>
+                            <p className="text-xs text-amber-500 font-bold mt-1">{part.lessons.length} Bài học</p>
+                        </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                        <button onClick={() => startLearn(idx)} className="bg-blue-50 text-blue-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-blue-100 transition-colors">Học ngay</button>
+                        <button onClick={() => startTest(idx)} className="bg-amber-50 text-amber-600 font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-1.5 hover:bg-amber-100 transition-colors"><Award size={16} /> Kiểm tra</button>
+                        </div>
+                    </div>
+                    ))}
+                </div>
+                </div>
+            </div>
+            );
+        }
+
+        // --- RENDER MÀN HÌNH KẾT QUẢ ---
+        if (screen === 'RESULT') {
+            const percentage = Math.round((testScore / testQuestions.length) * 100);
+            return (
+            <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4 font-sans sm:py-8">
+                <div className="w-full max-w-[400px] h-[800px] max-h-[90vh] bg-white rounded-[2.5rem] shadow-2xl relative flex flex-col border-[8px] border-gray-800 p-8 items-center text-center pt-24">
+                <Trophy size={80} className={`${percentage >= 80 ? 'text-amber-400' : 'text-gray-300'} mb-6`} />
+                <h2 className="text-3xl font-black text-gray-800 mb-2">Hoàn thành!</h2>
+                <p className="text-gray-500 font-medium mb-8">Bài kiểm tra: {COURSE_DATA[activePartIdx].title}</p>
+                
+                <div className="bg-gray-50 w-full rounded-2xl p-6 mb-8 border border-gray-100">
+                    <p className="text-sm text-gray-400 uppercase tracking-widest font-bold mb-2">Số câu đúng</p>
+                    <div className="text-5xl font-black text-blue-600">{testScore} <span className="text-2xl text-gray-400">/ {testQuestions.length}</span></div>
+                </div>
+
+                <div className="flex flex-col gap-3 w-full mt-auto">
+                    <button onClick={() => startTest(activePartIdx)} className="bg-amber-400 text-gray-900 font-bold py-4 rounded-xl shadow-lg shadow-amber-200">Làm lại bài kiểm tra</button>
+                    <button onClick={goHome} className="bg-gray-100 text-gray-600 font-bold py-4 rounded-xl hover:bg-gray-200">Về trang chủ</button>
+                </div>
+                </div>
+            </div>
+            );
+        }
+
+        // --- RENDER MÀN HÌNH LUYỆN TẬP & KIỂM TRA ---
+        const isTest = screen === 'TEST';
+        const currentLessonList = isTest ? testQuestions : COURSE_DATA[activePartIdx].lessons;
+        const currentGlobalIdx = isTest ? testCurrentIdx : currentLessonIdx;
+        const lesson = currentLessonList[currentGlobalIdx];
+        const progress = ((currentGlobalIdx) / currentLessonList.length) * 100;
+
+        return (
+            <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4 font-sans sm:py-8">
+            <div className="w-full max-w-[400px] h-[800px] max-h-[90vh] bg-white rounded-[2.5rem] shadow-2xl relative overflow-hidden flex flex-col border-[8px] border-gray-800">
+                
+                {/* Header App */}
+                <div className={`px-4 pt-8 pb-4 flex items-center justify-between z-10 ${isTest ? 'bg-indigo-50' : 'bg-white'}`}>
+                <button onClick={goHome} className="text-gray-400 hover:text-gray-600 p-2"><ArrowLeft size={24} /></button>
+                <div className="flex-1 mx-2 h-2.5 bg-gray-200 rounded-full overflow-hidden">
+                    <div className={`h-full transition-all duration-500 ease-out rounded-full ${isTest ? 'bg-indigo-500' : 'bg-amber-400'}`} style={{ width: `${progress}%` }} />
+                </div>
+                <div className={`font-bold text-sm px-2 ${isTest ? 'text-indigo-600' : 'text-amber-500'}`}>
+                    {currentGlobalIdx + 1}/{currentLessonList.length}
+                </div>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 px-6 flex flex-col pt-4 overflow-y-auto pb-44">
+                <div className="mb-3">
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${isTest ? 'bg-indigo-100 text-indigo-700' : 'bg-amber-100 text-amber-700'}`}>
+                    {isTest ? 'Chế độ kiểm tra' : 'Luyện nói'}
+                    </span>
+                </div>
+
+                <h2 className="text-2xl font-bold text-gray-800 mb-6 leading-snug">"{lesson.vn}"</h2>
+
+                {!isTest && (
+                    <>
+                    {!showHint && !evaluation ? (
+                        <button onClick={() => setShowHint(true)} className="w-full py-4 border-2 border-dashed border-gray-300 rounded-2xl text-gray-500 font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
+                        <Info size={20} /> Xem gợi ý tiếng Anh
+                        </button>
+                    ) : (
+                        <div className="bg-blue-50 rounded-2xl p-5 border border-blue-100">
+                        <div className="flex justify-between items-start mb-3">
+                            <p className="text-blue-900 font-semibold text-xl leading-relaxed flex flex-wrap gap-x-1.5 gap-y-1 flex-1">
+                            {evaluation ? (
+                                evaluation.wordFeedback.map((item, i) => (
+                                <span 
+                                    key={i} 
+                                    onClick={() => playWord(item.word)}
+                                    className={`cursor-pointer hover:opacity-70 transition-opacity ${item.isCorrect ? "text-green-600" : "text-red-500 underline decoration-wavy decoration-red-300"}`}
+                                    title="Bấm để nghe từ này"
+                                >
+                                    {item.word}
+                                </span>
+                                ))
+                            ) : ( 
+                                lesson.en.split(' ').map((word, idx) => (
+                                <span 
+                                    key={idx} 
+                                    onClick={() => playWord(word)} 
+                                    className="cursor-pointer hover:text-blue-600 hover:bg-blue-100 rounded px-1 -mx-1 transition-colors"
+                                    title="Bấm để nghe từ này"
+                                >
+                                    {word}
+                                </span>
+                                ))
+                            )}
+                            </p>
+                            <div className="flex gap-1 ml-2 shrink-0">
+                            <button onClick={() => playTTS(lesson.en, 0.5)} className="bg-white p-2 rounded-full text-blue-600 shadow-sm hover:bg-blue-50 transition-colors" title="Đọc chậm">
+                                <Volume1 size={20} />
+                            </button>
+                            <button onClick={() => playTTS(lesson.en, 0.85)} className="bg-white p-2 rounded-full text-blue-600 shadow-sm hover:bg-blue-50 transition-colors" title="Đọc bình thường">
+                                <Volume2 size={20} />
+                            </button>
+                            </div>
+                        </div>
+                        <div className="text-sm text-blue-700 opacity-80 border-t border-blue-200 pt-3 flex items-center justify-between mt-2">
+                            <span>💡 {lesson.hint}</span>
+                            <span className="text-[10px] font-bold text-blue-500 bg-blue-100 px-2 py-1 rounded-full whitespace-nowrap ml-2">Bấm vào từ để nghe</span>
+                        </div>
+                        </div>
+                    )}
+                    </>
+                )}
+
+                {isTest && testEvaluated && evaluation && (
+                    <div className="bg-indigo-50 rounded-2xl p-5 border border-indigo-100 mt-2">
+                        <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                            <p className="text-xs uppercase font-bold text-indigo-400 mb-2">Đáp án chính xác (Bấm từ để nghe):</p>
+                            <p className="text-indigo-900 font-semibold text-xl leading-relaxed flex flex-wrap gap-x-1.5 gap-y-1">
+                            {evaluation.wordFeedback.map((item, i) => (
+                                <span 
+                                key={i} 
+                                onClick={() => playWord(item.word)}
+                                className={`cursor-pointer hover:opacity-70 transition-opacity ${item.isCorrect ? "text-green-600" : "text-red-500 underline decoration-wavy decoration-red-300"}`}
+                                >
+                                {item.word}
+                                </span>
+                            ))}
+                            </p>
+                        </div>
+                        <div className="flex gap-1 ml-2 shrink-0">
+                            <button onClick={() => playTTS(lesson.en, 0.5)} className="bg-white p-2 rounded-full text-indigo-600 shadow-sm hover:bg-indigo-50 transition-colors" title="Đọc chậm">
+                            <Volume1 size={20} />
+                            </button>
+                            <button onClick={() => playTTS(lesson.en, 0.85)} className="bg-white p-2 rounded-full text-indigo-600 shadow-sm hover:bg-indigo-50 transition-colors" title="Đọc bình thường">
+                            <Volume2 size={20} />
+                            </button>
+                        </div>
+                        </div>
+                    </div>
+                )}
+
+                {error && <div className="mt-4 p-3 bg-red-50 text-red-600 rounded-xl text-sm flex items-center gap-2"><AlertCircle size={16} /> {error}</div>}
+
+                {transcript && !isListening && (
+                    <div className="mt-4">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Bạn đã nói:</p>
+                    <p className="text-gray-600 italic bg-gray-50 p-4 rounded-xl border border-gray-100">"{transcript}"</p>
+                    </div>
+                )}
+                </div>
+
+                {/* Footer Controls */}
+                <div className="absolute bottom-0 left-0 w-full bg-white border-t border-gray-100 px-6 py-6 flex flex-col items-center pb-8 z-20">
+                {evaluation && (
+                    <div className="w-full flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                        {evaluation.score >= 80 ? (
+                        <span className="flex items-center gap-1.5 text-green-600 font-bold bg-green-50 px-3 py-1.5 rounded-lg whitespace-nowrap"><CheckCircle2 size={18} /> Tuyệt!</span>
+                        ) : (
+                        <span className="flex items-center gap-1.5 text-red-600 font-bold bg-red-50 px-3 py-1.5 rounded-lg whitespace-nowrap">Đạt {evaluation.score}%</span>
+                        )}
+                    </div>
+                    
+                    <div className="flex gap-2">
+                        {/* NÚT "THỬ LẠI" */}
+                        {!isTest && (
+                        <button onClick={handleRetry} className="bg-gray-100 text-gray-700 px-4 py-2.5 rounded-xl font-bold flex items-center gap-1 hover:bg-gray-200 transition-colors">
+                            <RefreshCw size={18} /> Thử lại
+                        </button>
+                        )}
+                        
+                        {!isTest && currentGlobalIdx === currentLessonList.length - 1 ? (
+                        <button onClick={() => startTest(activePartIdx)} className="bg-amber-500 text-white px-4 py-2.5 rounded-xl font-bold flex items-center gap-1 animate-pulse">
+                            Kiểm tra <Award size={18} />
+                        </button>
+                        ) : (
+                        <button onClick={isTest ? handleNextTest : handleNextLearn} className="bg-gray-900 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-1">
+                            Tiếp <ChevronRight size={18} />
+                        </button>
+                        )}
+                    </div>
+                    </div>
+                )}
+
+                <button
+                    onClick={() => handleListen(lesson.en)}
+                    // Nút Micro chính bị khóa (giới hạn) khi đã có điểm hoặc đã làm xong bài kiểm tra
+                    disabled={evaluation !== null || (isTest && testEvaluated)} 
+                    className={`w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 ${
+                    isListening ? 'bg-red-500 text-white shadow-[0_0_0_8px_rgba(239,68,68,0.2)] animate-pulse-ring' 
+                        : (evaluation || (isTest && testEvaluated)) ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : isTest ? 'bg-indigo-500 text-white shadow-xl shadow-indigo-200 hover:scale-105 active:scale-95'
+                        : 'bg-amber-400 text-gray-900 shadow-xl shadow-amber-200 hover:scale-105 active:scale-95'
+                    }`}
+                >
+                    <Mic size={isListening ? 32 : 36} />
+                </button>
+                <p className="text-gray-400 text-sm mt-3 font-medium">
+                    {isListening ? 'Đang nghe...' : (isTest && testEvaluated) ? 'Bấm Tiếp để sang câu sau' : evaluation ? 'Đã ghi âm xong' : 'Chạm để nói'}
+                </p>
+                </div>
+            </div>
+            </div>
+        );
+        }
+
+        // --- Render the App ---
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
