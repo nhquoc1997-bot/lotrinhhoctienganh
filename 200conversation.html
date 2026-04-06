@@ -28,6 +28,14 @@
     <div id="root"></div>
 
     <script type="text/babel">
+        // ==========================================
+        // 1. KÍCH HOẠT TẢI GIỌNG NÓI NGẦM (Bắt buộc cho Windows/Android)
+        // ==========================================
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.getVoices();
+            window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+        }
+
         const { useState, useEffect, useRef } = React;
 
         // ==========================================
@@ -341,14 +349,15 @@
             setError('Trình duyệt không hỗ trợ nhận diện giọng nói. Hãy dùng Chrome hoặc Edge.');
             }
 
-            // Tải giọng nói ngầm từ lúc khởi động
+            // Gọi lại getVoices trong useEffect để đảm bảo React cũng nắm được danh sách
             if (window.speechSynthesis) {
                 window.speechSynthesis.getVoices();
-                window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
             }
         }, []);
 
-        // --- HÀM PHÁT ÂM (ÁP DỤNG CHÍNH XÁC MÃ TTS_SNIPPET.MD) ---
+        // ==========================================
+        // 2. HÀM ĐỌC VĂN BẢN THÔNG MINH (ĐÃ TÍCH HỢP)
+        // ==========================================
         const playTTS = (text, customRate = null) => {
             // Kiểm tra xem trình duyệt có hỗ trợ không
             if (!('speechSynthesis' in window)) {
@@ -356,56 +365,51 @@
                 return;
             }
 
+            // Dừng âm thanh đang đọc (nếu có) để bắt đầu câu mới ngay lập tức
             window.speechSynthesis.cancel(); 
-            const cleanText = text.trim();
-            const utterance = new SpeechSynthesisUtterance(cleanText);
             
+            // Loại bỏ khoảng trắng thừa ở đầu/cuối
+            const cleanText = text.trim();
+            const utterance = new SpeechSynthesisUtterance(cleanText); 
+            
+            // Đặt ngôn ngữ mặc định
             utterance.lang = 'en-US'; 
 
-            // TÌM KIẾM GIỌNG CAO CẤP: Đảm bảo kích hoạt Siri, Samantha nâng cao hoặc Google/Natural
-            const voices = window.speechSynthesis.getVoices();
-            
-            // Thuật toán chấm điểm ưu tiên giọng "Người thật"
-            const premiumVoice = voices.filter(v => v.lang.startsWith('en')).sort((a, b) => {
-                const score = (v) => {
-                    let s = 0;
-                    const name = v.name.toLowerCase();
-                    // Nhóm giọng siêu cao cấp của Apple
-                    if (name.includes('siri')) s += 100;
-                    if (name.includes('samantha') && !name.includes('compact')) s += 90; // Lấy Samantha nâng cao, bỏ qua bản compact robot
-                    // Nhóm giọng cao cấp của Windows / Android
-                    if (name.includes('natural') || name.includes('online')) s += 80;
-                    if (name.includes('google us english')) s += 70;
-                    return s;
-                };
-                return score(b) - score(a);
-            })[0];
-
+            // Phân loại thiết bị Apple và phần còn lại
             const isAppleDevice = /(Mac|iPhone|iPod|iPad)/i.test(navigator.userAgent);
             
-            // Nếu tìm thấy giọng xịn (điểm cao), ép hệ thống dùng nó
-            if (premiumVoice && (premiumVoice.name.toLowerCase().includes('siri') || premiumVoice.name.toLowerCase().includes('samantha') || premiumVoice.name.toLowerCase().includes('natural') || premiumVoice.name.toLowerCase().includes('google'))) {
-                utterance.voice = premiumVoice;
-            } else if (!isAppleDevice) {
-                // Nếu là máy Windows mà không có giọng xịn, lấy giọng tiếng Anh nữ bất kỳ (vd: Zira)
-                utterance.voice = voices.find(v => v.lang.startsWith('en-US') && v.name.includes('Zira')) || voices.find(v => v.lang.startsWith('en'));
+            if (!isAppleDevice) {
+                // Nếu LÀ Windows/Android: Tìm và ép dùng giọng xịn (Google/Natural)
+                const voices = window.speechSynthesis.getVoices();
+                const premiumVoice = voices.find(v => 
+                    v.name.includes('Google US English') || 
+                    v.name.includes('Natural') || 
+                    v.name.includes('Premium')
+                );
+                
+                // Nếu tìm thấy giọng xịn thì gán vào, nếu không sẽ giữ mặc định
+                if (premiumVoice) {
+                    utterance.voice = premiumVoice;
+                }
             }
-            // Mẹo: Nếu là thiết bị Apple mà web chưa load kịp mảng voices, không gán gì cả để Apple tự rơi vào giọng mặc định cao cấp (Fallback).
+            // Nếu là Apple (Mac/iOS), KHÔNG gán 'utterance.voice'. 
+            // Hệ thống sẽ tự động dùng giọng cao cấp mặc định của Apple.
 
-            // Tinh chỉnh tốc độ: Nếu bấm nút UI thì dùng customRate, nếu không (như đọc từ đơn) thì tự động thông minh
+            // Tinh chỉnh tốc độ: Ưu tiên rate từ UI truyền vào, nếu không có thì chạy auto logic
             if (customRate !== null) {
                 utterance.rate = customRate;
             } else {
                 utterance.rate = cleanText.includes(' ') ? 1.0 : 0.8; 
             }
 
-            window.speechSynthesis.speak(utterance);
+            // Phát âm
+            window.speechSynthesis.speak(utterance); 
         };
 
         // Đọc 1 từ cụ thể khi click
         const playWord = (word) => {
             const cleanWord = word.replace(/[.,!?]/g, '');
-            // Không truyền customRate để kích hoạt thuật toán đọc chậm 0.8 tự động từ TTS_Snippet
+            // Không truyền customRate để kích hoạt thuật toán đọc chậm 0.8 tự động
             playTTS(cleanWord); 
         };
 
