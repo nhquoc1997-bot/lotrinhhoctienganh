@@ -213,9 +213,7 @@
             data: {
                 sentences: [],
                 currentIdx: 0,
-                voices: [],
-                selectedVoice: null,
-                speed: 0.8, // Chỉnh mặc định thành 0.8 theo mã yêu cầu
+                speed: 0.8, // Chỉnh mặc định thành 0.8 theo yêu cầu
                 isPlaying: false,
                 isRecording: false
             },
@@ -309,41 +307,12 @@
                 return { result, accuracy };
             },
 
-            // --- TỐI ƯU HÓA VOICE CHẠY NGẦM ---
+            // --- TÍCH HỢP MÃ ĐỌC GIỌNG TỰ NHIÊN ---
             initVoices() {
-                const load = () => {
-                    let allVoices = window.speechSynthesis.getVoices();
-                    if(allVoices.length === 0) return;
-
-                    let engVoices = allVoices.filter(v => v.lang.toLowerCase().startsWith('en'));
-                    
-                    // Thuật toán chấm điểm ưu tiên giọng tự nhiên (ẩn khỏi UI)
-                    const getScore = (v) => {
-                        let score = 0;
-                        const n = v.name.toLowerCase();
-                        if (n.includes('natural') || n.includes('premium') || n.includes('online')) score += 100;
-                        if (n.includes('google us') || n.includes('google uk')) score += 90;
-                        if (n.includes('google')) score += 70;
-                        if (n.includes('samantha') || n.includes('daniel') || n.includes('siri') || n.includes('karen')) score += 60;
-                        if (v.lang === 'en-US') score += 10;
-                        return score;
-                    };
-
-                    engVoices.sort((a, b) => getScore(b) - getScore(a));
-                    
-                    if(engVoices.length === 0) engVoices = allVoices;
-
-                    this.data.voices = engVoices;
-                    
-                    // Tự động ghim giọng tự nhiên nhất ngầm, bỏ hộp thoại chọn giọng phức tạp
-                    if(engVoices.length > 0) {
-                        this.data.selectedVoice = engVoices[0];
-                    }
-                };
-
-                load();
-                if (speechSynthesis.onvoiceschanged !== undefined) {
-                    speechSynthesis.onvoiceschanged = load;
+                // 1. KÍCH HOẠT TẢI GIỌNG NÓI NGẦM (Bắt buộc cho Windows/Android)
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.getVoices();
+                    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
                 }
             },
 
@@ -361,48 +330,78 @@
                 if(this.data.isPlaying) this.playCurrentSentence();
             },
 
+            // 2. HÀM ĐỌC VĂN BẢN THÔNG MINH ĐÃ ĐƯỢC TÍCH HỢP
             playCurrentSentence() {
                 const text = this.data.sentences[this.data.currentIdx];
                 if (!text) return;
 
-                // Áp dụng chính xác mã Text-to-Speech được yêu cầu
-                if ('speechSynthesis' in window) {
-                    window.speechSynthesis.cancel(); // Dừng âm thanh đang đọc (nếu có) để đọc từ mới
-                    
-                    const utterance = new SpeechSynthesisUtterance(text); // Đọc nội dung biến 'text' (câu)
-                    utterance.lang = 'en-US'; // Cài đặt ngôn ngữ là Tiếng Anh Mỹ
-                    
-                    // Cải thiện tự nhiên trên máy tính: Gắn giọng tốt nhất tìm được chạy ngầm để tránh giọng robot
-                    if (this.data.selectedVoice) {
-                        utterance.voice = this.data.selectedVoice;
-                    }
-
-                    utterance.rate = this.data.speed; // Dùng tốc độ từ nút bấm UI (Mặc định bắt đầu là 0.8)
-
-                    // Logic cập nhật hiệu ứng rung nháy cho nút Play
-                    const playBtn = document.getElementById('play-btn');
-                    const playIcon = document.getElementById('play-icon');
-
-                    utterance.onstart = () => {
-                        this.data.isPlaying = true;
-                        if(playBtn) {
-                            playBtn.classList.add('bg-indigo-400', 'scale-105');
-                            playBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
-                            playIcon.className = "fa-solid fa-volume-high text-3xl md:text-4xl animate-pulse";
-                        }
-                    };
-
-                    utterance.onend = () => {
-                        this.data.isPlaying = false;
-                        if(playBtn) {
-                            playBtn.classList.remove('bg-indigo-400', 'scale-105');
-                            playBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
-                            playIcon.className = "fa-solid fa-play text-3xl md:text-4xl ml-2";
-                        }
-                    };
-
-                    window.speechSynthesis.speak(utterance); // Yêu cầu trình duyệt phát âm
+                // Kiểm tra xem trình duyệt có hỗ trợ không
+                if (!('speechSynthesis' in window)) {
+                    console.warn("Trình duyệt của bạn không hỗ trợ đọc văn bản.");
+                    return;
                 }
+
+                // Dừng âm thanh đang đọc (nếu có) để bắt đầu câu mới ngay lập tức
+                window.speechSynthesis.cancel(); 
+                
+                // Loại bỏ khoảng trắng thừa ở đầu/cuối
+                const cleanText = text.trim();
+                const utterance = new SpeechSynthesisUtterance(cleanText); 
+                
+                // Đặt ngôn ngữ mặc định
+                utterance.lang = 'en-US'; 
+
+                // MẸO CỐT LÕI: Phân loại thiết bị Apple và phần còn lại
+                const isAppleDevice = /(Mac|iPhone|iPod|iPad)/i.test(navigator.userAgent);
+                
+                if (!isAppleDevice) {
+                    // Nếu LÀ Windows/Android: Tìm và ép dùng giọng xịn (Google/Natural)
+                    const voices = window.speechSynthesis.getVoices();
+                    const premiumVoice = voices.find(v => 
+                        v.name.includes('Google US English') || 
+                        v.name.includes('Natural') || 
+                        v.name.includes('Premium')
+                    );
+                    
+                    // Nếu tìm thấy giọng xịn thì gán vào, nếu không sẽ giữ mặc định
+                    if (premiumVoice) {
+                        utterance.voice = premiumVoice;
+                    }
+                }
+                // Nếu là Apple (Mac/iOS), KHÔNG gán 'utterance.voice'. Hệ thống sẽ tự dùng giọng xịn của thiết bị.
+
+                // Áp dụng tốc độ đã lưu trong this.data.speed do học viên tự tùy chỉnh thông qua UI (mặc định là 0.8)
+                utterance.rate = this.data.speed;
+
+                // Các hiệu ứng UI khi bắt đầu và kết thúc đọc
+                const playBtn = document.getElementById('play-btn');
+                const playIcon = document.getElementById('play-icon');
+
+                utterance.onstart = () => {
+                    this.data.isPlaying = true;
+                    if(playBtn) {
+                        playBtn.classList.add('bg-indigo-400', 'scale-105');
+                        playBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+                        playIcon.className = "fa-solid fa-volume-high text-3xl md:text-4xl animate-pulse";
+                    }
+                };
+
+                utterance.onend = () => {
+                    this.data.isPlaying = false;
+                    if(playBtn) {
+                        playBtn.classList.remove('bg-indigo-400', 'scale-105');
+                        playBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+                        playIcon.className = "fa-solid fa-play text-3xl md:text-4xl ml-2";
+                    }
+                };
+
+                utterance.onerror = (e) => {
+                    console.error("Audio error", e);
+                    utterance.onend();
+                };
+
+                // Phát âm
+                window.speechSynthesis.speak(utterance); 
             },
 
             stopAudio() {
