@@ -29,7 +29,7 @@
 
     <script type="text/babel">
         // ==========================================
-        // 1. KÍCH HOẠT TẢI GIỌNG NÓI NGẦM (Bắt buộc cho Windows/Android)
+        // 1. KÍCH HOẠT TẢI GIỌNG NÓI NGẦM
         // ==========================================
         if ('speechSynthesis' in window) {
             window.speechSynthesis.getVoices();
@@ -39,7 +39,7 @@
         const { useState, useEffect, useRef } = React;
 
         // ==========================================
-        // ICONS (Thay thế cho lucide-react để chạy offline 1 file)
+        // ICONS (Thay thế cho lucide-react để chạy offline)
         // ==========================================
         const IconBase = ({ children, size = 24, className = "" }) => (
             <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -356,53 +356,57 @@
         }, []);
 
         // ==========================================
-        // 2. HÀM ĐỌC VĂN BẢN THÔNG MINH (ĐÃ TÍCH HỢP)
+        // 2. HÀM ĐỌC VĂN BẢN THÔNG MINH (CẬP NHẬT MỚI NHẤT)
         // ==========================================
         const playTTS = (text, customRate = null) => {
-            // Kiểm tra xem trình duyệt có hỗ trợ không
             if (!('speechSynthesis' in window)) {
                 console.warn("Trình duyệt của bạn không hỗ trợ đọc văn bản.");
                 return;
             }
 
-            // Dừng âm thanh đang đọc (nếu có) để bắt đầu câu mới ngay lập tức
             window.speechSynthesis.cancel(); 
-            
-            // Loại bỏ khoảng trắng thừa ở đầu/cuối
             const cleanText = text.trim();
             const utterance = new SpeechSynthesisUtterance(cleanText); 
-            
-            // Đặt ngôn ngữ mặc định
             utterance.lang = 'en-US'; 
 
-            // Phân loại thiết bị Apple và phần còn lại
-            const isAppleDevice = /(Mac|iPhone|iPod|iPad)/i.test(navigator.userAgent);
+            const voices = window.speechSynthesis.getVoices();
             
-            if (!isAppleDevice) {
-                // Nếu LÀ Windows/Android: Tìm và ép dùng giọng xịn (Google/Natural)
-                const voices = window.speechSynthesis.getVoices();
-                const premiumVoice = voices.find(v => 
-                    v.name.includes('Google US English') || 
-                    v.name.includes('Natural') || 
-                    v.name.includes('Premium')
-                );
-                
-                // Nếu tìm thấy giọng xịn thì gán vào, nếu không sẽ giữ mặc định
-                if (premiumVoice) {
-                    utterance.voice = premiumVoice;
-                }
-            }
-            // Nếu là Apple (Mac/iOS), KHÔNG gán 'utterance.voice'. 
-            // Hệ thống sẽ tự động dùng giọng cao cấp mặc định của Apple.
+            // Thuật toán chấm điểm thông minh để tìm giọng tốt nhất trên MỌI thiết bị
+            const bestVoice = voices.filter(v => v.lang.startsWith('en')).sort((a, b) => {
+                const score = (v) => {
+                    let s = 0;
+                    const name = v.name.toLowerCase();
+                    
+                    // 1. Ưu tiên giọng xịn của Apple
+                    if (name.includes('siri')) s += 100; // Đỉnh nhất trên Apple
+                    if (name.includes('samantha') && !name.includes('compact')) s += 90; // Samantha bản nâng cao
+                    if (name.includes('premium') || name.includes('enhanced')) s += 80;
+                    
+                    // 2. Ưu tiên giọng xịn của Windows/Android
+                    if (name.includes('natural') || name.includes('online')) s += 85;
+                    if (name.includes('google us english')) s += 70;
+                    
+                    // 3. Phạt điểm cực nặng các giọng robot/rút gọn (nguyên nhân gây giọng dở trên Apple)
+                    if (name.includes('compact')) s -= 100;
+                    if (name.includes('fred') || name.includes('zarvox')) s -= 100;
+                    
+                    return s;
+                };
+                return score(b) - score(a);
+            })[0];
 
-            // Tinh chỉnh tốc độ: Ưu tiên rate từ UI truyền vào, nếu không có thì chạy auto logic
+            // Gán giọng cao điểm nhất tìm được
+            if (bestVoice) {
+                utterance.voice = bestVoice;
+            }
+
+            // Tinh chỉnh tốc độ: 
             if (customRate !== null) {
                 utterance.rate = customRate;
             } else {
                 utterance.rate = cleanText.includes(' ') ? 1.0 : 0.8; 
             }
 
-            // Phát âm
             window.speechSynthesis.speak(utterance); 
         };
 
@@ -482,7 +486,6 @@
             if(window.speechSynthesis) window.speechSynthesis.cancel();
         };
         const handleRetry = () => {
-            // Hàm gọi khi bấm nút "Thử lại", reset trạng thái để có thể thu âm lại
             setTranscript(''); 
             setEvaluation(null); 
             setError(''); 
