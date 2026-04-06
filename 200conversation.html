@@ -341,24 +341,48 @@
             setError('Trình duyệt không hỗ trợ nhận diện giọng nói. Hãy dùng Chrome hoặc Edge.');
             }
 
+            // Tải giọng nói ngầm từ lúc khởi động
             if (window.speechSynthesis) {
-            window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
+                window.speechSynthesis.getVoices();
+                window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
             }
         }, []);
 
-        // --- HÀM PHÁT ÂM (OFFLINE TTS TÍCH HỢP) ---
+        // --- HÀM PHÁT ÂM VỚI THUẬT TOÁN GIỌNG ĐỌC TỰ NHIÊN (Apple vs Windows) ---
         const playTTS = (text, rate = 0.85) => {
             if (!window.speechSynthesis) return;
             window.speechSynthesis.cancel(); // Dừng nếu đang đọc câu khác
-            const utterance = new SpeechSynthesisUtterance(text);
+            const cleanText = text.trim();
+            const utterance = new SpeechSynthesisUtterance(cleanText);
             
-            // Tìm giọng nữ tiếng Anh (ưu tiên giọng dễ nghe của hệ điều hành)
-            const voices = window.speechSynthesis.getVoices();
-            let enVoice = voices.find(v => v.lang.startsWith('en-US') && (v.name.includes('Samantha') || v.name.includes('Zira') || v.name.includes('Female') || v.name.includes('Google')));
-            if (!enVoice) enVoice = voices.find(v => v.lang.startsWith('en')); // Nếu không có, lấy giọng tiếng Anh bất kỳ
-            if (enVoice) utterance.voice = enVoice;
-
             utterance.lang = 'en-US'; 
+
+            // Phân loại thiết bị Apple và phần còn lại
+            const isAppleDevice = /(Mac|iPhone|iPod|iPad)/i.test(navigator.userAgent);
+            
+            if (!isAppleDevice) {
+                // Nếu là Windows/Android: Tìm giọng nữ cao cấp (Google/Natural/Samantha/Zira)
+                const voices = window.speechSynthesis.getVoices();
+                let premiumVoice = voices.find(v => 
+                    v.name.includes('Google US English') || 
+                    v.name.includes('Natural') || 
+                    v.name.includes('Premium') ||
+                    v.name.includes('Zira') ||
+                    v.name.includes('Samantha')
+                );
+                
+                // Fallback nếu không có giọng Premium
+                if (!premiumVoice) {
+                    premiumVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Female'));
+                }
+
+                // Gán giọng xịn vào nếu tìm thấy
+                if (premiumVoice) {
+                    utterance.voice = premiumVoice;
+                }
+            }
+            // Nếu là Apple (Mac/iOS), tuyệt đối KHÔNG gán 'utterance.voice' để hệ thống tự dùng Siri/Samantha nâng cao.
+
             utterance.rate = rate; 
             window.speechSynthesis.speak(utterance);
         };
