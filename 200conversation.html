@@ -333,6 +333,9 @@
         const [showHint, setShowHint] = useState(false);
         const [evaluation, setEvaluation] = useState(null); 
         const [error, setError] = useState('');
+        
+        // Thêm state để tạo hiệu ứng nhấp nháy UI khi đang đọc
+        const [isPlayingTTS, setIsPlayingTTS] = useState(false);
 
         const recognitionRef = useRef(null);
 
@@ -356,7 +359,7 @@
         }, []);
 
         // ==========================================
-        // 2. HÀM ĐỌC VĂN BẢN THÔNG MINH (CẬP NHẬT MỚI NHẤT)
+        // 2. HÀM ĐỌC VĂN BẢN THÔNG MINH (TÍCH HỢP TỪ DỰ ÁN AUDIO MODULE)
         // ==========================================
         const playTTS = (text, customRate = null) => {
             if (!('speechSynthesis' in window)) {
@@ -364,41 +367,30 @@
                 return;
             }
 
+            // Dừng mọi âm thanh đang phát
             window.speechSynthesis.cancel(); 
             const cleanText = text.trim();
             const utterance = new SpeechSynthesisUtterance(cleanText); 
             utterance.lang = 'en-US'; 
 
-            const voices = window.speechSynthesis.getVoices();
+            // --- LỌC GIỌNG ĐỌC THÔNG MINH ---
+            const isAppleDevice = /(Mac|iPhone|iPod|iPad)/i.test(navigator.userAgent);
             
-            // Thuật toán chấm điểm thông minh để tìm giọng tốt nhất trên MỌI thiết bị
-            const bestVoice = voices.filter(v => v.lang.startsWith('en')).sort((a, b) => {
-                const score = (v) => {
-                    let s = 0;
-                    const name = v.name.toLowerCase();
-                    
-                    // 1. Ưu tiên giọng xịn của Apple
-                    if (name.includes('siri')) s += 100; // Đỉnh nhất trên Apple
-                    if (name.includes('samantha') && !name.includes('compact')) s += 90; // Samantha bản nâng cao
-                    if (name.includes('premium') || name.includes('enhanced')) s += 80;
-                    
-                    // 2. Ưu tiên giọng xịn của Windows/Android
-                    if (name.includes('natural') || name.includes('online')) s += 85;
-                    if (name.includes('google us english')) s += 70;
-                    
-                    // 3. Phạt điểm cực nặng các giọng robot/rút gọn (nguyên nhân gây giọng dở trên Apple)
-                    if (name.includes('compact')) s -= 100;
-                    if (name.includes('fred') || name.includes('zarvox')) s -= 100;
-                    
-                    return s;
-                };
-                return score(b) - score(a);
-            })[0];
-
-            // Gán giọng cao điểm nhất tìm được
-            if (bestVoice) {
-                utterance.voice = bestVoice;
+            if (!isAppleDevice) {
+                // Trên Windows/Android: Tìm giọng Google/Natural hoặc Premium
+                const voices = window.speechSynthesis.getVoices();
+                const premiumVoice = voices.find(v => 
+                    v.name.includes('Google US English') || 
+                    v.name.includes('Natural') || 
+                    v.name.includes('Premium')
+                );
+                
+                // Nếu có giọng tốt sẽ gán vào, nếu không có hệ thống tự dùng mặc định
+                if (premiumVoice) {
+                    utterance.voice = premiumVoice;
+                }
             }
+            // Nếu là thiết bị Apple, ta không gán utterance.voice để hệ thống tự dùng giọng Siri tự nhiên của máy
 
             // Tinh chỉnh tốc độ: 
             if (customRate !== null) {
@@ -407,13 +399,18 @@
                 utterance.rate = cleanText.includes(' ') ? 1.0 : 0.8; 
             }
 
+            // Hiệu ứng giao diện (pulse effect) giống như Audio Module
+            utterance.onstart = () => setIsPlayingTTS(true);
+            utterance.onend = () => setIsPlayingTTS(false);
+            utterance.onerror = () => setIsPlayingTTS(false);
+
             window.speechSynthesis.speak(utterance); 
         };
 
         // Đọc 1 từ cụ thể khi click
         const playWord = (word) => {
             const cleanWord = word.replace(/[.,!?]/g, '');
-            // Không truyền customRate để kích hoạt thuật toán đọc chậm 0.8 tự động
+            // Không truyền customRate để kích hoạt tốc độ 0.8 tự động
             playTTS(cleanWord); 
         };
 
@@ -442,6 +439,7 @@
             setEvaluation(null); 
             setTestEvaluated(false); 
             if(window.speechSynthesis) window.speechSynthesis.cancel(); // Tắt giọng đọc mẫu nếu đang đọc
+            setIsPlayingTTS(false); // Xóa hiệu ứng play nếu có
             
             // Khởi động Nhận diện giọng nói (Chấm điểm)
             recognitionRef.current.onresult = (event) => {
@@ -483,12 +481,14 @@
         const resetStates = () => { 
             setTranscript(''); setEvaluation(null); setShowHint(false); setError(''); 
             setTestEvaluated(false); 
+            setIsPlayingTTS(false);
             if(window.speechSynthesis) window.speechSynthesis.cancel();
         };
         const handleRetry = () => {
             setTranscript(''); 
             setEvaluation(null); 
             setError(''); 
+            setIsPlayingTTS(false);
             if(window.speechSynthesis) window.speechSynthesis.cancel();
         };
         const handleNextLearn = () => { if (currentLessonIdx < COURSE_DATA[activePartIdx].lessons.length - 1) { setCurrentLessonIdx(currentLessonIdx + 1); resetStates(); } };
@@ -554,9 +554,9 @@
         // --- RENDER MÀN HÌNH LUYỆN TẬP & KIỂM TRA ---
         const isTest = screen === 'TEST';
         const currentLessonList = isTest ? testQuestions : COURSE_DATA[activePartIdx].lessons;
-        const currentGlobalIdx = isTest ? testCurrentIdx : currentLessonIdx;
-        const lesson = currentLessonList[currentGlobalIdx];
-        const progress = ((currentGlobalIdx) / currentLessonList.length) * 100;
+        const currentGlobalIdx = isTest ? testCurrentIdx : currentLessonList;
+        const lesson = currentLessonList[isTest ? testCurrentIdx : currentLessonIdx];
+        const progress = ((isTest ? testCurrentIdx : currentLessonIdx) / currentLessonList.length) * 100;
 
         return (
             <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4 font-sans sm:py-8">
@@ -569,7 +569,7 @@
                     <div className={`h-full transition-all duration-500 ease-out rounded-full ${isTest ? 'bg-indigo-500' : 'bg-amber-400'}`} style={{ width: `${progress}%` }} />
                 </div>
                 <div className={`font-bold text-sm px-2 ${isTest ? 'text-indigo-600' : 'text-amber-500'}`}>
-                    {currentGlobalIdx + 1}/{currentLessonList.length}
+                    {(isTest ? testCurrentIdx : currentLessonIdx) + 1}/{currentLessonList.length}
                 </div>
                 </div>
 
@@ -617,11 +617,13 @@
                                 ))
                             )}
                             </p>
+                            
+                            {/* Nút Đọc Giọng Tích hợp (Có hiệu ứng Pulse) */}
                             <div className="flex gap-1 ml-2 shrink-0">
-                            <button onClick={() => playTTS(lesson.en, 0.5)} className="bg-white p-2 rounded-full text-blue-600 shadow-sm hover:bg-blue-50 transition-colors" title="Đọc chậm">
+                            <button onClick={() => playTTS(lesson.en, 0.5)} className={`bg-white p-2 rounded-full shadow-sm transition-all ${isPlayingTTS ? 'text-blue-400 animate-pulse' : 'text-blue-600 hover:bg-blue-50'}`} title="Đọc chậm">
                                 <Volume1 size={20} />
                             </button>
-                            <button onClick={() => playTTS(lesson.en, 0.85)} className="bg-white p-2 rounded-full text-blue-600 shadow-sm hover:bg-blue-50 transition-colors" title="Đọc bình thường">
+                            <button onClick={() => playTTS(lesson.en, 0.85)} className={`bg-white p-2 rounded-full shadow-sm transition-all ${isPlayingTTS ? 'text-blue-400 animate-pulse' : 'text-blue-600 hover:bg-blue-50'}`} title="Đọc bình thường">
                                 <Volume2 size={20} />
                             </button>
                             </div>
@@ -652,11 +654,13 @@
                             ))}
                             </p>
                         </div>
+                        
+                        {/* Nút Đọc Giọng Tích hợp trong Bài Kiểm tra */}
                         <div className="flex gap-1 ml-2 shrink-0">
-                            <button onClick={() => playTTS(lesson.en, 0.5)} className="bg-white p-2 rounded-full text-indigo-600 shadow-sm hover:bg-indigo-50 transition-colors" title="Đọc chậm">
+                            <button onClick={() => playTTS(lesson.en, 0.5)} className={`bg-white p-2 rounded-full shadow-sm transition-all ${isPlayingTTS ? 'text-indigo-400 animate-pulse' : 'text-indigo-600 hover:bg-indigo-50'}`} title="Đọc chậm">
                             <Volume1 size={20} />
                             </button>
-                            <button onClick={() => playTTS(lesson.en, 0.85)} className="bg-white p-2 rounded-full text-indigo-600 shadow-sm hover:bg-indigo-50 transition-colors" title="Đọc bình thường">
+                            <button onClick={() => playTTS(lesson.en, 0.85)} className={`bg-white p-2 rounded-full shadow-sm transition-all ${isPlayingTTS ? 'text-indigo-400 animate-pulse' : 'text-indigo-600 hover:bg-indigo-50'}`} title="Đọc bình thường">
                             <Volume2 size={20} />
                             </button>
                         </div>
@@ -694,7 +698,7 @@
                         </button>
                         )}
                         
-                        {!isTest && currentGlobalIdx === currentLessonList.length - 1 ? (
+                        {!isTest && currentLessonIdx === currentLessonList.length - 1 ? (
                         <button onClick={() => startTest(activePartIdx)} className="bg-amber-500 text-white px-4 py-2.5 rounded-xl font-bold flex items-center gap-1 animate-pulse">
                             Kiểm tra <Award size={18} />
                         </button>
