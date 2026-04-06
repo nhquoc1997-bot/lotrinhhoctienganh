@@ -824,17 +824,36 @@
             }
             updateProgressUI();
 
+            // Kích hoạt tải giọng nói ngầm để chuẩn bị sẵn cho máy tính Windows/Android
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.getVoices();
+                window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+            }
+
             // --- HỆ THỐNG AUDIO NATIVE CẢI TIẾN (THEO MÃ CỦA BẠN) ---
             window.playUnifiedAudio = function(text, buttonElement = null) {
-                // Loại bỏ dấu câu để đọc mượt hơn
-                const word = text.replace(/[.,!?]/g, '').trim(); 
+                // Giữ lại dấu câu để ngắt nghỉ tự nhiên
+                const word = text.trim(); 
 
                 // Text-to-Speech (Tính năng chuyển văn bản thành giọng nói)
                 if ('speechSynthesis' in window) {
                     window.speechSynthesis.cancel(); // Dừng âm thanh đang đọc (nếu có) để đọc từ mới
                     const utterance = new SpeechSynthesisUtterance(word); // Tạo đối tượng chứa từ cần đọc
+                    
                     utterance.lang = 'en-US'; // Cài đặt ngôn ngữ là Tiếng Anh Mỹ
-                    utterance.rate = 0.8; // Tốc độ đọc chậm lại một chút (0.8) để dễ nghe hơn
+                    
+                    // GIẢI QUYẾT VẤN ĐỀ TỰ NHIÊN:
+                    // 1. Không đụng chạm vào giọng của Mac/iOS để Apple tự gọi "Samantha Nâng cao" hoặc "Siri".
+                    // 2. Chỉ chèn giọng tốt (Google/Natural) nếu là máy tính Windows / Android.
+                    const isAppleDevice = /(Mac|iPhone|iPod|iPad)/i.test(navigator.userAgent);
+                    if (!isAppleDevice) {
+                        const voices = window.speechSynthesis.getVoices();
+                        const premiumVoice = voices.find(v => v.name.includes('Google US English') || v.name.includes('Natural'));
+                        if (premiumVoice) utterance.voice = premiumVoice;
+                    }
+
+                    // Cải thiện tự nhiên: Đọc từ đơn thì chậm (0.8), đọc cả câu dài thì tốc độ bình thường (1.0)
+                    utterance.rate = word.includes(' ') ? 1.0 : 0.8; 
 
                     // Thêm hiệu ứng loading cho nút bấm (để giao diện đẹp hơn)
                     if(buttonElement) {
