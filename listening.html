@@ -59,7 +59,7 @@
             <div class="mt-6">
                 <div class="bg-blue-50 border border-blue-100 p-4 rounded-xl mb-6 text-sm text-blue-800 flex items-start gap-3">
                     <i class="fa-solid fa-lightbulb text-blue-500 mt-1"></i>
-                    <p><strong>Mẹo cho giọng đọc tự nhiên:</strong> Hãy mở trang web này bằng trình duyệt <strong>Microsoft Edge</strong>. Trình duyệt này hỗ trợ các giọng AI "Natural" vô cùng chân thực (như người thật) mà hoàn toàn miễn phí.</p>
+                    <p><strong>Mẹo cho Máy tính:</strong> Hệ thống tự động chọn giọng AI tự nhiên nhất. Nhấn <code>Ctrl + Space</code> (hoặc <code>Cmd + Space</code>) để nghe lại câu nhanh chóng. Nhấn <code>Enter</code> để kiểm tra đáp án.</p>
                 </div>
 
                 <button onclick="app.startPractice()" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white text-lg font-bold rounded-2xl transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 transform hover:scale-[1.01]">
@@ -84,19 +84,12 @@
 
             <!-- Audio Player & Voice Settings -->
             <div class="bg-indigo-50/50 border border-indigo-100 p-5 md:p-6 rounded-3xl mb-8 relative overflow-hidden">
-                <!-- Cài đặt Giọng & Tốc độ -->
-                <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6 relative z-10">
-                    <div class="w-full sm:w-auto flex-1">
-                        <label class="text-xs font-bold text-indigo-400 uppercase tracking-wider block mb-1">Chọn Giọng Đọc</label>
-                        <select id="voice-select" onchange="app.changeVoice()" class="w-full max-w-xs bg-white border border-indigo-200 text-indigo-700 text-sm rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-300 font-medium truncate">
-                            <option>Đang tải giọng...</option>
-                        </select>
-                    </div>
+                <!-- Cài đặt Tốc độ -->
+                <div class="flex justify-center mb-6 relative z-10">
                     <div class="flex items-center bg-white border border-indigo-200 rounded-xl p-1 shadow-sm">
-                        <button onclick="app.setSpeed(0.7)" id="speed-0.7" class="speed-btn px-3 py-1 rounded-lg text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors">0.7x</button>
-                        <button onclick="app.setSpeed(0.8)" id="speed-0.8" class="speed-btn px-3 py-1 rounded-lg text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors">0.8x</button>
-                        <button onclick="app.setSpeed(0.9)" id="speed-0.9" class="speed-btn px-3 py-1 rounded-lg text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors">0.9x</button>
-                        <button onclick="app.setSpeed(1.0)" id="speed-1.0" class="speed-btn px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-bold transition-colors">1.0x</button>
+                        <button onclick="app.setSpeed(0.8)" id="speed-0.8" class="speed-btn px-4 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-bold transition-colors">0.8x</button>
+                        <button onclick="app.setSpeed(0.9)" id="speed-0.9" class="speed-btn px-4 py-1.5 rounded-lg text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors">0.9x</button>
+                        <button onclick="app.setSpeed(1.0)" id="speed-1.0" class="speed-btn px-4 py-1.5 rounded-lg text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors">1.0x</button>
                     </div>
                 </div>
                 
@@ -220,9 +213,7 @@
             data: {
                 sentences: [],
                 currentIdx: 0,
-                voices: [],
-                selectedVoice: null,
-                speed: 1.0,
+                speed: 0.8, // Chỉnh mặc định thành 0.8 theo yêu cầu
                 isPlaying: false,
                 isRecording: false
             },
@@ -230,6 +221,19 @@
             // --- KHỞI TẠO ---
             init() {
                 this.initVoices();
+
+                // Cải thiện sự tự nhiên trên máy tính: Thêm phím tắt rảnh tay
+                document.addEventListener('keydown', (e) => {
+                    // Phím tắt Ctrl+Space (hoặc Cmd+Space) để nghe lại audio
+                    if ((e.ctrlKey || e.metaKey) && e.code === 'Space') {
+                        e.preventDefault(); 
+                        const practiceScreen = document.getElementById('screen-practice');
+                        if (!practiceScreen.classList.contains('hidden')) {
+                            this.playCurrentSentence();
+                        }
+                    }
+                });
+
                 // Bắt sự kiện Enter cho textarea
                 document.getElementById('user-input').addEventListener('keydown', (e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
@@ -303,111 +307,92 @@
                 return { result, accuracy };
             },
 
-            // --- TỐI ƯU HÓA VOICE (CHỐNG ROBOT) ---
+            // --- TÍCH HỢP MÃ ĐỌC GIỌNG TỰ NHIÊN ---
             initVoices() {
-                const load = () => {
-                    let allVoices = window.speechSynthesis.getVoices();
-                    if(allVoices.length === 0) return;
-
-                    // Lọc giọng tiếng Anh
-                    let engVoices = allVoices.filter(v => v.lang.toLowerCase().startsWith('en'));
-                    
-                    // Thuật toán chấm điểm ưu tiên giọng Tự nhiên
-                    const getScore = (v) => {
-                        let score = 0;
-                        const n = v.name.toLowerCase();
-                        // Ưu tiên cao nhất cho giọng Natural của Microsoft (Edge)
-                        if (n.includes('natural') || n.includes('online')) score += 100;
-                        // Ưu tiên Google US
-                        if (n.includes('google us')) score += 80;
-                        if (n.includes('google')) score += 70;
-                        // Ưu tiên giọng Mac tốt
-                        if (n.includes('samantha') || n.includes('alex') || n.includes('siri')) score += 60;
-                        // Giọng US nói chung
-                        if (v.lang === 'en-US' || v.lang === 'en_US') score += 10;
-                        // Trừ điểm các giọng mặc định quá cũ
-                        if (n.includes('zira') || n.includes('david')) score -= 20; 
-                        return score;
-                    };
-
-                    engVoices.sort((a, b) => getScore(b) - getScore(a));
-                    
-                    // Nếu không có tiếng Anh, lấy tất cả
-                    if(engVoices.length === 0) engVoices = allVoices;
-
-                    this.data.voices = engVoices;
-                    
-                    // Render Dropdown
-                    const select = document.getElementById('voice-select');
-                    select.innerHTML = '';
-                    engVoices.forEach((v, index) => {
-                        const option = document.createElement('option');
-                        option.value = index;
-                        // Hiển thị tên đẹp hơn
-                        let displayName = v.name.replace('Microsoft ', '').replace('Desktop', '').trim();
-                        if(displayName.includes('Natural')) displayName = "✨ " + displayName;
-                        option.textContent = displayName;
-                        select.appendChild(option);
-                    });
-
-                    // Chọn giọng tốt nhất làm mặc định
-                    if(engVoices.length > 0 && !this.data.selectedVoice) {
-                        this.data.selectedVoice = engVoices[0];
-                        select.value = 0;
-                    }
-                };
-
-                load();
-                if (speechSynthesis.onvoiceschanged !== undefined) {
-                    speechSynthesis.onvoiceschanged = load;
+                // 1. KÍCH HOẠT TẢI GIỌNG NÓI NGẦM (Bắt buộc cho Windows/Android)
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.getVoices();
+                    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
                 }
-            },
-
-            changeVoice() {
-                const index = document.getElementById('voice-select').value;
-                this.data.selectedVoice = this.data.voices[index];
-                // Thử đọc 1 câu ngắn để test giọng
-                this.stopAudio();
             },
 
             setSpeed(s) {
                 this.data.speed = s;
                 // Update UI
-                ['0.7', '0.8', '0.9', '1.0'].forEach(val => {
+                ['0.8', '0.9', '1.0'].forEach(val => {
                     const btn = document.getElementById(`speed-${val}`);
                     if(parseFloat(val) === s) {
-                        btn.className = "speed-btn px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-bold transition-colors";
+                        btn.className = "speed-btn px-4 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-bold transition-colors";
                     } else {
-                        btn.className = "speed-btn px-3 py-1 rounded-lg text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors";
+                        btn.className = "speed-btn px-4 py-1.5 rounded-lg text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors";
                     }
                 });
-                if(this.data.isPlaying) this.playCurrentSentence(); // Đọc lại với tốc độ mới
+                if(this.data.isPlaying) this.playCurrentSentence();
             },
 
+            // 2. HÀM ĐỌC VĂN BẢN THÔNG MINH ĐÃ ĐƯỢC TÍCH HỢP
             playCurrentSentence() {
-                this.stopAudio();
                 const text = this.data.sentences[this.data.currentIdx];
                 if (!text) return;
 
-                const utterance = new SpeechSynthesisUtterance(text);
-                if (this.data.selectedVoice) utterance.voice = this.data.selectedVoice;
+                // Kiểm tra xem trình duyệt có hỗ trợ không
+                if (!('speechSynthesis' in window)) {
+                    console.warn("Trình duyệt của bạn không hỗ trợ đọc văn bản.");
+                    return;
+                }
+
+                // Dừng âm thanh đang đọc (nếu có) để bắt đầu câu mới ngay lập tức
+                window.speechSynthesis.cancel(); 
+                
+                // Loại bỏ khoảng trắng thừa ở đầu/cuối
+                const cleanText = text.trim();
+                const utterance = new SpeechSynthesisUtterance(cleanText); 
+                
+                // Đặt ngôn ngữ mặc định
+                utterance.lang = 'en-US'; 
+
+                // MẸO CỐT LÕI: Phân loại thiết bị Apple và phần còn lại
+                const isAppleDevice = /(Mac|iPhone|iPod|iPad)/i.test(navigator.userAgent);
+                
+                if (!isAppleDevice) {
+                    // Nếu LÀ Windows/Android: Tìm và ép dùng giọng xịn (Google/Natural)
+                    const voices = window.speechSynthesis.getVoices();
+                    const premiumVoice = voices.find(v => 
+                        v.name.includes('Google US English') || 
+                        v.name.includes('Natural') || 
+                        v.name.includes('Premium')
+                    );
+                    
+                    // Nếu tìm thấy giọng xịn thì gán vào, nếu không sẽ giữ mặc định
+                    if (premiumVoice) {
+                        utterance.voice = premiumVoice;
+                    }
+                }
+                // Nếu là Apple (Mac/iOS), KHÔNG gán 'utterance.voice'. Hệ thống sẽ tự dùng giọng xịn của thiết bị.
+
+                // Áp dụng tốc độ đã lưu trong this.data.speed do học viên tự tùy chỉnh thông qua UI (mặc định là 0.8)
                 utterance.rate = this.data.speed;
 
+                // Các hiệu ứng UI khi bắt đầu và kết thúc đọc
                 const playBtn = document.getElementById('play-btn');
                 const playIcon = document.getElementById('play-icon');
 
                 utterance.onstart = () => {
                     this.data.isPlaying = true;
-                    playBtn.classList.add('bg-indigo-400', 'scale-105');
-                    playBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
-                    playIcon.className = "fa-solid fa-volume-high text-3xl md:text-4xl animate-pulse";
+                    if(playBtn) {
+                        playBtn.classList.add('bg-indigo-400', 'scale-105');
+                        playBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+                        playIcon.className = "fa-solid fa-volume-high text-3xl md:text-4xl animate-pulse";
+                    }
                 };
 
                 utterance.onend = () => {
                     this.data.isPlaying = false;
-                    playBtn.classList.remove('bg-indigo-400', 'scale-105');
-                    playBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
-                    playIcon.className = "fa-solid fa-play text-3xl md:text-4xl ml-2";
+                    if(playBtn) {
+                        playBtn.classList.remove('bg-indigo-400', 'scale-105');
+                        playBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+                        playIcon.className = "fa-solid fa-play text-3xl md:text-4xl ml-2";
+                    }
                 };
 
                 utterance.onerror = (e) => {
@@ -415,11 +400,12 @@
                     utterance.onend();
                 };
 
-                window.speechSynthesis.speak(utterance);
+                // Phát âm
+                window.speechSynthesis.speak(utterance); 
             },
 
             stopAudio() {
-                window.speechSynthesis.cancel();
+                if(window.speechSynthesis) window.speechSynthesis.cancel();
                 this.data.isPlaying = false;
                 const playIcon = document.getElementById('play-icon');
                 if(playIcon) playIcon.className = "fa-solid fa-play text-3xl md:text-4xl ml-2";
@@ -455,11 +441,12 @@
                 this.data.sentences = parsed;
                 this.data.currentIdx = 0;
                 
-                this.loadSentence();
+                // Khởi động giao diện luyện tập với cơ chế play trực tiếp (Hỗ trợ iPhone/Safari)
+                this.loadSentence(true);
                 this.showScreen('screen-practice');
             },
 
-            loadSentence() {
+            loadSentence(autoplay = false) {
                 // Update Progress
                 const total = this.data.sentences.length;
                 const idx = this.data.currentIdx;
@@ -473,7 +460,11 @@
                 document.getElementById('hint-box').classList.add('hidden');
                 
                 this.showStep('step-dictation');
-                setTimeout(() => this.playCurrentSentence(), 500); // Tự động đọc
+
+                // Gọi hàm đọc trực tiếp nếu có cờ autoplay, không dùng setTimeout để tránh bị iPhone chặn
+                if(autoplay) {
+                    this.playCurrentSentence();
+                }
             },
 
             showHint(type) {
@@ -556,7 +547,7 @@
             retryDictation() {
                 document.getElementById('user-input').value = "";
                 this.showStep('step-dictation');
-                this.playCurrentSentence();
+                this.playCurrentSentence(); // Đọc lại lập tức khi ấn nút
             },
 
             proceedToShadowing() {
@@ -569,7 +560,7 @@
                     this.data.currentIdx < this.data.sentences.length - 1 ? "Câu tiếp theo" : "Hoàn thành bài tập";
 
                 this.showStep('step-shadowing');
-                this.playCurrentSentence();
+                this.playCurrentSentence(); // Đọc lại lập tức khi ấn nút
             },
 
             // --- SHADOWING / NHẬN DIỆN GIỌNG NÓI ---
@@ -639,7 +630,7 @@
             nextSentence() {
                 if (this.data.currentIdx < this.data.sentences.length - 1) {
                     this.data.currentIdx++;
-                    this.loadSentence();
+                    this.loadSentence(true); // Đọc ngay khi nhấn
                 } else {
                     this.stopAudio();
                     this.showScreen('screen-results');
