@@ -60,16 +60,6 @@
         .word-correct { color: #16a34a; }
         .word-missing { color: #dc2626; text-decoration: line-through; font-weight: bold; background-color: #fee2e2; padding: 0 4px; border-radius: 4px;}
         .word-extra { color: #ea580c; text-decoration: line-through; font-size: 0.8em; background-color: #ffedd5; padding: 0 4px; border-radius: 4px;}
-        
-        /* Select dropdown styling */
-        select#voice-select {
-            appearance: none;
-            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23131313%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
-            background-repeat: no-repeat;
-            background-position: right .7rem top 50%;
-            background-size: .65rem auto;
-            padding-right: 2rem;
-        }
     </style>
 </head>
 <body class="text-gray-800">
@@ -89,16 +79,8 @@
                 </div>
                 
                 <div class="flex items-center gap-4">
-                    <!-- Dropdown chọn Giọng (MỚI THÊM) -->
-                    <div class="hidden md:flex items-center gap-2 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-full shadow-inner">
-                        <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
-                        <select id="voice-select" class="text-xs font-semibold text-gray-700 bg-transparent border-none outline-none cursor-pointer w-32 truncate" title="Chọn giọng đọc">
-                            <option value="">Đang tải giọng...</option>
-                        </select>
-                    </div>
-
                     <!-- Theo dõi tiến độ học tập -->
-                    <div class="flex items-center gap-3 border-l pl-4 border-gray-200">
+                    <div class="flex items-center gap-3 border-gray-200">
                         <div class="text-right hidden sm:block">
                             <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Tiến độ</p>
                             <p id="progress-text" class="text-sm font-extrabold text-blue-600">0 / 0 từ</p>
@@ -842,100 +824,27 @@
             }
             updateProgressUI();
 
-            // --- HỆ THỐNG AUDIO NATIVE CẢI TIẾN (CÓ UI CHỌN GIỌNG) ---
-            const speechService = {
-                isReady: false,
-                selectedVoice: null,
-                voices: [],
-                init: function() {
-                    if(typeof window === 'undefined' || !window.speechSynthesis) return;
-                    
-                    const populateVoiceList = () => {
-                        this.voices = window.speechSynthesis.getVoices();
-                        if(this.voices.length === 0) return;
-
-                        const voiceSelect = document.getElementById('voice-select');
-                        if (!voiceSelect) return;
-                        
-                        voiceSelect.innerHTML = '';
-
-                        // Lọc chỉ lấy giọng Tiếng Anh để danh sách gọn gàng
-                        const englishVoices = this.voices.filter(v => v.lang.startsWith('en-'));
-
-                        // Thuật toán ưu tiên các giọng Premium tốt nhất
-                        const premiumNames = ['Samantha', 'Siri', 'Google US English', 'Microsoft Aria', 'Microsoft Guy', 'Microsoft Jenny'];
-
-                        englishVoices.sort((a, b) => {
-                            const aIndex = premiumNames.findIndex(name => a.name.includes(name));
-                            const bIndex = premiumNames.findIndex(name => b.name.includes(name));
-                            if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
-                            if (aIndex !== -1) return -1;
-                            if (bIndex !== -1) return 1;
-                            return 0; // Giữ nguyên thứ tự nếu không phải Premium
-                        });
-
-                        if(englishVoices.length === 0) {
-                            voiceSelect.innerHTML = '<option>Không tìm thấy giọng Tiếng Anh</option>';
-                            return;
-                        }
-
-                        // Đổ dữ liệu vào Dropdown
-                        englishVoices.forEach((voice, index) => {
-                            const option = document.createElement('option');
-                            // Hiển thị tên giọng ngắn gọn
-                            let shortName = voice.name.replace('Microsoft ', '').replace('Online (Natural)', '').trim();
-                            option.textContent = shortName;
-                            option.value = index;
-                            voiceSelect.appendChild(option);
-                        });
-
-                        // Mặc định chọn giọng ngon nhất (đầu danh sách)
-                        this.selectedVoice = englishVoices[0];
-                        this.isReady = true;
-
-                        // Lắng nghe người dùng tự thay đổi giọng
-                        voiceSelect.addEventListener('change', (e) => {
-                            this.selectedVoice = englishVoices[e.target.value];
-                        });
-                    };
-
-                    populateVoiceList();
-                    // Chrome cần onvoiceschanged để load giọng bất đồng bộ
-                    if (window.speechSynthesis.onvoiceschanged !== undefined) {
-                        window.speechSynthesis.onvoiceschanged = populateVoiceList;
-                    }
-                },
-                speak: function(text, buttonElement){
-                    if(!this.isReady || !window.speechSynthesis) return false;
-                    try {
-                        window.speechSynthesis.cancel(); // Dừng câu cũ nếu đang nói
-                        const utterance = new SpeechSynthesisUtterance(text);
-                        if(this.selectedVoice) utterance.voice = this.selectedVoice;
-                        
-                        utterance.lang = 'en-US';
-                        // Tinh chỉnh Rate và Pitch để giọng nghe ấm và thật hơn
-                        utterance.rate = 0.88; // Đọc chậm lại một xíu
-                        utterance.pitch = 1.05; // Cao độ tự nhiên
-
-                        if(buttonElement) {
-                            buttonElement.classList.add('loading');
-                            utterance.onend = () => buttonElement.classList.remove('loading');
-                            utterance.onerror = () => buttonElement.classList.remove('loading');
-                        }
-                        window.speechSynthesis.speak(utterance);
-                        return true;
-                    } catch(err) {
-                        return false;
-                    }
-                }
-            };
-            
-            // Khởi tạo hệ thống giọng nói
-            speechService.init();
-
+            // --- HỆ THỐNG AUDIO NATIVE CẢI TIẾN (THEO MÃ CỦA BẠN) ---
             window.playUnifiedAudio = function(text, buttonElement = null) {
-                const cleanText = text.replace(/[.,!?]/g, '').trim();
-                speechService.speak(cleanText, buttonElement);
+                // Loại bỏ dấu câu để đọc mượt hơn
+                const word = text.replace(/[.,!?]/g, '').trim(); 
+
+                // Text-to-Speech (Tính năng chuyển văn bản thành giọng nói)
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel(); // Dừng âm thanh đang đọc (nếu có) để đọc từ mới
+                    const utterance = new SpeechSynthesisUtterance(word); // Tạo đối tượng chứa từ cần đọc
+                    utterance.lang = 'en-US'; // Cài đặt ngôn ngữ là Tiếng Anh Mỹ
+                    utterance.rate = 0.8; // Tốc độ đọc chậm lại một chút (0.8) để dễ nghe hơn
+
+                    // Thêm hiệu ứng loading cho nút bấm (để giao diện đẹp hơn)
+                    if(buttonElement) {
+                        buttonElement.classList.add('loading');
+                        utterance.onend = () => buttonElement.classList.remove('loading');
+                        utterance.onerror = () => buttonElement.classList.remove('loading');
+                    }
+
+                    window.speechSynthesis.speak(utterance); // Yêu cầu trình duyệt phát âm
+                }
             };
 
             // --- WEB SPEECH API (NHẬN DIỆN GIỌNG NÓI) ---
