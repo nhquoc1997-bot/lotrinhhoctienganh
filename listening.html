@@ -375,12 +375,10 @@
                 // Update UI
                 ['0.7', '0.8', '0.9', '1.0'].forEach(val => {
                     const btn = document.getElementById(`speed-${val}`);
-                    if(btn) {
-                        if(parseFloat(val) === s) {
-                            btn.className = "speed-btn px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-bold transition-colors";
-                        } else {
-                            btn.className = "speed-btn px-3 py-1 rounded-lg text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors";
-                        }
+                    if(parseFloat(val) === s) {
+                        btn.className = "speed-btn px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-bold transition-colors";
+                    } else {
+                        btn.className = "speed-btn px-3 py-1 rounded-lg text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors";
                     }
                 });
                 if(this.data.isPlaying) this.playCurrentSentence(); // Đọc lại với tốc độ mới
