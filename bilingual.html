@@ -82,6 +82,18 @@
                     <h1 class="text-xl font-bold text-slate-900">Trình Tạo Song Ngữ</h1>
                 </div>
                 <div class="flex items-center gap-4">
+                    <!-- Tùy chọn chia câu (MỚI) -->
+                    <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-lg border border-slate-200">
+                        <i class="ph ph-list-numbers text-slate-500 ml-1"></i>
+                        <select id="chunkSize" class="bg-transparent border-none outline-none text-sm font-medium text-slate-700 py-1 pr-2 cursor-pointer">
+                            <option value="random" selected>Gộp 2-3 câu</option>
+                            <option value="1">Gộp 1 câu</option>
+                            <option value="2">Gộp 2 câu</option>
+                            <option value="3">Gộp 3 câu</option>
+                            <option value="4">Gộp 4 câu</option>
+                        </select>
+                    </div>
+                    <!-- Tùy chọn ngôn ngữ -->
                     <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-lg border border-slate-200">
                         <select id="langDirection" class="bg-transparent border-none outline-none text-sm font-medium text-slate-700 py-1 px-2 cursor-pointer">
                             <option value="en-vi">Tiếng Anh ➔ Tiếng Việt</option>
@@ -252,6 +264,7 @@
         const practiceSection = document.getElementById('practiceSection');
         const outputArea = document.getElementById('outputArea');
         const langDirection = document.getElementById('langDirection');
+        const chunkSizeSelect = document.getElementById('chunkSize'); // Thêm truy xuất element gộp câu
         const charCount = document.getElementById('charCount');
         const copyAllBtn = document.getElementById('copyAllBtn');
         const copyEnBtn = document.getElementById('copyEnBtn');
@@ -324,18 +337,16 @@
 
         // HÀM TÁCH CÂU DỰA VÀO DẤU CHẤM, CHẤM HỎI, CHẤM THAN
         function splitIntoSentences(text) {
-            // Regex tìm các câu kết thúc bằng . ! ? theo sau là khoảng trắng hoặc hết chuỗi
             const regex = /[^.!?]+[.!?]+(?:\s|$)/g;
             let sentences = text.match(regex);
             
             if (!sentences) {
-                // Nếu không có dấu câu nào, trả về toàn bộ text như 1 câu
                 return [text.trim()].filter(s => s);
             }
             return sentences.map(s => s.trim()).filter(s => s !== '');
         }
 
-        // --- TÍNH NĂNG 1: DỊCH & CHIA ĐOẠN (BÌNH THƯỜNG) ---
+        // --- TÍNH NĂNG 1: DỊCH & CHIA ĐOẠN (ĐÃ CẬP NHẬT) ---
         translateBtn.addEventListener('click', async () => {
             const text = sourceText.value.trim();
             if (!text) {
@@ -346,21 +357,35 @@
             const dir = langDirection.value.split('-');
             const sourceLang = dir[0];
             const targetLang = dir[1];
+            const chunkConfig = chunkSizeSelect.value;
 
-            // Gom cụm 2 câu
+            // Gom cụm câu linh hoạt dựa vào lựa chọn
             let chunks = [];
             const paragraphs = text.split(/\n+/).filter(p => p.trim() !== '');
             
             paragraphs.forEach(p => {
                 const sents = p.match(/[^.!?]+[.!?]*/g) || [p];
                 let currentChunk = [];
+                
+                // Hàm xác định số câu mục tiêu cho chunk hiện tại
+                const getTargetLength = () => {
+                    if (chunkConfig === 'random') {
+                        return Math.floor(Math.random() * 2) + 2; // Sinh ngẫu nhiên 2 hoặc 3
+                    }
+                    return parseInt(chunkConfig);
+                };
+
+                let targetLength = getTargetLength();
+
                 sents.forEach(s => {
                     const trimmed = s.trim();
                     if (!trimmed) return;
                     currentChunk.push(trimmed);
-                    if (currentChunk.length >= 2) {
+                    
+                    if (currentChunk.length >= targetLength) {
                         chunks.push(currentChunk.join(' '));
                         currentChunk = [];
+                        targetLength = getTargetLength(); // Cập nhật số câu cho mảng tiếp theo
                     }
                 });
                 if (currentChunk.length > 0) chunks.push(currentChunk.join(' '));
@@ -416,7 +441,6 @@
         });
 
         // --- CÁC HÀM XỬ LÝ NÚT COPY ---
-        
         copyAllBtn.addEventListener('click', () => {
             const rows = outputArea.querySelectorAll('.grid');
             let finalString = '';
@@ -433,7 +457,6 @@
             const isEnVi = langDirection.value === 'en-vi';
             let finalString = '';
             rows.forEach(row => {
-                // Nếu dịch Anh->Việt thì Anh ở cột 1, nếu Việt->Anh thì Anh ở cột 2
                 const text = isEnVi ? row.children[0].textContent : row.children[1].textContent;
                 finalString += text.trim() + '\n\n';
             });
@@ -445,14 +468,13 @@
             const isEnVi = langDirection.value === 'en-vi';
             let finalString = '';
             rows.forEach(row => {
-                // Nếu dịch Anh->Việt thì Việt ở cột 2, nếu Việt->Anh thì Việt ở cột 1
                 const text = isEnVi ? row.children[1].textContent : row.children[0].textContent;
                 finalString += text.trim() + '\n\n';
             });
             copyTextToClipboard(finalString, 'Đã sao chép phần Tiếng Việt!');
         });
 
-        // --- TÍNH NĂNG 2: CHẾ ĐỘ LUYỆN TẬP (MỚI) ---
+        // --- TÍNH NĂNG 2: CHẾ ĐỘ LUYỆN TẬP ---
         let practiceData = [];
         let currentPracticeIndex = 0;
 
@@ -478,24 +500,20 @@
                 langDirection.value = 'en-vi';
             }
 
-            // Giao diện loading
             translateBtn.disabled = true;
             startPracticeBtn.disabled = true;
             resultSection.classList.add('hidden');
             practiceSection.classList.add('hidden');
             loadingIndicator.classList.replace('hidden', 'flex');
             
-            // Lấy danh sách các câu
             const sentences = splitIntoSentences(text);
             practiceData = [];
 
             try {
-                // Dịch từng câu một để tạo Flashcard
                 for (let i = 0; i < sentences.length; i++) {
                     const enSentence = sentences[i];
                     const viSentence = await translateText(enSentence, 'en', 'vi');
                     practiceData.push({ en: enSentence, vi: viSentence });
-                    // Delay nhỏ để tránh spam API
                     await new Promise(r => setTimeout(r, 200)); 
                 }
 
@@ -546,7 +564,6 @@
             const currentQA = practiceData[currentPracticeIndex];
             const originalEn = currentQA.en;
 
-            // Xử lý logic so sánh đúng sai đơn giản (so sánh từng từ)
             const targetWords = originalEn.split(/\s+/);
             const targetWordsClean = targetWords.map(cleanWord);
             
@@ -555,7 +572,6 @@
             let isPerfect = cleanWord(originalEn) === cleanWord(userInputText);
             let diffHtml = '';
 
-            // Tạo HTML để chỉ ra chỗ sai cho người dùng
             userWords.forEach(word => {
                 const cWord = cleanWord(word);
                 if (!cWord) {
@@ -570,7 +586,6 @@
                 }
             });
 
-            // Hiển thị giao diện feedback
             practiceInput.disabled = true;
             checkPracticeBtn.classList.add('hidden');
             practiceFeedback.classList.remove('hidden');
@@ -585,7 +600,6 @@
             }
 
             userAnswerDiff.innerHTML = diffHtml.trim();
-            // Áp dụng bọc từ (wrapWordsForEnglish) vào câu gốc để học viên có thể click vào tra từ
             correctAnswerOriginal.innerHTML = wrapWordsForEnglish(originalEn);
         });
 
@@ -594,7 +608,6 @@
             if (currentPracticeIndex < practiceData.length) {
                 loadPracticeQuestion();
             } else {
-                // Hoàn thành
                 practiceSection.innerHTML = `
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-10 text-center flex flex-col items-center gap-4">
                         <i class="ph-fill ph-trophy text-6xl text-yellow-500"></i>
@@ -609,11 +622,9 @@
         });
 
         exitPracticeBtn.addEventListener('click', () => {
-            // Reset UI về ban đầu
             practiceSection.classList.add('hidden');
             inputSection.classList.remove('hidden');
             
-            // Nếu mất nút Thoát do innerHTML ghi đè ở trên, reload lại phần DOM
             if(!document.getElementById('practiceViText')) {
                 location.reload(); 
             }
