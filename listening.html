@@ -59,7 +59,7 @@
             <div class="mt-6">
                 <div class="bg-blue-50 border border-blue-100 p-4 rounded-xl mb-6 text-sm text-blue-800 flex items-start gap-3">
                     <i class="fa-solid fa-lightbulb text-blue-500 mt-1"></i>
-                    <p><strong>Mẹo cho giọng đọc tự nhiên:</strong> Hãy mở trang web này bằng trình duyệt <strong>Microsoft Edge</strong>. Trình duyệt này hỗ trợ các giọng AI "Natural" vô cùng chân thực (như người thật) mà hoàn toàn miễn phí.</p>
+                    <p><strong>Mẹo cho Điện thoại & Máy tính:</strong> Trên iOS hãy mở bằng Safari. Trên PC/Android dùng Chrome hoặc Microsoft Edge để có chất lượng giọng đọc AI tự nhiên và tốt nhất.</p>
                 </div>
 
                 <button onclick="app.startPractice()" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white text-lg font-bold rounded-2xl transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 transform hover:scale-[1.01]">
@@ -302,7 +302,7 @@
                 return { result, accuracy };
             },
 
-            // --- TỐI ƯU HÓA VOICE (CHỐNG ROBOT) ---
+            // --- TỐI ƯU HÓA VOICE (HỖ TRỢ ĐIỆN THOẠI & MÁY TÍNH) ---
             initVoices() {
                 const load = () => {
                     let allVoices = window.speechSynthesis.getVoices();
@@ -311,27 +311,25 @@
                     // Lọc giọng tiếng Anh
                     let engVoices = allVoices.filter(v => v.lang.toLowerCase().startsWith('en'));
                     
-                    // Thuật toán chấm điểm ưu tiên giọng Tự nhiên
+                    // Thuật toán chấm điểm ưu tiên giọng Tự nhiên (Hỗ trợ cả iOS Safari và Desktop)
                     const getScore = (v) => {
                         let score = 0;
                         const n = v.name.toLowerCase();
-                        // Ưu tiên cao nhất cho giọng Natural của Microsoft (Edge)
-                        if (n.includes('natural') || n.includes('online')) score += 100;
-                        // Ưu tiên Google US
-                        if (n.includes('google us')) score += 80;
+                        // Ưu tiên cực cao cho giọng Premium/Natural
+                        if (n.includes('natural') || n.includes('premium') || n.includes('online')) score += 100;
+                        // Ưu tiên Google US/UK trên Android/PC
+                        if (n.includes('google us') || n.includes('google uk')) score += 90;
                         if (n.includes('google')) score += 70;
-                        // Ưu tiên giọng Mac tốt
-                        if (n.includes('samantha') || n.includes('alex') || n.includes('siri')) score += 60;
-                        // Giọng US nói chung
-                        if (v.lang === 'en-US' || v.lang === 'en_US') score += 10;
-                        // Trừ điểm các giọng mặc định quá cũ
+                        // Ưu tiên giọng cao cấp trên Mac/iOS (Samantha, Siri, Daniel)
+                        if (n.includes('samantha') || n.includes('daniel') || n.includes('siri') || n.includes('karen')) score += 60;
+                        // Các giọng mặc định cơ bản
+                        if (v.lang === 'en-US') score += 10;
                         if (n.includes('zira') || n.includes('david')) score -= 20; 
                         return score;
                     };
 
                     engVoices.sort((a, b) => getScore(b) - getScore(a));
                     
-                    // Nếu không có tiếng Anh, lấy tất cả
                     if(engVoices.length === 0) engVoices = allVoices;
 
                     this.data.voices = engVoices;
@@ -342,14 +340,16 @@
                     engVoices.forEach((v, index) => {
                         const option = document.createElement('option');
                         option.value = index;
-                        // Hiển thị tên đẹp hơn
+                        // Hiển thị tên đẹp hơn và gắn sao cho giọng xịn
                         let displayName = v.name.replace('Microsoft ', '').replace('Desktop', '').trim();
-                        if(displayName.includes('Natural')) displayName = "✨ " + displayName;
+                        if(displayName.includes('Natural') || displayName.includes('Premium') || displayName.includes('Google') || displayName.includes('Samantha') || displayName.includes('Siri')) {
+                            displayName = "✨ " + displayName;
+                        }
                         option.textContent = displayName;
                         select.appendChild(option);
                     });
 
-                    // Chọn giọng tốt nhất làm mặc định
+                    // Tự động ghim giọng tự nhiên nhất làm mặc định
                     if(engVoices.length > 0 && !this.data.selectedVoice) {
                         this.data.selectedVoice = engVoices[0];
                         select.value = 0;
@@ -365,7 +365,6 @@
             changeVoice() {
                 const index = document.getElementById('voice-select').value;
                 this.data.selectedVoice = this.data.voices[index];
-                // Thử đọc 1 câu ngắn để test giọng
                 this.stopAudio();
             },
 
@@ -397,16 +396,20 @@
 
                 utterance.onstart = () => {
                     this.data.isPlaying = true;
-                    playBtn.classList.add('bg-indigo-400', 'scale-105');
-                    playBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
-                    playIcon.className = "fa-solid fa-volume-high text-3xl md:text-4xl animate-pulse";
+                    if(playBtn) {
+                        playBtn.classList.add('bg-indigo-400', 'scale-105');
+                        playBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+                        playIcon.className = "fa-solid fa-volume-high text-3xl md:text-4xl animate-pulse";
+                    }
                 };
 
                 utterance.onend = () => {
                     this.data.isPlaying = false;
-                    playBtn.classList.remove('bg-indigo-400', 'scale-105');
-                    playBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
-                    playIcon.className = "fa-solid fa-play text-3xl md:text-4xl ml-2";
+                    if(playBtn) {
+                        playBtn.classList.remove('bg-indigo-400', 'scale-105');
+                        playBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+                        playIcon.className = "fa-solid fa-play text-3xl md:text-4xl ml-2";
+                    }
                 };
 
                 utterance.onerror = (e) => {
@@ -418,7 +421,7 @@
             },
 
             stopAudio() {
-                window.speechSynthesis.cancel();
+                if(window.speechSynthesis) window.speechSynthesis.cancel();
                 this.data.isPlaying = false;
                 const playIcon = document.getElementById('play-icon');
                 if(playIcon) playIcon.className = "fa-solid fa-play text-3xl md:text-4xl ml-2";
@@ -454,11 +457,12 @@
                 this.data.sentences = parsed;
                 this.data.currentIdx = 0;
                 
-                this.loadSentence();
+                // Khởi động giao diện luyện tập với cơ chế play trực tiếp (Hỗ trợ iPhone/Safari)
+                this.loadSentence(true);
                 this.showScreen('screen-practice');
             },
 
-            loadSentence() {
+            loadSentence(autoplay = false) {
                 // Update Progress
                 const total = this.data.sentences.length;
                 const idx = this.data.currentIdx;
@@ -472,7 +476,11 @@
                 document.getElementById('hint-box').classList.add('hidden');
                 
                 this.showStep('step-dictation');
-                setTimeout(() => this.playCurrentSentence(), 500); // Tự động đọc
+
+                // Gọi hàm đọc trực tiếp nếu có cờ autoplay, không dùng setTimeout để tránh bị iPhone chặn
+                if(autoplay) {
+                    this.playCurrentSentence();
+                }
             },
 
             showHint(type) {
@@ -555,7 +563,7 @@
             retryDictation() {
                 document.getElementById('user-input').value = "";
                 this.showStep('step-dictation');
-                this.playCurrentSentence();
+                this.playCurrentSentence(); // Đọc lại lập tức khi ấn nút
             },
 
             proceedToShadowing() {
@@ -568,7 +576,7 @@
                     this.data.currentIdx < this.data.sentences.length - 1 ? "Câu tiếp theo" : "Hoàn thành bài tập";
 
                 this.showStep('step-shadowing');
-                this.playCurrentSentence();
+                this.playCurrentSentence(); // Đọc lại lập tức khi ấn nút
             },
 
             // --- SHADOWING / NHẬN DIỆN GIỌNG NÓI ---
@@ -638,7 +646,7 @@
             nextSentence() {
                 if (this.data.currentIdx < this.data.sentences.length - 1) {
                     this.data.currentIdx++;
-                    this.loadSentence();
+                    this.loadSentence(true); // Đọc ngay khi nhấn
                 } else {
                     this.stopAudio();
                     this.showScreen('screen-results');

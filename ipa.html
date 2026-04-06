@@ -120,16 +120,19 @@
             <div id="review-nav" class="hidden bg-blue-600 text-white px-4 py-3 flex justify-between items-center shadow-md z-20">
                 <button id="review-prev" class="px-3 py-1 bg-blue-700 hover:bg-blue-800 rounded-lg flex items-center gap-1 transition text-sm font-medium">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg> Trước
+                    <kbd class="hidden md:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-mono bg-blue-800/80 rounded border border-blue-600 text-blue-200">←</kbd>
                 </button>
                 <div class="font-bold tracking-widest text-sm bg-blue-800/50 px-3 py-1 rounded-full" id="review-counter">1/8</div>
                 <button id="review-next" class="px-3 py-1 bg-blue-700 hover:bg-blue-800 rounded-lg flex items-center gap-1 transition text-sm font-medium">
                     Tiếp <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    <kbd class="hidden md:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-mono bg-blue-800/80 rounded border border-blue-600 text-blue-200">→</kbd>
                 </button>
             </div>
 
             <!-- Close btn -->
-            <button id="close-modal" class="absolute top-4 right-4 text-gray-400 hover:text-red-500 bg-gray-100 hover:bg-red-50 rounded-full p-2 z-30 transition-colors">
+            <button id="close-modal" class="absolute top-4 right-4 text-gray-400 hover:text-red-500 bg-gray-100 hover:bg-red-50 rounded-full p-2 z-30 transition-colors group" title="Đóng (Esc)">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                <span class="absolute -bottom-6 right-1/2 translate-x-1/2 text-[10px] text-gray-400 font-mono hidden group-hover:md:block opacity-70">Esc</span>
             </button>
 
             <div class="p-6 md:p-8 overflow-y-auto" id="modal-scroll-area">
@@ -158,8 +161,9 @@
                             <svg fill="currentColor" viewBox="0 0 24 24"><path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 0 0 1.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.66 1.905H6.44l4.5 4.5c.945.945 2.56.276 2.56-1.06V4.06ZM18.584 5.106a.75.75 0 0 1 1.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 0 1-1.06-1.06 8.25 8.25 0 0 0 0-11.668.75.75 0 0 1 0-1.06Z" /><path d="M15.932 7.757a.75.75 0 0 1 1.061 0 6 6 0 0 1 0 8.486.75.75 0 0 1-1.06-1.061 4.5 4.5 0 0 0 0-6.364.75.75 0 0 1 0-1.06Z" /></svg>
                         </button>
 
-                        <button id="record-word-btn" class="mic-btn bg-gray-800 hover:bg-gray-900 text-white p-6 rounded-full shadow-lg" title="Nhấn để đọc">
+                        <button id="record-word-btn" class="mic-btn bg-gray-800 hover:bg-gray-900 text-white p-6 rounded-full shadow-lg relative group" title="Nhấn để đọc (Phím Space)">
                             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                            <span class="absolute -bottom-7 right-1/2 translate-x-1/2 text-[10px] text-gray-400 font-mono hidden md:block whitespace-nowrap">Phím Space</span>
                         </button>
                     </div>
 
@@ -824,26 +828,52 @@
             }
             updateProgressUI();
 
-            // --- HỆ THỐNG AUDIO NATIVE CẢI TIẾN (THEO MÃ CỦA BẠN) ---
+            // --- TÌM GIỌNG ĐỌC HAY NHẤT (CHẠY NGẦM) ---
+            let bestEnglishVoice = null;
+            function loadBestVoice() {
+                const voices = window.speechSynthesis.getVoices();
+                if (voices.length === 0) return;
+                
+                // Ưu tiên chọn giọng đọc tự nhiên (Google, Apple Siri, Microsoft Premium)
+                bestEnglishVoice = voices.find(v => v.name.includes('Google US English')) ||
+                                   voices.find(v => v.name.includes('Samantha') || v.name.includes('Daniel')) ||
+                                   voices.find(v => v.lang === 'en-US' && v.name.includes('Premium')) ||
+                                   voices.find(v => v.lang === 'en-US' || v.lang === 'en-GB') ||
+                                   voices[0];
+            }
+            
+            // Trình duyệt load giọng đọc bất đồng bộ
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.onvoiceschanged = loadBestVoice;
+                loadBestVoice();
+            }
+
+            // --- HỆ THỐNG AUDIO NATIVE CẢI TIẾN ---
             window.playUnifiedAudio = function(text, buttonElement = null) {
-                // Loại bỏ dấu câu để đọc mượt hơn
-                const word = text.replace(/[.,!?]/g, '').trim(); 
+                // Giữ lại dấu câu để giọng đọc ngắt nghỉ tự nhiên hơn khi đọc câu dài
+                const textToRead = text.trim(); 
 
-                // Text-to-Speech (Tính năng chuyển văn bản thành giọng nói)
                 if ('speechSynthesis' in window) {
-                    window.speechSynthesis.cancel(); // Dừng âm thanh đang đọc (nếu có) để đọc từ mới
-                    const utterance = new SpeechSynthesisUtterance(word); // Tạo đối tượng chứa từ cần đọc
-                    utterance.lang = 'en-US'; // Cài đặt ngôn ngữ là Tiếng Anh Mỹ
-                    utterance.rate = 0.8; // Tốc độ đọc chậm lại một chút (0.8) để dễ nghe hơn
+                    window.speechSynthesis.cancel(); 
+                    const utterance = new SpeechSynthesisUtterance(textToRead); 
+                    
+                    // Gắn giọng đọc tốt nhất nếu tìm thấy, không thì dùng ngôn ngữ mặc định
+                    if (bestEnglishVoice) {
+                        utterance.voice = bestEnglishVoice;
+                    } else {
+                        utterance.lang = 'en-US'; 
+                    }
+                    
+                    // Thông minh: Đọc từ vựng thì chậm (0.8), đọc cả câu dài thì tốc độ bình thường (1.0)
+                    utterance.rate = textToRead.includes(' ') ? 1.0 : 0.8; 
 
-                    // Thêm hiệu ứng loading cho nút bấm (để giao diện đẹp hơn)
                     if(buttonElement) {
                         buttonElement.classList.add('loading');
                         utterance.onend = () => buttonElement.classList.remove('loading');
                         utterance.onerror = () => buttonElement.classList.remove('loading');
                     }
 
-                    window.speechSynthesis.speak(utterance); // Yêu cầu trình duyệt phát âm
+                    window.speechSynthesis.speak(utterance); 
                 }
             };
 
@@ -1181,6 +1211,7 @@
 
                 modal.classList.add('active');
                 document.getElementById('modal-scroll-area').scrollTop = 0;
+                document.body.style.overflow = 'hidden'; // Ngăn cuộn trang khi mở modal (Tối ưu Desktop)
             }
 
             document.getElementById('review-prev').addEventListener('click', () => {
@@ -1194,6 +1225,7 @@
                     openPracticeModal(currentPhonemeContext, reviewWords[currentReviewIndex + 1], true, reviewWords, currentReviewIndex + 1);
                 } else {
                     modal.classList.remove('active');
+                    document.body.style.overflow = ''; // Phục hồi cuộn trang nền
                     alert(`Tuyệt vời! Bạn đã hoàn thành ôn tập âm ${currentPhonemeContext}`);
                 }
             });
@@ -1202,6 +1234,36 @@
                 if(isRecording && recognition) recognition.stop();
                 if(window.speechSynthesis) window.speechSynthesis.cancel();
                 modal.classList.remove('active');
+                document.body.style.overflow = ''; // Phục hồi cuộn trang nền
+            });
+
+            // --- TỐI ƯU TRẢI NGHIỆM BÀN PHÍM CHO DESKTOP ---
+            document.addEventListener('keydown', (e) => {
+                if (modal.classList.contains('active')) {
+                    // Đóng modal bằng phím Esc
+                    if (e.key === 'Escape') {
+                        document.getElementById('close-modal').click();
+                    } 
+                    // Chuyển từ bằng phím mũi tên Trái/Phải trong chế độ ôn tập
+                    else if (e.key === 'ArrowLeft' && isReviewMode && document.getElementById('review-prev').style.visibility !== 'hidden') {
+                        document.getElementById('review-prev').click();
+                    } 
+                    else if (e.key === 'ArrowRight' && isReviewMode && document.getElementById('review-next').style.display !== 'none') {
+                        document.getElementById('review-next').click();
+                    } 
+                    // Thu âm nhanh bằng phím Space
+                    else if (e.code === 'Space' || e.key === ' ') {
+                        // Ngăn cuộn trang nền khi nhấn Space
+                        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                            e.preventDefault();
+                            if (!isRecording) {
+                                document.getElementById('record-word-btn').click();
+                            } else {
+                                if (recognition) recognition.stop();
+                            }
+                        }
+                    }
+                }
             });
 
             document.getElementById('listen-word-btn').addEventListener('click', (e) => {
