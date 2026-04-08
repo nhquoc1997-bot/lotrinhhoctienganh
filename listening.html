@@ -354,36 +354,22 @@
 
                 // MẸO CỐT LÕI: Phân loại thiết bị Apple và phần còn lại
                 const isAppleDevice = /(Mac|iPhone|iPod|iPad)/i.test(navigator.userAgent);
-                const voices = window.speechSynthesis.getVoices();
-                let selectedVoice = null;
                 
-                if (isAppleDevice) {
-                    // Lọc ra các giọng tiếng Anh trước
-                    const enVoices = voices.filter(v => v.lang.startsWith('en'));
-                    
-                    // Ưu tiên 1: Cố gắng tìm giọng chất lượng cao (Enhanced, Premium, hoặc Siri)
-                    selectedVoice = enVoices.find(v => v.name.includes('Enhanced') || v.name.includes('Premium') || v.name.includes('Siri'));
-                    
-                    // Ưu tiên 2: Nếu máy bị giới hạn không tải được giọng xịn, ép dùng giọng Samantha cơ bản
-                    if (!selectedVoice) {
-                        selectedVoice = enVoices.find(v => v.name.includes('Samantha'));
-                    }
-
-                    // Ưu tiên 3: Nếu vẫn không có, đảm bảo chọn đúng giọng Mỹ (en-US) tiêu chuẩn
-                    if (!selectedVoice) {
-                        selectedVoice = enVoices.find(v => v.lang === 'en-US');
-                    }
-                } else {
-                    // TRÊN WINDOWS/ANDROID: Tìm và ép dùng giọng xịn (Google/Natural)
-                    selectedVoice = voices.find(v => 
-                        (v.name.includes('Google US English') || v.name.includes('Natural') || v.name.includes('Premium')) && v.lang.startsWith('en')
+                if (!isAppleDevice) {
+                    // Nếu LÀ Windows/Android: Tìm và ép dùng giọng xịn (Google/Natural)
+                    const voices = window.speechSynthesis.getVoices();
+                    const premiumVoice = voices.find(v => 
+                        v.name.includes('Google US English') || 
+                        v.name.includes('Natural') || 
+                        v.name.includes('Premium')
                     );
+                    
+                    // Nếu tìm thấy giọng xịn thì gán vào, nếu không sẽ giữ mặc định
+                    if (premiumVoice) {
+                        utterance.voice = premiumVoice;
+                    }
                 }
-                
-                // Nếu tìm thấy giọng thì gán vào, nếu không sẽ giữ mặc định
-                if (selectedVoice) {
-                    utterance.voice = selectedVoice;
-                }
+                // Nếu là Apple (Mac/iOS), KHÔNG gán 'utterance.voice'. Hệ thống sẽ tự dùng giọng xịn của thiết bị.
 
                 // Áp dụng tốc độ đã lưu trong this.data.speed do học viên tự tùy chỉnh thông qua UI
                 utterance.rate = this.data.speed;
