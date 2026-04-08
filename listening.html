@@ -86,10 +86,11 @@
             <div class="bg-indigo-50/50 border border-indigo-100 p-5 md:p-6 rounded-3xl mb-8 relative overflow-hidden">
                 <!-- Cài đặt Tốc độ -->
                 <div class="flex justify-center mb-6 relative z-10">
-                    <div class="flex items-center bg-white border border-indigo-200 rounded-xl p-1 shadow-sm">
-                        <button onclick="app.setSpeed(0.8)" id="speed-0.8" class="speed-btn px-4 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-bold transition-colors">0.8x</button>
-                        <button onclick="app.setSpeed(0.9)" id="speed-0.9" class="speed-btn px-4 py-1.5 rounded-lg text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors">0.9x</button>
-                        <button onclick="app.setSpeed(1.0)" id="speed-1.0" class="speed-btn px-4 py-1.5 rounded-lg text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors">1.0x</button>
+                    <div class="flex items-center bg-white border border-indigo-200 rounded-xl p-1 shadow-sm overflow-x-auto">
+                        <button onclick="app.setSpeed(0.75)" id="speed-0.75" class="speed-btn px-3 md:px-4 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-bold transition-colors">0.75x</button>
+                        <button onclick="app.setSpeed(0.8)" id="speed-0.8" class="speed-btn px-3 md:px-4 py-1.5 rounded-lg text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors">0.8x</button>
+                        <button onclick="app.setSpeed(0.9)" id="speed-0.9" class="speed-btn px-3 md:px-4 py-1.5 rounded-lg text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors">0.9x</button>
+                        <button onclick="app.setSpeed(1.0)" id="speed-1.0" class="speed-btn px-3 md:px-4 py-1.5 rounded-lg text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors">1.0x</button>
                     </div>
                 </div>
                 
@@ -213,7 +214,7 @@
             data: {
                 sentences: [],
                 currentIdx: 0,
-                speed: 0.8, // Chỉnh mặc định thành 0.8 theo yêu cầu
+                speed: 0.75, // Đổi mặc định sang 0.75 theo yêu cầu mới
                 isPlaying: false,
                 isRecording: false
             },
@@ -318,13 +319,13 @@
 
             setSpeed(s) {
                 this.data.speed = s;
-                // Update UI
-                ['0.8', '0.9', '1.0'].forEach(val => {
+                // Update UI (Thêm nút 0.75x)
+                ['0.75', '0.8', '0.9', '1.0'].forEach(val => {
                     const btn = document.getElementById(`speed-${val}`);
                     if(parseFloat(val) === s) {
-                        btn.className = "speed-btn px-4 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-bold transition-colors";
+                        btn.className = "speed-btn px-3 md:px-4 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-bold transition-colors";
                     } else {
-                        btn.className = "speed-btn px-4 py-1.5 rounded-lg text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors";
+                        btn.className = "speed-btn px-3 md:px-4 py-1.5 rounded-lg text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors";
                     }
                 });
                 if(this.data.isPlaying) this.playCurrentSentence();
@@ -370,7 +371,7 @@
                 }
                 // Nếu là Apple (Mac/iOS), KHÔNG gán 'utterance.voice'. Hệ thống sẽ tự dùng giọng xịn của thiết bị.
 
-                // Áp dụng tốc độ đã lưu trong this.data.speed do học viên tự tùy chỉnh thông qua UI (mặc định là 0.8)
+                // Áp dụng tốc độ đã lưu trong this.data.speed do học viên tự tùy chỉnh thông qua UI
                 utterance.rate = this.data.speed;
 
                 // Các hiệu ứng UI khi bắt đầu và kết thúc đọc
