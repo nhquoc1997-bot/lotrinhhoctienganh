@@ -48,18 +48,19 @@
         <!-- ================= MÀN HÌNH 1: NHẬP VĂN BẢN ================= -->
         <div id="screen-input" class="bg-white p-6 md:p-8 rounded-3xl shadow-xl border border-slate-200 fade-in">
             <h2 class="text-2xl md:text-3xl font-bold text-indigo-600 mb-3"><i class="fa-solid fa-keyboard mr-2"></i>Nhập Đoạn Văn</h2>
-            <p class="text-slate-600 mb-6 font-medium">Dán văn bản tiếng Anh vào đây. Hệ thống sẽ tự động chia câu và tìm giọng đọc tự nhiên nhất trên máy của bạn để luyện tập.</p>
+            <p class="text-slate-600 mb-6 font-medium">Dán văn bản vào đây. Hệ thống sẽ ngắt câu theo dấu chấm hoặc <b>dấu xuống dòng (Enter)</b> của bạn.</p>
             
             <div id="input-error" class="hidden mb-4 p-3 bg-red-50 text-red-600 border border-red-200 rounded-xl font-medium text-sm flex items-center gap-2">
                 <i class="fa-solid fa-triangle-exclamation"></i> Vui lòng nhập văn bản hợp lệ.
             </div>
 
-            <textarea id="raw-text" class="w-full h-56 p-5 border-2 border-indigo-100 rounded-2xl focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 resize-none text-lg text-slate-700 outline-none transition-all shadow-inner" placeholder="Paste your English text here...">I started learning English eight years ago because I wanted a better job. I hope this system helps everyone improve their listening skills.</textarea>
+            <textarea id="raw-text" class="w-full h-56 p-5 border-2 border-indigo-100 rounded-2xl focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 resize-none text-lg text-slate-700 outline-none transition-all shadow-inner" placeholder="Paste your English text here...">I started learning English eight years ago because I wanted a better job.
+I hope this system helps everyone improve their listening skills.</textarea>
 
             <div class="mt-6">
                 <div class="bg-blue-50 border border-blue-100 p-4 rounded-xl mb-6 text-sm text-blue-800 flex items-start gap-3">
                     <i class="fa-solid fa-lightbulb text-blue-500 mt-1"></i>
-                    <p><strong>Mẹo cho Máy tính:</strong> Hệ thống tự động chọn giọng AI tự nhiên nhất. Nhấn <code>Ctrl + Space</code> (hoặc <code>Cmd + Space</code>) để nghe lại câu nhanh chóng. Nhấn <code>Enter</code> để kiểm tra đáp án.</p>
+                    <p><strong>Mẹo:</strong> Nhấn phím Enter để buộc hệ thống ngắt thành một câu mới tại vị trí bạn muốn. Nhấn <code>Ctrl + Space</code> để nghe lại audio, <code>Enter</code> để chấm điểm.</p>
                 </div>
 
                 <button onclick="app.startPractice()" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white text-lg font-bold rounded-2xl transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 transform hover:scale-[1.01]">
@@ -69,8 +70,13 @@
         </div>
 
         <!-- ================= MÀN HÌNH 2: LUYỆN TẬP ================= -->
-        <div id="screen-practice" class="hidden bg-white p-4 md:p-8 rounded-3xl shadow-xl border border-slate-200 fade-in">
+        <div id="screen-practice" class="hidden bg-white p-4 md:p-8 rounded-3xl shadow-xl border border-slate-200 fade-in relative">
             
+            <!-- Nút quay lại trang chính -->
+            <button onclick="app.goHome()" class="mb-5 flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-bold transition-colors w-fit px-3 py-1.5 rounded-lg hover:bg-slate-100">
+                <i class="fa-solid fa-arrow-left"></i> Quay lại
+            </button>
+
             <!-- Progress Bar -->
             <div class="mb-6 md:mb-8">
                 <div class="flex justify-between text-sm font-bold text-slate-500 mb-2">
@@ -87,7 +93,7 @@
                 <!-- Cài đặt Tốc độ -->
                 <div class="flex justify-center mb-6 relative z-10">
                     <div class="flex items-center bg-white border border-indigo-200 rounded-xl p-1 shadow-sm overflow-x-auto">
-                        <button onclick="app.setSpeed(0.75)" id="speed-0.75" class="speed-btn px-3 md:px-4 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-bold transition-colors">0.75x</button>
+                        <button onclick="app.setSpeed(0.7)" id="speed-0.7" class="speed-btn px-3 md:px-4 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-bold transition-colors">0.7x</button>
                         <button onclick="app.setSpeed(0.8)" id="speed-0.8" class="speed-btn px-3 md:px-4 py-1.5 rounded-lg text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors">0.8x</button>
                         <button onclick="app.setSpeed(0.9)" id="speed-0.9" class="speed-btn px-3 md:px-4 py-1.5 rounded-lg text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors">0.9x</button>
                         <button onclick="app.setSpeed(1.0)" id="speed-1.0" class="speed-btn px-3 md:px-4 py-1.5 rounded-lg text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors">1.0x</button>
@@ -214,7 +220,7 @@
             data: {
                 sentences: [],
                 currentIdx: 0,
-                speed: 0.75, // Đổi mặc định sang 0.75 theo yêu cầu mới
+                speed: 0.7, // Tốc độ mặc định chuyển thành 0.7
                 isPlaying: false,
                 isRecording: false
             },
@@ -244,13 +250,45 @@
                 });
             },
 
+            // Quay về trang chính
+            goHome() {
+                this.stopAudio();
+                this.showScreen('screen-input');
+            },
+
             // --- TIỆN ÍCH CHUỖI ---
             cleanText(text) {
                 return text.replace(/[^\w\s]|_/g, "").replace(/\s+/g, " ").toLowerCase().trim();
             },
 
+            // Tính năng ngắt câu thông minh: Ưu tiên ngắt theo \n, sau đó ngắt theo dấu chấm
             splitIntoSentences(text) {
-                return text.match(/[^.!?]+[.!?]+/g) || [text];
+                const lines = text.split('\n');
+                let sentences = [];
+
+                lines.forEach(line => {
+                    let trimmed = line.trim();
+                    if (!trimmed) return;
+                    
+                    // Tìm các đoạn có dấu kết thúc câu
+                    let matches = trimmed.match(/[^.!?]+[.!?]+/g);
+                    
+                    if (matches) {
+                        sentences.push(...matches.map(s => s.trim()));
+                        
+                        // Xử lý đoạn text còn sót lại cuối dòng không có dấu chấm
+                        let joinedMatches = matches.join("").trim();
+                        if (joinedMatches.length < trimmed.length) {
+                            let leftover = trimmed.substring(joinedMatches.length).trim();
+                            if (leftover) sentences.push(leftover);
+                        }
+                    } else {
+                        // Nếu dòng không có dấu câu nào, tự động coi là 1 câu
+                        sentences.push(trimmed);
+                    }
+                });
+
+                return sentences;
             },
 
             compareSentences(target, input) {
@@ -319,8 +357,8 @@
 
             setSpeed(s) {
                 this.data.speed = s;
-                // Update UI (Thêm nút 0.75x)
-                ['0.75', '0.8', '0.9', '1.0'].forEach(val => {
+                // Update UI (Thêm nút 0.7x)
+                ['0.7', '0.8', '0.9', '1.0'].forEach(val => {
                     const btn = document.getElementById(`speed-${val}`);
                     if(parseFloat(val) === s) {
                         btn.className = "speed-btn px-3 md:px-4 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-bold transition-colors";
@@ -432,7 +470,7 @@
                 const rawText = document.getElementById('raw-text').value;
                 const errBox = document.getElementById('input-error');
                 
-                const parsed = this.splitIntoSentences(rawText).map(s => s.trim()).filter(s => s.length > 0);
+                const parsed = this.splitIntoSentences(rawText).filter(s => s.length > 0);
                 if (parsed.length === 0) {
                     errBox.classList.remove('hidden');
                     return;
