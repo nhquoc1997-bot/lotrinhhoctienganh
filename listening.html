@@ -60,7 +60,7 @@ I hope this system helps everyone improve their listening skills.</textarea>
             <div class="mt-6">
                 <div class="bg-blue-50 border border-blue-100 p-4 rounded-xl mb-6 text-sm text-blue-800 flex items-start gap-3">
                     <i class="fa-solid fa-lightbulb text-blue-500 mt-1"></i>
-                    <p><strong>Mẹo:</strong> Nhấn phím Enter để buộc hệ thống ngắt thành một câu mới tại vị trí bạn muốn. Nhấn <code>Ctrl + Space</code> để nghe lại audio, <code>Enter</code> để chấm điểm.</p>
+                    <p><strong>Mẹo:</strong> Nhấn phím Enter để buộc hệ thống ngắt thành một câu mới tại vị trí bạn muốn. Nhấn <code>Ctrl + Space</code> để nghe lại/tạm dừng audio, <code>Enter</code> để chấm điểm.</p>
                 </div>
 
                 <button onclick="app.startPractice()" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white text-lg font-bold rounded-2xl transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 transform hover:scale-[1.01]">
@@ -100,12 +100,23 @@ I hope this system helps everyone improve their listening skills.</textarea>
                     </div>
                 </div>
                 
-                <!-- Nút Play -->
+                <!-- Khu vực điều khiển Audio -->
                 <div class="flex flex-col items-center justify-center relative z-10">
-                    <button id="play-btn" onclick="app.playCurrentSentence()" class="w-20 h-20 md:w-24 md:h-24 flex items-center justify-center rounded-full text-white bg-indigo-600 hover:bg-indigo-700 hover:scale-105 shadow-xl shadow-indigo-300/50 transition-all duration-300">
-                        <i id="play-icon" class="fa-solid fa-play text-3xl md:text-4xl ml-2"></i>
-                    </button>
-                    <p class="mt-4 text-sm text-indigo-500 font-bold tracking-wide uppercase">Bấm để nghe audio</p>
+                    <div class="flex items-center gap-4 md:gap-6">
+                        <!-- Nút Tua lại (Replay) -->
+                        <button onclick="app.replaySentence()" class="w-12 h-12 flex items-center justify-center rounded-full bg-white text-indigo-600 hover:bg-indigo-100 shadow-md border border-indigo-100 transition-all hover:scale-105" title="Nghe lại từ đầu">
+                            <i class="fa-solid fa-rotate-left text-xl"></i>
+                        </button>
+
+                        <!-- Nút Play/Pause -->
+                        <button id="play-btn" onclick="app.togglePlayPause()" class="w-20 h-20 md:w-24 md:h-24 flex items-center justify-center rounded-full text-white bg-indigo-600 hover:bg-indigo-700 hover:scale-105 shadow-xl shadow-indigo-300/50 transition-all duration-300">
+                            <i id="play-icon" class="fa-solid fa-play text-3xl md:text-4xl ml-2"></i>
+                        </button>
+                        
+                        <!-- Placeholder để cân bằng khoảng trống hai bên Play -->
+                        <div class="w-12 h-12"></div>
+                    </div>
+                    <p id="play-instruction" class="mt-4 text-sm text-indigo-500 font-bold tracking-wide uppercase">Bấm để nghe audio</p>
                 </div>
 
                 <!-- Decor -->
@@ -173,7 +184,7 @@ I hope this system helps everyone improve their listening skills.</textarea>
                     <div id="shadowing-error" class="hidden mb-6 p-3 bg-red-50 text-red-600 border border-red-200 rounded-xl font-medium text-sm"></div>
 
                     <div class="flex justify-center items-center gap-6 mb-8">
-                        <button onclick="app.playCurrentSentence()" class="w-14 h-14 flex items-center justify-center bg-white text-indigo-600 rounded-full hover:bg-indigo-100 border border-indigo-200 shadow-md transition-all hover:scale-105" title="Nghe lại">
+                        <button onclick="app.replaySentence()" class="w-14 h-14 flex items-center justify-center bg-white text-indigo-600 rounded-full hover:bg-indigo-100 border border-indigo-200 shadow-md transition-all hover:scale-105" title="Nghe lại">
                             <i class="fa-solid fa-volume-high text-xl"></i>
                         </button>
                         
@@ -220,9 +231,11 @@ I hope this system helps everyone improve their listening skills.</textarea>
             data: {
                 sentences: [],
                 currentIdx: 0,
-                speed: 0.7, // Tốc độ mặc định chuyển thành 0.7
+                speed: 0.7, 
                 isPlaying: false,
-                isRecording: false
+                isPaused: false, // State mới hỗ trợ dừng
+                isRecording: false,
+                utterance: null // Fix lỗi Garbage Collection của trình duyệt gây mất tiếng khi Resume
             },
 
             // --- KHỞI TẠO ---
@@ -231,12 +244,15 @@ I hope this system helps everyone improve their listening skills.</textarea>
 
                 // Cải thiện sự tự nhiên trên máy tính: Thêm phím tắt rảnh tay
                 document.addEventListener('keydown', (e) => {
-                    // Phím tắt Ctrl+Space (hoặc Cmd+Space) để nghe lại audio
+                    // Phím tắt Ctrl+Space (hoặc Cmd+Space) để Dừng/Nghe tiếp
                     if ((e.ctrlKey || e.metaKey) && e.code === 'Space') {
                         e.preventDefault(); 
                         const practiceScreen = document.getElementById('screen-practice');
                         if (!practiceScreen.classList.contains('hidden')) {
-                            this.playCurrentSentence();
+                            // Không kích hoạt nếu đang mở mic ghi âm
+                            if(!this.data.isRecording) {
+                                this.togglePlayPause();
+                            }
                         }
                     }
                 });
@@ -261,7 +277,6 @@ I hope this system helps everyone improve their listening skills.</textarea>
                 return text.replace(/[^\w\s]|_/g, "").replace(/\s+/g, " ").toLowerCase().trim();
             },
 
-            // Tính năng ngắt câu thông minh: Ưu tiên ngắt theo \n, sau đó ngắt theo dấu chấm
             splitIntoSentences(text) {
                 const lines = text.split('\n');
                 let sentences = [];
@@ -270,20 +285,16 @@ I hope this system helps everyone improve their listening skills.</textarea>
                     let trimmed = line.trim();
                     if (!trimmed) return;
                     
-                    // Tìm các đoạn có dấu kết thúc câu
                     let matches = trimmed.match(/[^.!?]+[.!?]+/g);
                     
                     if (matches) {
                         sentences.push(...matches.map(s => s.trim()));
-                        
-                        // Xử lý đoạn text còn sót lại cuối dòng không có dấu chấm
                         let joinedMatches = matches.join("").trim();
                         if (joinedMatches.length < trimmed.length) {
                             let leftover = trimmed.substring(joinedMatches.length).trim();
                             if (leftover) sentences.push(leftover);
                         }
                     } else {
-                        // Nếu dòng không có dấu câu nào, tự động coi là 1 câu
                         sentences.push(trimmed);
                     }
                 });
@@ -298,7 +309,6 @@ I hope this system helps everyone improve their listening skills.</textarea>
                 const n = targetWords.length;
                 const m = inputWords.length;
                 
-                // Thuật toán Quy hoạch động (Dynamic Programming) gióng hàng từng từ
                 const dp = Array(n + 1).fill(null).map(() => Array(m + 1).fill(0));
 
                 for (let i = 0; i <= n; i++) dp[i][0] = i;
@@ -307,18 +317,17 @@ I hope this system helps everyone improve their listening skills.</textarea>
                 for (let i = 1; i <= n; i++) {
                     for (let j = 1; j <= m; j++) {
                         if (targetWords[i - 1] === inputWords[j - 1]) {
-                            dp[i][j] = dp[i - 1][j - 1]; // Trùng khớp
+                            dp[i][j] = dp[i - 1][j - 1]; 
                         } else {
                             dp[i][j] = Math.min(
-                                dp[i - 1][j - 1] + 1, // Thay thế (Sai từ)
-                                dp[i][j - 1] + 1,     // Dư thừa (Thêm từ)
-                                dp[i - 1][j] + 1      // Bị thiếu (Mất từ)
+                                dp[i - 1][j - 1] + 1,
+                                dp[i][j - 1] + 1,     
+                                dp[i - 1][j] + 1      
                             );
                         }
                     }
                 }
 
-                // Truy vết ngược để xây dựng giao diện sửa lỗi chi tiết
                 let i = n;
                 let j = m;
                 const result = [];
@@ -341,14 +350,12 @@ I hope this system helps everyone improve their listening skills.</textarea>
                     }
                 }
 
-                // Tính % trên tổng số từ của câu gốc
                 const accuracy = n > 0 ? Math.round((correctCount / n) * 100) : 0;
                 return { result, accuracy };
             },
 
             // --- TÍCH HỢP MÃ ĐỌC GIỌNG TỰ NHIÊN ---
             initVoices() {
-                // 1. KÍCH HOẠT TẢI GIỌNG NÓI NGẦM (Bắt buộc cho Windows/Android)
                 if ('speechSynthesis' in window) {
                     window.speechSynthesis.getVoices();
                     window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
@@ -357,7 +364,7 @@ I hope this system helps everyone improve their listening skills.</textarea>
 
             setSpeed(s) {
                 this.data.speed = s;
-                // Update UI (Thêm nút 0.7x)
+                // Update UI
                 ['0.7', '0.8', '0.9', '1.0'].forEach(val => {
                     const btn = document.getElementById(`speed-${val}`);
                     if(parseFloat(val) === s) {
@@ -366,72 +373,122 @@ I hope this system helps everyone improve their listening skills.</textarea>
                         btn.className = "speed-btn px-3 md:px-4 py-1.5 rounded-lg text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors";
                     }
                 });
-                if(this.data.isPlaying) this.playCurrentSentence();
+                
+                // Cần Restart câu nếu đang đọc dở để tốc độ mới được áp dụng
+                if(this.data.isPlaying) {
+                    this.replaySentence();
+                }
             },
 
-            // 2. HÀM ĐỌC VĂN BẢN THÔNG MINH ĐÃ ĐƯỢC TÍCH HỢP
+            // --- HỆ THỐNG ĐIỀU KHIỂN AUDIO (PLAY/PAUSE/REPLAY) ---
+            togglePlayPause() {
+                if (!('speechSynthesis' in window)) return;
+
+                if (this.data.isPlaying) {
+                    if (this.data.isPaused) {
+                        window.speechSynthesis.resume();
+                        this.data.isPaused = false;
+                        this.updatePlayUI(true);
+                    } else {
+                        window.speechSynthesis.pause();
+                        this.data.isPaused = true;
+                        this.updatePlayUI(false);
+                    }
+                } else {
+                    // Nếu chưa phát, thì bắt đầu phát lại từ đầu
+                    this.playCurrentSentence();
+                }
+            },
+
+            replaySentence() {
+                if (!('speechSynthesis' in window)) return;
+                
+                // Mẹo fix lỗi trình duyệt: Bắt buộc phải resume trước khi cancel để không bị treo API
+                window.speechSynthesis.resume();
+                
+                // Huỷ audio hiện tại và đọc lại từ đầu câu
+                window.speechSynthesis.cancel();
+                this.data.isPlaying = false;
+                this.data.isPaused = false;
+                
+                // Dùng timeout ngắn để API kịp xử lý cancel()
+                setTimeout(() => {
+                    this.playCurrentSentence();
+                }, 50);
+            },
+
+            updatePlayUI(isPlayingAndNotPaused) {
+                const playBtn = document.getElementById('play-btn');
+                const playIcon = document.getElementById('play-icon');
+                const instruction = document.getElementById('play-instruction');
+                if (!playBtn || !playIcon) return;
+
+                if (isPlayingAndNotPaused) {
+                    // Trạng thái đang ĐỌC -> Hiển thị nút Tạm Dừng (Pause)
+                    playBtn.classList.add('bg-indigo-400', 'scale-105');
+                    playBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+                    playIcon.className = "fa-solid fa-pause text-3xl md:text-4xl"; // Đã bỏ ml-2 cho cân giữa
+                    if(instruction) instruction.innerText = "Đang phát... (Bấm để tạm dừng)";
+                } else {
+                    // Trạng thái đang DỪNG/PAUSE -> Hiển thị nút Play
+                    playBtn.classList.remove('bg-indigo-400', 'scale-105');
+                    playBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+                    playIcon.className = "fa-solid fa-play text-3xl md:text-4xl ml-2"; // Thêm ml-2 để icon tam giác cân bằng
+                    if(instruction) instruction.innerText = this.data.isPaused ? "Tạm dừng (Bấm để nghe tiếp)" : "Bấm để nghe / Tạm dừng";
+                }
+            },
+
             playCurrentSentence() {
                 const text = this.data.sentences[this.data.currentIdx];
                 if (!text) return;
 
-                // Kiểm tra xem trình duyệt có hỗ trợ không
                 if (!('speechSynthesis' in window)) {
                     console.warn("Trình duyệt của bạn không hỗ trợ đọc văn bản.");
                     return;
                 }
 
-                // Dừng âm thanh đang đọc (nếu có) để bắt đầu câu mới ngay lập tức
+                // Luôn dừng luồng cũ trước khi đọc mới
+                // Fix lỗi trình duyệt: phải resume() trước khi cancel() nếu đang pause, nếu không sẽ bị kẹt audio vĩnh viễn
+                window.speechSynthesis.resume();
                 window.speechSynthesis.cancel(); 
+                this.data.isPlaying = false;
+                this.data.isPaused = false;
                 
-                // Loại bỏ khoảng trắng thừa ở đầu/cuối
                 const cleanText = text.trim();
-                const utterance = new SpeechSynthesisUtterance(cleanText); 
                 
-                // Đặt ngôn ngữ mặc định
+                // Bắt buộc lưu vào biến toàn cục (this.data.utterance) để tránh trình duyệt tự động xóa (Garbage Collection)
+                this.data.utterance = new SpeechSynthesisUtterance(cleanText); 
+                const utterance = this.data.utterance;
+                
                 utterance.lang = 'en-US'; 
 
-                // MẸO CỐT LÕI: Phân loại thiết bị Apple và phần còn lại
                 const isAppleDevice = /(Mac|iPhone|iPod|iPad)/i.test(navigator.userAgent);
-                
                 if (!isAppleDevice) {
-                    // Nếu LÀ Windows/Android: Tìm và ép dùng giọng xịn (Google/Natural)
                     const voices = window.speechSynthesis.getVoices();
                     const premiumVoice = voices.find(v => 
                         v.name.includes('Google US English') || 
                         v.name.includes('Natural') || 
                         v.name.includes('Premium')
                     );
-                    
-                    // Nếu tìm thấy giọng xịn thì gán vào, nếu không sẽ giữ mặc định
                     if (premiumVoice) {
                         utterance.voice = premiumVoice;
                     }
                 }
-                // Nếu là Apple (Mac/iOS), KHÔNG gán 'utterance.voice'. Hệ thống sẽ tự dùng giọng xịn của thiết bị.
 
-                // Áp dụng tốc độ đã lưu trong this.data.speed do học viên tự tùy chỉnh thông qua UI
                 utterance.rate = this.data.speed;
-
-                // Các hiệu ứng UI khi bắt đầu và kết thúc đọc
-                const playBtn = document.getElementById('play-btn');
-                const playIcon = document.getElementById('play-icon');
 
                 utterance.onstart = () => {
                     this.data.isPlaying = true;
-                    if(playBtn) {
-                        playBtn.classList.add('bg-indigo-400', 'scale-105');
-                        playBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
-                        playIcon.className = "fa-solid fa-volume-high text-3xl md:text-4xl animate-pulse";
-                    }
+                    this.data.isPaused = false;
+                    this.updatePlayUI(true);
                 };
 
                 utterance.onend = () => {
                     this.data.isPlaying = false;
-                    if(playBtn) {
-                        playBtn.classList.remove('bg-indigo-400', 'scale-105');
-                        playBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
-                        playIcon.className = "fa-solid fa-play text-3xl md:text-4xl ml-2";
-                    }
+                    this.data.isPaused = false;
+                    this.updatePlayUI(false);
+                    const instr = document.getElementById('play-instruction');
+                    if(instr) instr.innerText = "Bấm để nghe audio";
                 };
 
                 utterance.onerror = (e) => {
@@ -439,15 +496,19 @@ I hope this system helps everyone improve their listening skills.</textarea>
                     utterance.onend();
                 };
 
-                // Phát âm
                 window.speechSynthesis.speak(utterance); 
             },
 
             stopAudio() {
-                if(window.speechSynthesis) window.speechSynthesis.cancel();
+                if(window.speechSynthesis) {
+                    window.speechSynthesis.resume(); // Fix lỗi kẹt API
+                    window.speechSynthesis.cancel();
+                }
                 this.data.isPlaying = false;
-                const playIcon = document.getElementById('play-icon');
-                if(playIcon) playIcon.className = "fa-solid fa-play text-3xl md:text-4xl ml-2";
+                this.data.isPaused = false;
+                this.updatePlayUI(false);
+                const instr = document.getElementById('play-instruction');
+                if(instr) instr.innerText = "Bấm để nghe audio";
             },
 
             // --- ĐIỀU HƯỚNG MÀN HÌNH ---
@@ -480,13 +541,11 @@ I hope this system helps everyone improve their listening skills.</textarea>
                 this.data.sentences = parsed;
                 this.data.currentIdx = 0;
                 
-                // Khởi động giao diện luyện tập với cơ chế play trực tiếp (Hỗ trợ iPhone/Safari)
                 this.loadSentence(true);
                 this.showScreen('screen-practice');
             },
 
             loadSentence(autoplay = false) {
-                // Update Progress
                 const total = this.data.sentences.length;
                 const idx = this.data.currentIdx;
                 const percent = Math.round((idx / total) * 100);
@@ -500,7 +559,6 @@ I hope this system helps everyone improve their listening skills.</textarea>
                 
                 this.showStep('step-dictation');
 
-                // Gọi hàm đọc trực tiếp nếu có cờ autoplay, không dùng setTimeout để tránh bị iPhone chặn
                 if(autoplay) {
                     this.playCurrentSentence();
                 }
@@ -540,33 +598,27 @@ I hope this system helps everyone improve their listening skills.</textarea>
                 const correctBox = document.getElementById('correct-sentence-box');
                 const correctText = document.getElementById('correct-sentence-text');
 
-                // Reset classes
                 box.className = `p-4 md:p-6 rounded-2xl border-2 mb-4 md:mb-6 shadow-sm ${accuracy === 100 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`;
                 title.className = `text-lg md:text-xl font-black mb-3 flex items-center gap-2 ${accuracy === 100 ? 'text-emerald-600' : 'text-red-600'}`;
                 
                 title.innerHTML = `${accuracy === 100 ? '<i class="fa-solid fa-circle-check text-2xl"></i>' : '<i class="fa-solid fa-circle-xmark text-2xl"></i>'} Độ chính xác: ${accuracy}%`;
 
-                // Render diff nâng cao
                 let html = "";
                 result.forEach(item => {
                     if (item.type === 'match') {
-                        // Nhập ĐÚNG
                         html += `<span class="inline-block mr-1.5 mb-2 px-2 py-1.5 rounded-md bg-emerald-100 text-emerald-800 font-bold border border-emerald-200">${item.target}</span>`;
                     } else if (item.type === 'sub') {
-                        // Nhập SAI TỪ
                         html += `<span class="inline-flex items-center gap-1.5 mr-1.5 mb-2 px-2 py-1.5 rounded-md bg-red-50 border border-red-200 shadow-sm">
                             <del class="text-red-400 text-sm font-medium">${item.input}</del>
                             <i class="fa-solid fa-arrow-right text-slate-400 text-xs"></i>
                             <span class="text-emerald-600 font-bold">${item.target}</span>
                         </span>`;
                     } else if (item.type === 'del') {
-                        // THIẾU TỪ
                         html += `<span class="inline-flex items-center gap-1.5 mr-1.5 mb-2 px-2 py-1.5 rounded-md bg-orange-50 border border-orange-200 shadow-sm">
                             <span class="text-[10px] uppercase font-black text-orange-500 bg-orange-100 px-1 rounded">Thiếu</span>
                             <span class="font-bold text-orange-600">${item.target}</span>
                         </span>`;
                     } else if (item.type === 'ins') {
-                        // THỪA TỪ
                         html += `<span class="inline-flex items-center gap-1.5 mr-1.5 mb-2 px-2 py-1.5 rounded-md bg-slate-100 border border-slate-300 shadow-sm">
                             <del class="text-slate-500 font-medium">${item.input}</del>
                             <span class="text-[10px] uppercase font-black text-slate-500 bg-slate-200 px-1 rounded">Thừa</span>
@@ -586,7 +638,7 @@ I hope this system helps everyone improve their listening skills.</textarea>
             retryDictation() {
                 document.getElementById('user-input').value = "";
                 this.showStep('step-dictation');
-                this.playCurrentSentence(); // Đọc lại lập tức khi ấn nút
+                this.playCurrentSentence(); 
             },
 
             proceedToShadowing() {
@@ -599,7 +651,7 @@ I hope this system helps everyone improve their listening skills.</textarea>
                     this.data.currentIdx < this.data.sentences.length - 1 ? "Câu tiếp theo" : "Hoàn thành bài tập";
 
                 this.showStep('step-shadowing');
-                this.playCurrentSentence(); // Đọc lại lập tức khi ấn nút
+                this.playCurrentSentence();
             },
 
             // --- SHADOWING / NHẬN DIỆN GIỌNG NÓI ---
@@ -669,7 +721,7 @@ I hope this system helps everyone improve their listening skills.</textarea>
             nextSentence() {
                 if (this.data.currentIdx < this.data.sentences.length - 1) {
                     this.data.currentIdx++;
-                    this.loadSentence(true); // Đọc ngay khi nhấn
+                    this.loadSentence(true); 
                 } else {
                     this.stopAudio();
                     this.showScreen('screen-results');
