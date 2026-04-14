@@ -17,7 +17,7 @@
         .speak-icon:hover { color: #1d4ed8; transform: scale(1.1); }
         .speak-icon.loading { animation: pulse 1s infinite; color: #9ca3af; pointer-events: none; }
         
-        .phoneme-btn { transition: all 0.2s ease; }
+        .phoneme-btn { transition: all 0.2s ease; position: relative; }
         .phoneme-btn.active { background-color: #3b82f6; color: white; transform: scale(1.05); box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.5); border-color: #3b82f6; }
         
         /* Mic Animation */
@@ -60,6 +60,12 @@
         .word-correct { color: #16a34a; }
         .word-missing { color: #dc2626; text-decoration: line-through; font-weight: bold; background-color: #fee2e2; padding: 0 4px; border-radius: 4px;}
         .word-extra { color: #ea580c; text-decoration: line-through; font-size: 0.8em; background-color: #ffedd5; padding: 0 4px; border-radius: 4px;}
+        
+        .badge-pop { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
     </style>
 </head>
 <body class="text-gray-800">
@@ -97,10 +103,12 @@
             
             <!-- Phoneme Selector -->
             <section class="mb-8 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                 <h2 class="text-lg font-bold mb-4 text-gray-800 flex items-center gap-2">
-                     <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                     Chọn âm cần luyện tập
-                </h2>
+                 <div class="flex justify-between items-center mb-4">
+                     <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                         <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                         Chọn âm cần luyện tập
+                     </h2>
+                 </div>
                  <div id="phoneme-navigation" class="space-y-6"></div>
             </section>
 
@@ -793,7 +801,21 @@
                 }
             };
 
-            // --- TRẠNG THÁI ỨNG DỤNG ---
+            // --- TRẠNG THÁI LƯU TRỮ ĐIỂM (CẬP NHẬT MỚI) ---
+            // Chúng ta không dùng mảng chuỗi nữa, mà dùng Object lưu điểm: { "sheep": 95, "eat": 80 }
+            let savedWordScores = JSON.parse(localStorage.getItem('elsa_word_scores') || '{}');
+            
+            // Migrate (Chuyển đổi) dữ liệu cũ nếu trước đó user dùng phiên bản cũ
+            const oldCompletedWords = JSON.parse(localStorage.getItem('elsa_completed_words') || '[]');
+            if (Array.isArray(oldCompletedWords) && oldCompletedWords.length > 0) {
+                oldCompletedWords.forEach(word => {
+                    if (!savedWordScores[word]) savedWordScores[word] = 70; // Set điểm mặc định 70% cho từ cũ
+                });
+                localStorage.setItem('elsa_word_scores', JSON.stringify(savedWordScores));
+                localStorage.removeItem('elsa_completed_words'); // Xóa cache cũ đi
+            }
+
+            // State toàn cục
             let currentWordData = null;
             let currentPhonemeContext = null;
             let expectedText = "";
@@ -805,8 +827,6 @@
             let currentReviewIndex = 0;
 
             let totalWordsCount = 0;
-            let completedWords = JSON.parse(localStorage.getItem('elsa_completed_words') || '[]');
-
             for (const category in phoneticsData) {
                 for (const phoneme in phoneticsData[category]) {
                     totalWordsCount += phoneticsData[category][phoneme].words.length;
@@ -816,9 +836,12 @@
             function updateProgressUI() {
                 const progressText = document.getElementById('progress-text');
                 const progressBar = document.getElementById('progress-bar');
+                // Tính số từ đạt yêu cầu (>=70đ)
+                const learnedCount = Object.values(savedWordScores).filter(score => score >= 70).length;
+
                 if (progressText && progressBar) {
-                    progressText.textContent = `${completedWords.length} / ${totalWordsCount} từ`;
-                    const percentage = totalWordsCount === 0 ? 0 : Math.round((completedWords.length / totalWordsCount) * 100);
+                    progressText.textContent = `${learnedCount} / ${totalWordsCount} từ`;
+                    const percentage = totalWordsCount === 0 ? 0 : Math.round((learnedCount / totalWordsCount) * 100);
                     progressBar.style.width = `${percentage}%`;
                 }
             }
@@ -830,39 +853,39 @@
                 window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
             }
 
-            // --- HỆ THỐNG AUDIO NATIVE CẢI TIẾN (THEO MÃ CỦA BẠN) ---
-            window.playUnifiedAudio = function(text, buttonElement = null) {
-                // Giữ lại dấu câu để ngắt nghỉ tự nhiên
-                const word = text.trim(); 
+            // --- THUẬT TOÁN TÍNH TRUNG BÌNH THEO ÂM ---
+            function getPhonemeAverageScore(category, phoneme) {
+                const words = phoneticsData[category][phoneme].words;
+                if (!words || words.length === 0) return 0;
+                
+                let totalScore = 0;
+                words.forEach(w => {
+                    totalScore += (savedWordScores[w.word] || 0); // Nếu chưa học thì tính 0 điểm
+                });
+                
+                return Math.round(totalScore / words.length);
+            }
 
-                // Text-to-Speech (Tính năng chuyển văn bản thành giọng nói)
+            // --- HỆ THỐNG AUDIO NATIVE CẢI TIẾN ---
+            window.playUnifiedAudio = function(text, buttonElement = null) {
+                const word = text.trim(); 
                 if ('speechSynthesis' in window) {
-                    window.speechSynthesis.cancel(); // Dừng âm thanh đang đọc (nếu có) để đọc từ mới
-                    const utterance = new SpeechSynthesisUtterance(word); // Tạo đối tượng chứa từ cần đọc
-                    
-                    utterance.lang = 'en-US'; // Cài đặt ngôn ngữ là Tiếng Anh Mỹ
-                    
-                    // GIẢI QUYẾT VẤN ĐỀ TỰ NHIÊN:
-                    // 1. Không đụng chạm vào giọng của Mac/iOS để Apple tự gọi "Samantha Nâng cao" hoặc "Siri".
-                    // 2. Chỉ chèn giọng tốt (Google/Natural) nếu là máy tính Windows / Android.
+                    window.speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(word);
+                    utterance.lang = 'en-US';
                     const isAppleDevice = /(Mac|iPhone|iPod|iPad)/i.test(navigator.userAgent);
                     if (!isAppleDevice) {
                         const voices = window.speechSynthesis.getVoices();
                         const premiumVoice = voices.find(v => v.name.includes('Google US English') || v.name.includes('Natural'));
                         if (premiumVoice) utterance.voice = premiumVoice;
                     }
-
-                    // Cải thiện tự nhiên: Đọc từ đơn thì chậm (0.8), đọc cả câu dài thì tốc độ bình thường (1.0)
                     utterance.rate = word.includes(' ') ? 1.0 : 0.8; 
-
-                    // Thêm hiệu ứng loading cho nút bấm (để giao diện đẹp hơn)
                     if(buttonElement) {
                         buttonElement.classList.add('loading');
                         utterance.onend = () => buttonElement.classList.remove('loading');
                         utterance.onerror = () => buttonElement.classList.remove('loading');
                     }
-
-                    window.speechSynthesis.speak(utterance); // Yêu cầu trình duyệt phát âm
+                    window.speechSynthesis.speak(utterance);
                 }
             };
 
@@ -894,7 +917,7 @@
                 };
             }
 
-            // --- THUẬT TOÁN LCS (Longest Common Subsequence) ĐỂ TÌM DIFF ---
+            // --- THUẬT TOÁN LCS (Longest Common Subsequence) ---
             function getDiff(expectedArr, spokenArr) {
                 const n = expectedArr.length;
                 const m = spokenArr.length;
@@ -927,7 +950,7 @@
                 return diff;
             }
 
-            // --- PHÂN TÍCH LỖI CHUYÊN SÂU THEO ÂM ---
+            // --- PHÂN TÍCH LỖI ---
             function getDetailedFeedback(expected, spoken, type) {
                 const cleanExpected = expected.replace(/[.,!?]/g, "").trim();
                 const cleanSpoken = spoken.replace(/[.,!?]/g, "").trim();
@@ -942,14 +965,11 @@
                     const spokenChars = spokenWord.split('');
 
                     const diffs = getDiff(expectedChars, spokenChars);
-                    
-                    // Logic phân tách phụ âm đầu, nguyên âm, phụ âm cuối
                     const vowelsList = ['a', 'e', 'i', 'o', 'u', 'y'];
                     const expLower = cleanExpected.toLowerCase();
                     let firstVowelIdx = -1;
                     let lastVowelIdx = -1;
                     
-                    // Tìm vị trí nhóm nguyên âm
                     for (let k = 0; k < expLower.length; k++) {
                         if (vowelsList.includes(expLower[k])) {
                             if (firstVowelIdx === -1) firstVowelIdx = k;
@@ -959,7 +979,6 @@
 
                     let correctChars = 0;
                     let expIdx = 0;
-                    
                     let initialErrors = [];
                     let vowelErrors = [];
                     let finalErrors = [];
@@ -972,8 +991,6 @@
                             expIdx++;
                         } else if (d.type === 'missing') {
                             html += `<span class="diff-char char-missing" title="Thiếu âm này">${d.value}</span>`;
-                            
-                            // Phân loại lỗi
                             const charLower = d.value.toLowerCase();
                             if (vowelsList.includes(charLower)) {
                                 vowelErrors.push(d.value);
@@ -983,7 +1000,7 @@
                                 } else if (expIdx > lastVowelIdx) {
                                     finalErrors.push(d.value);
                                 } else {
-                                    vowelErrors.push(d.value); // Lỗi phụ âm giữa từ
+                                    vowelErrors.push(d.value); 
                                 }
                             }
                             expIdx++;
@@ -997,32 +1014,18 @@
                     if (score < 100 && spokenWord.length > 0) {
                         analysis = `<div class="mb-3 text-sm text-gray-700 font-medium">Hệ thống nhận diện thành: <strong class="text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-100 uppercase tracking-widest">"${spokenWord}"</strong></div>`;
                         analysis += `<ul class="space-y-3">`;
-                        
                         if (initialErrors.length > 0) {
-                            analysis += `<li class="flex items-start gap-3 bg-white p-3 rounded-xl border-l-4 border-red-400 shadow-sm">
-                                <span class="text-red-500 mt-0.5 text-lg">🎯</span>
-                                <div><strong class="text-gray-800 block mb-1">Lỗi Phụ Âm Đầu (Initial Consonant):</strong> Bạn đọc sai hoặc thiếu âm <strong class="text-red-600 bg-red-50 px-1.5 py-0.5 rounded">"${initialErrors.join('')}"</strong> ở đầu từ.</div>
-                            </li>`;
+                            analysis += `<li class="flex items-start gap-3 bg-white p-3 rounded-xl border-l-4 border-red-400 shadow-sm"><span class="text-red-500 mt-0.5 text-lg">🎯</span><div><strong class="text-gray-800 block mb-1">Lỗi Phụ Âm Đầu:</strong> Sai/thiếu âm <strong class="text-red-600 bg-red-50 px-1.5 py-0.5 rounded">"${initialErrors.join('')}"</strong> ở đầu từ.</div></li>`;
                         }
                         if (vowelErrors.length > 0) {
-                            analysis += `<li class="flex items-start gap-3 bg-white p-3 rounded-xl border-l-4 border-orange-400 shadow-sm">
-                                <span class="text-orange-500 mt-0.5 text-lg">👄</span>
-                                <div><strong class="text-gray-800 block mb-1">Lỗi Nguyên Âm (Vowels):</strong> Khẩu hình miệng của âm <strong class="text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">"${vowelErrors.join('')}"</strong> chưa chuẩn xác.</div>
-                            </li>`;
+                            analysis += `<li class="flex items-start gap-3 bg-white p-3 rounded-xl border-l-4 border-orange-400 shadow-sm"><span class="text-orange-500 mt-0.5 text-lg">👄</span><div><strong class="text-gray-800 block mb-1">Lỗi Nguyên Âm:</strong> Khẩu hình của âm <strong class="text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">"${vowelErrors.join('')}"</strong> chưa chuẩn xác.</div></li>`;
                         }
                         if (finalErrors.length > 0) {
-                            analysis += `<li class="flex items-start gap-3 bg-white p-3 rounded-xl border-l-4 border-purple-500 shadow-sm">
-                                <span class="text-purple-500 mt-0.5 text-lg">🛑</span>
-                                <div><strong class="text-gray-800 block mb-1">Lỗi Phụ Âm Cuối (Ending Sound):</strong> Bạn đã quên bật đuôi âm <strong class="text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded">"${finalErrors.join('')}"</strong>. Cố gắng chặn hơi hoặc bật nhẹ cuối câu nhé.</div>
-                            </li>`;
+                            analysis += `<li class="flex items-start gap-3 bg-white p-3 rounded-xl border-l-4 border-purple-500 shadow-sm"><span class="text-purple-500 mt-0.5 text-lg">🛑</span><div><strong class="text-gray-800 block mb-1">Lỗi Phụ Âm Cuối:</strong> Quên bật đuôi <strong class="text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded">"${finalErrors.join('')}"</strong>. Cố gắng bật nhẹ ở cuối câu nhé.</div></li>`;
                         }
                         if (finalErrors.length === 0 && extraErrors.length > 0 && expIdx > lastVowelIdx) {
-                            analysis += `<li class="flex items-start gap-3 bg-white p-3 rounded-xl border-l-4 border-yellow-400 shadow-sm">
-                                <span class="text-yellow-600 mt-0.5 text-lg">💡</span>
-                                <div><strong class="text-gray-800 block mb-1">Lỗi Dư Âm:</strong> Bạn có xu hướng xì thêm hoặc nối âm <strong class="text-yellow-600 bg-yellow-50 px-1.5 py-0.5 rounded">"${extraErrors.join('')}"</strong> không cần thiết.</div>
-                            </li>`;
+                            analysis += `<li class="flex items-start gap-3 bg-white p-3 rounded-xl border-l-4 border-yellow-400 shadow-sm"><span class="text-yellow-600 mt-0.5 text-lg">💡</span><div><strong class="text-gray-800 block mb-1">Lỗi Dư Âm:</strong> Bạn xì thêm <strong class="text-yellow-600 bg-yellow-50 px-1.5 py-0.5 rounded">"${extraErrors.join('')}"</strong> không cần thiết.</div></li>`;
                         }
-                        
                         analysis += `</ul>`;
                     } else if (spokenWord === "") {
                         analysis = "Chưa nghe thấy âm thanh. Vui lòng đọc lớn hơn.";
@@ -1031,10 +1034,8 @@
                     }
 
                 } else {
-                    // DIFF THEO TỪ (Dành cho Câu) - Vẫn giữ nguyên phân tích độ mượt
                     const expectedWords = cleanExpected.split(/\s+/);
                     const spokenWords = cleanSpoken.split(/\s+/);
-
                     const diffs = getDiff(expectedWords, spokenWords);
                     
                     let correctWords = 0;
@@ -1070,39 +1071,73 @@
                 return "border-red-500 text-red-600 bg-red-50";
             }
 
+            function getBadgeColorClass(score) {
+                if (score >= 80) return "bg-green-500";
+                if (score >= 50) return "bg-yellow-400 text-gray-800";
+                return "bg-red-500";
+            }
+
             // --- UI RENDERING TỪ ĐIỂN ---
             function renderPhonemeNavigation() {
                 const navContainer = document.getElementById('phoneme-navigation');
                 navContainer.innerHTML = '';
+                
                 for (const category in phoneticsData) {
                     let categoryHtml = `<div>
                         <h3 class="text-xs font-black text-gray-400 uppercase tracking-wider mb-3">${category}</h3>
                         <div class="flex flex-wrap gap-2 md:gap-3">`;
+                    
                     for (const phoneme in phoneticsData[category]) {
-                        categoryHtml += `<button class="phoneme-btn font-mono text-lg md:text-xl bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 text-gray-600 font-bold py-2 md:py-3 px-4 md:px-6 rounded-xl" data-category="${category}" data-phoneme="${phoneme}">${phoneme}</button>`;
+                        // Tính điểm trung bình của âm này
+                        const avgScore = getPhonemeAverageScore(category, phoneme);
+                        let badgeHtml = '';
+                        
+                        if (avgScore > 0) {
+                            const badgeColor = getBadgeColorClass(avgScore);
+                            badgeHtml = `<span class="absolute -top-2 -right-2 ${badgeColor} text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow border border-white badge-pop z-10">${avgScore}%</span>`;
+                        }
+
+                        // Kiểm tra xem nút này có đang được chọn không để thêm class active
+                        const isActive = (currentCategoryContext === category && currentPhonemeContext === phoneme) ? 'active' : '';
+
+                        categoryHtml += `<button class="phoneme-btn ${isActive} relative font-mono text-lg md:text-xl bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 text-gray-600 font-bold py-2 md:py-3 px-4 md:px-6 rounded-xl" data-category="${category}" data-phoneme="${phoneme}">
+                            ${phoneme}
+                            ${badgeHtml}
+                        </button>`;
                     }
                     categoryHtml += `</div></div>`;
                     navContainer.innerHTML += categoryHtml;
                 }
+                
+                // Cài đặt lại Events sau khi render
+                addPhonemeNavListeners();
             }
 
             function displayWordList(category, phoneme) {
                 currentCategoryContext = category;
+                currentPhonemeContext = phoneme;
                 const data = phoneticsData[category][phoneme];
                 const contentContainer = document.getElementById('phoneme-content-display');
                 if (!data || !contentContainer) return;
 
                 let wordsHtml = data.words.map((item, index) => {
-                    const isCompleted = completedWords.includes(item.word);
-                    const checkmarkBadge = isCompleted 
-                        ? `<div class="absolute top-0 right-0 bg-green-500 text-white text-[10px] uppercase font-bold px-2 py-1 rounded-bl-lg rounded-tr-2xl flex items-center gap-1 shadow-sm">
-                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>Đã thuộc
-                           </div><div class="absolute inset-0 border-2 border-green-400 rounded-2xl pointer-events-none opacity-30"></div>` 
-                        : '';
+                    const wordScore = savedWordScores[item.word] || 0;
+                    const isCompleted = wordScore >= 70; // Chuẩn 70 điểm là Đã thuộc
+                    
+                    let statusBadge = '';
+                    if (isCompleted) {
+                        statusBadge = `<div class="absolute top-0 right-0 bg-green-500 text-white text-[10px] uppercase font-bold px-2 py-1 rounded-bl-lg rounded-tr-2xl flex items-center gap-1 shadow-sm">
+                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>Đã thuộc (${wordScore}%)
+                           </div><div class="absolute inset-0 border-2 border-green-400 rounded-2xl pointer-events-none opacity-30"></div>`;
+                    } else if (wordScore > 0) {
+                        statusBadge = `<div class="absolute top-0 right-0 bg-orange-400 text-white text-[10px] uppercase font-bold px-2 py-1 rounded-bl-lg rounded-tr-2xl flex items-center gap-1 shadow-sm">
+                             Đang học (${wordScore}%)
+                           </div>`;
+                    }
 
                     return `
                     <div class="card bg-white p-5 rounded-2xl border ${isCompleted ? 'border-green-200 bg-green-50/30' : 'border-gray-100'} shadow-sm flex items-center justify-between group relative" data-idx="${index}">
-                        ${checkmarkBadge}
+                        ${statusBadge}
                         <div class="relative z-10">
                             <h4 class="text-2xl font-black ${isCompleted ? 'text-green-800' : 'text-gray-800'} mb-1">${item.word}</h4>
                             <p class="${isCompleted ? 'text-green-600' : 'text-gray-500'} font-mono text-sm font-medium">${item.transcription}</p>
@@ -1261,9 +1296,9 @@
                 document.getElementById('record-sentence-btn').classList.remove('recording');
             }
 
+            // Xử lý và Cập nhật điểm
             function handleRecognitionResult(transcript) {
                 const type = activeRecordType;
-                
                 const feedback = getDetailedFeedback(expectedText, transcript, type);
                 const colorClass = getScoreColorClass(feedback.score);
                 
@@ -1288,14 +1323,19 @@
                     analysisBox.innerHTML = '';
                 }
 
-                if (feedback.score >= 70 && currentWordData) {
-                    if (!completedWords.includes(currentWordData.word)) {
-                        completedWords.push(currentWordData.word);
-                        localStorage.setItem('elsa_completed_words', JSON.stringify(completedWords));
+                // CẬP NHẬT ĐIỂM CAO NHẤT LÊN LOCAL STORAGE
+                if (currentWordData) {
+                    const currentSavedScore = savedWordScores[currentWordData.word] || 0;
+                    if (feedback.score > currentSavedScore) {
+                        savedWordScores[currentWordData.word] = feedback.score;
+                        localStorage.setItem('elsa_word_scores', JSON.stringify(savedWordScores));
+                        
                         updateProgressUI();
                         
-                        if(currentCategoryContext && currentPhonemeContext && !isReviewMode) {
-                            displayWordList(currentCategoryContext, currentPhonemeContext);
+                        // Cập nhật lại giao diện ngay lập tức
+                        renderPhonemeNavigation(); // Render lại menu âm để cập nhật huy hiệu
+                        if (currentCategoryContext && currentPhonemeContext && !isReviewMode) {
+                            displayWordList(currentCategoryContext, currentPhonemeContext); // Render lại list từ
                         }
                     }
                 }
@@ -1314,7 +1354,6 @@
             }
             
             renderPhonemeNavigation();
-            addPhonemeNavListeners();
             
             const firstButton = document.querySelector('.phoneme-btn');
             if(firstButton) firstButton.click();
