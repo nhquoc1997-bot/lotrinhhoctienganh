@@ -66,11 +66,38 @@
         const { useState, useEffect, useRef } = React;
 
         // --- HỆ THỐNG LƯU TRỮ ĐÁM MÂY ---
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        let app, auth, db;
+        let firebaseInitError = null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'bob-english-app';
+
+        try {
+            // 🛑 BƯỚC QUAN TRỌNG DÀNH CHO VERCEL: 
+            // Đã tích hợp cấu hình Firebase của bạn
+            const myFirebaseConfig = {
+                apiKey: "AIzaSyBfWDsekZ4_KZlKKYz-nDHjcfdPBimL_2I",
+                authDomain: "lotrinhhoc.firebaseapp.com",
+                projectId: "lotrinhhoc",
+                storageBucket: "lotrinhhoc.firebasestorage.app",
+                messagingSenderId: "417426834442",
+                appId: "1:417426834442:web:a02b1c7765e9f4f3fa4bf3",
+                measurementId: "G-0K6L35KMM5"
+            };
+
+            const firebaseConfig = typeof __firebase_config !== 'undefined' 
+                ? JSON.parse(__firebase_config) 
+                : myFirebaseConfig;
+
+            if (!firebaseConfig || Object.keys(firebaseConfig).length === 0) {
+                throw new Error("Chưa có thông tin cấu hình Đám mây (myFirebaseConfig).");
+            }
+
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+        } catch (err) {
+            console.error("Lỗi khởi tạo Firebase:", err);
+            firebaseInitError = err.message;
+        }
 
         // --- HELPER FUNCTIONS ---
         const getTodayStr = () => {
@@ -93,8 +120,6 @@
         const Icon = ({ name, size = 20, className = "" }) => {
             const spanRef = useRef(null);
 
-            // Sửa lỗi NotFoundError: Failed to execute 'removeChild' trên React
-            // Bằng cách quản lý DOM riêng bên trong một thẻ <span> rỗng
             useEffect(() => {
                 if (window.lucide && spanRef.current) {
                     spanRef.current.innerHTML = `<i data-lucide="${name}"></i>`;
@@ -128,8 +153,33 @@
             });
             const [error, setError] = useState('');
 
+            // HIỂN THỊ LỖI NẾU THIẾU CẤU HÌNH TRÊN VERCEL (Thay vì màn hình trắng)
+            if (firebaseInitError) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50">
+                        <div className="bg-white p-8 rounded-[2rem] shadow-xl max-w-md text-center border-t-4 border-red-500 animate-fade-up">
+                            <div className="w-16 h-16 bg-red-100 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
+                                <Icon name="database" size={32} />
+                            </div>
+                            <h2 className="text-xl font-black text-slate-800 mb-2">Thiếu Cơ sở dữ liệu!</h2>
+                            <p className="text-slate-600 text-sm mb-4 leading-relaxed">
+                                Bạn đang gặp lỗi này vì ứng dụng đã được đưa lên Vercel nhưng chưa thiết lập cấu hình Đám mây (Firebase) để lưu tài khoản.
+                            </p>
+                            <div className="text-left bg-slate-50 p-4 rounded-xl text-xs font-mono text-slate-500 mb-6 border border-slate-100">
+                                <span className="font-bold text-red-500">Chi tiết lỗi:</span><br/>{firebaseInitError}
+                            </div>
+                            <p className="text-sm font-medium text-indigo-600 border border-indigo-100 bg-indigo-50 p-3 rounded-xl">
+                                Hãy mở file <code>index.html</code>, tìm biến <b>myFirebaseConfig</b> (khoảng dòng 68) và dán cấu hình Firebase của bạn vào nhé!
+                            </p>
+                        </div>
+                    </div>
+                );
+            }
+
             // 1. Xác thực bảo mật Đám mây
             useEffect(() => {
+                if (!auth) return;
+                
                 const initAuth = async () => {
                     try {
                         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
@@ -152,7 +202,7 @@
 
             // 2. Lắng nghe và đồng bộ dữ liệu theo thời gian thực
             useEffect(() => {
-                if (!firebaseUser) return;
+                if (!firebaseUser || !db) return;
                 
                 // Đồng bộ danh sách học viên
                 const usersRef = collection(db, 'artifacts', appId, 'public', 'data', 'bob_users');
@@ -249,9 +299,9 @@
 
                             <main className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8">
                                 {user.role === 'admin' ? (
-                                    <AdminPanel users={usersList} timeData={timeData} />
+                                    <AdminPanel users={usersList} timeData={timeData} db={db} />
                                 ) : (
-                                    <StudentHub user={user} timeData={timeData} />
+                                    <StudentHub user={user} timeData={timeData} db={db} />
                                 )}
                             </main>
                         </div>
@@ -302,7 +352,7 @@
         };
 
         // --- STUDENT HUB COMPONENT ---
-        const StudentHub = ({ user, timeData }) => {
+        const StudentHub = ({ user, timeData, db }) => {
             const [activeLesson, setActiveLesson] = useState(null);
             const todayStr = getTodayStr();
 
@@ -344,7 +394,7 @@
 
             // Lưu lên Đám mây sau mỗi 10 giây học
             useEffect(() => {
-                if (!deviceName) return;
+                if (!deviceName || !db) return;
                 latestLocalSeconds.current = localSeconds;
                 
                 if (localSeconds - lastSyncedSeconds.current >= 10) {
@@ -357,12 +407,12 @@
                     }, { merge: true }).catch(console.error);
                     lastSyncedSeconds.current = localSeconds;
                 }
-            }, [localSeconds, user.id, todayStr, deviceId, deviceName]);
+            }, [localSeconds, user.id, todayStr, deviceId, deviceName, db]);
 
             // Lưu nốt phần dư khi thoát
             useEffect(() => {
                 return () => {
-                    if (deviceName && latestLocalSeconds.current > lastSyncedSeconds.current) {
+                    if (deviceName && db && latestLocalSeconds.current > lastSyncedSeconds.current) {
                         const timeRef = doc(db, 'artifacts', appId, 'public', 'data', 'bob_timeData', user.id);
                         setDoc(timeRef, { 
                             [deviceId]: {
@@ -372,7 +422,7 @@
                         }, { merge: true }).catch(console.error);
                     }
                 };
-            }, [user.id, todayStr, deviceId, deviceName]);
+            }, [user.id, todayStr, deviceId, deviceName, db]);
 
             // Giao diện hỏi tên nếu là máy mới
             if (!deviceName) {
@@ -504,7 +554,7 @@
         };
 
         // --- ADMIN PANEL ---
-        const AdminPanel = ({ users, timeData }) => {
+        const AdminPanel = ({ users, timeData, db }) => {
             const [n, setN] = useState('');
             const [u, setU] = useState('');
             const [p, setP] = useState('');
@@ -523,6 +573,11 @@
                     return;
                 }
 
+                if (!db) {
+                    setAddError("Chưa kết nối CSDL, không thể thêm.");
+                    return;
+                }
+
                 const newId = 'stu_' + Date.now();
                 const newUser = { username: u.trim().toLowerCase(), password: p, role: 'student', name: n };
                 
@@ -536,9 +591,10 @@
 
             const confirmDelete = async (id) => {
                 try {
-                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_users', id));
-                    // Xóa luôn lịch sử thời gian của người này cho sạch dữ liệu
-                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_timeData', id));
+                    if (db) {
+                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_users', id));
+                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_timeData', id));
+                    }
                     setDeletingId(null);
                 } catch(err) {
                     console.error("Lỗi xóa tài khoản", err);
