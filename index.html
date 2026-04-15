@@ -13,7 +13,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
         
         body { 
             font-family: 'Plus Jakarta Sans', sans-serif; 
@@ -32,6 +32,7 @@
         .animate-fade-up { animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         .animate-fade-in { animation: fadeIn 0.3s ease-out; }
         .animate-bounce-slow { animation: bounce 2s infinite; }
+        .animate-pulse-fast { animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
         
         @keyframes fadeUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -39,20 +40,35 @@
             0%, 100% { transform: translateY(-5%); }
             50% { transform: translateY(0); }
         }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
 
-        .lesson-card {
+        .lesson-card, .rank-card {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
         @media (hover: hover) {
-            .lesson-card:hover {
+            .lesson-card:hover, .rank-card:hover {
                 transform: translateY(-5px);
                 box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
             }
         }
 
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        /* Rank Colors & Effects */
+        .rank-1 { background: linear-gradient(135deg, #FFD700 0%, #FDB931 100%); color: #fff; box-shadow: 0 10px 15px -3px rgba(253, 185, 49, 0.4); border: none; }
+        .rank-2 { background: linear-gradient(135deg, #E2E8F0 0%, #94A3B8 100%); color: #fff; box-shadow: 0 10px 15px -3px rgba(148, 163, 184, 0.4); border: none;}
+        .rank-3 { background: linear-gradient(135deg, #F4A460 0%, #CD7F32 100%); color: #fff; box-shadow: 0 10px 15px -3px rgba(205, 127, 50, 0.4); border: none;}
+        .rank-1 p, .rank-2 p, .rank-3 p { color: rgba(255,255,255,0.9) !important; }
+        .rank-1 h3, .rank-2 h3, .rank-3 h3 { color: #fff !important; }
+        .rank-1 .icon-bg, .rank-2 .icon-bg, .rank-3 .icon-bg { background: rgba(255,255,255,0.25) !important; color: #fff !important; }
+        
+        /* Progress Bar Animation */
+        .progress-bar-fill { transition: width 1s cubic-bezier(0.4, 0, 0.2, 1); }
     </style>
 </head>
 <body class="text-slate-900">
@@ -63,16 +79,14 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect, useRef, useMemo } = React;
 
-        // --- HỆ THỐNG LƯU TRỮ ĐÁM MÂY ---
+        // --- FIREBASE INIT ---
         let app, auth, db;
         let firebaseInitError = null;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'bob-english-app';
 
         try {
-            // 🛑 BƯỚC QUAN TRỌNG DÀNH CHO VERCEL: 
-            // Đã tích hợp cấu hình Firebase của bạn
             const myFirebaseConfig = {
                 apiKey: "AIzaSyBfWDsekZ4_KZlKKYz-nDHjcfdPBimL_2I",
                 authDomain: "lotrinhhoc.firebaseapp.com",
@@ -82,15 +96,7 @@
                 appId: "1:417426834442:web:a02b1c7765e9f4f3fa4bf3",
                 measurementId: "G-0K6L35KMM5"
             };
-
-            const firebaseConfig = typeof __firebase_config !== 'undefined' 
-                ? JSON.parse(__firebase_config) 
-                : myFirebaseConfig;
-
-            if (!firebaseConfig || Object.keys(firebaseConfig).length === 0) {
-                throw new Error("Chưa có thông tin cấu hình Đám mây (myFirebaseConfig).");
-            }
-
+            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : myFirebaseConfig;
             app = initializeApp(firebaseConfig);
             auth = getAuth(app);
             db = getFirestore(app);
@@ -99,41 +105,76 @@
             firebaseInitError = err.message;
         }
 
-        // --- HELPER FUNCTIONS ---
+        // --- DATA & TIME HELPERS ---
+        const lessonsData = [
+            { id: "200conversation", title: "200 Conversations", subtitle: "Giao tiếp", desc: "Học qua 200 đoạn hội thoại.", icon: "messages-square", color: "text-cyan-600", bg: "bg-cyan-50", path: "200conversation.html" },
+            { id: "reading", title: "Reading", subtitle: "Luyện đọc", desc: "Bài báo, truyện ngắn.", icon: "book-open", color: "text-indigo-600", bg: "bg-indigo-50", path: "reading.html" },
+            { id: "ipa", title: "Bảng IPA", subtitle: "Phát âm", desc: "44 âm tiếng Anh.", icon: "mic-2", color: "text-blue-600", bg: "bg-blue-50", path: "ipa.html" },
+            { id: "listening", title: "Listening", subtitle: "Luyện nghe", desc: "Hội thoại thực tế.", icon: "headphones", color: "text-emerald-600", bg: "bg-emerald-50", path: "listening.html" },
+            { id: "speaking", title: "Speaking", subtitle: "Luyện nói", desc: "Thực hành phản xạ.", icon: "message-circle", color: "text-violet-600", bg: "bg-violet-50", path: "speaking.html" },
+            { id: "vocabulary", title: "Vocabulary", subtitle: "Từ vựng", desc: "Từ mới theo chủ đề.", icon: "sparkles", color: "text-amber-600", bg: "bg-amber-50", path: "vocabulary.html" },
+            { id: "bilingual", title: "Bilingual", subtitle: "Song ngữ", desc: "Đọc tin tức song ngữ.", icon: "languages", color: "text-rose-600", bg: "bg-rose-50", path: "bilingual.html" },
+            { id: "taboo", title: "Taboo Game", subtitle: "Trò chơi", desc: "Giải đố từ vựng.", icon: "gamepad-2", color: "text-orange-600", bg: "bg-orange-50", path: "taboo.html" }
+        ];
+
+        const getLessonTitle = (path) => {
+            const lesson = lessonsData.find(l => l.path === path);
+            return lesson ? lesson.title : path;
+        };
+
+        const getLessonColor = (path) => {
+            const lesson = lessonsData.find(l => l.path === path);
+            return lesson ? lesson.color.replace('text-', 'bg-') : 'bg-slate-500';
+        };
+
         const getTodayStr = () => {
             const d = new Date();
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        };
+
+        const getCurrentWeekDates = () => {
+            const curr = new Date();
+            const day = curr.getDay(); 
+            const diff = curr.getDate() - day + (day === 0 ? -6 : 1); 
+            const monday = new Date(curr.setDate(diff));
+            const dates = [];
+            for (let i = 0; i < 7; i++) {
+                const nextDay = new Date(monday);
+                nextDay.setDate(monday.getDate() + i);
+                dates.push(`${nextDay.getFullYear()}-${String(nextDay.getMonth() + 1).padStart(2, '0')}-${String(nextDay.getDate()).padStart(2, '0')}`);
+            }
+            return dates;
+        };
+
+        const getCurrentMonthDates = () => {
+            const curr = new Date();
+            const year = curr.getFullYear();
+            const month = curr.getMonth();
+            const numDays = new Date(year, month + 1, 0).getDate(); 
+            const dates = [];
+            for (let i = 1; i <= numDays; i++) {
+                dates.push(`${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`);
+            }
+            return dates;
         };
 
         const formatTime = (totalSeconds) => {
-            if (!totalSeconds) return "00:00:00";
+            if (!totalSeconds || isNaN(totalSeconds)) return "00:00:00";
             const h = Math.floor(totalSeconds / 3600);
             const m = Math.floor((totalSeconds % 3600) / 60);
             const s = totalSeconds % 60;
             return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
         };
 
-        // --- COMPONENTS ---
+        // --- ICON COMPONENT ---
         const Icon = ({ name, size = 20, className = "" }) => {
             const spanRef = useRef(null);
-
             useEffect(() => {
                 if (window.lucide && spanRef.current) {
                     spanRef.current.innerHTML = `<i data-lucide="${name}"></i>`;
-                    window.lucide.createIcons({
-                        root: spanRef.current,
-                        attrs: {
-                            class: className,
-                            width: size,
-                            height: size
-                        }
-                    });
+                    window.lucide.createIcons({ root: spanRef.current, attrs: { class: className, width: size, height: size }});
                 }
             }, [name, size, className]);
-
             return <span ref={spanRef} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}></span>;
         };
 
@@ -146,83 +187,37 @@
             const [timeData, setTimeData] = useState({});
             const [isLoadingData, setIsLoadingData] = useState(true);
 
-            // Giữ phiên đăng nhập cục bộ
             const [user, setUser] = useState(() => {
                 const savedUser = localStorage.getItem('bob_currentUser');
                 return savedUser ? JSON.parse(savedUser) : null;
             });
             const [error, setError] = useState('');
 
-            // HIỂN THỊ LỖI NẾU THIẾU CẤU HÌNH TRÊN VERCEL (Thay vì màn hình trắng)
-            if (firebaseInitError) {
-                return (
-                    <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50">
-                        <div className="bg-white p-8 rounded-[2rem] shadow-xl max-w-md text-center border-t-4 border-red-500 animate-fade-up">
-                            <div className="w-16 h-16 bg-red-100 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
-                                <Icon name="database" size={32} />
-                            </div>
-                            <h2 className="text-xl font-black text-slate-800 mb-2">Thiếu Cơ sở dữ liệu!</h2>
-                            <p className="text-slate-600 text-sm mb-4 leading-relaxed">
-                                Bạn đang gặp lỗi này vì ứng dụng đã được đưa lên Vercel nhưng chưa thiết lập cấu hình Đám mây (Firebase) để lưu tài khoản.
-                            </p>
-                            <div className="text-left bg-slate-50 p-4 rounded-xl text-xs font-mono text-slate-500 mb-6 border border-slate-100">
-                                <span className="font-bold text-red-500">Chi tiết lỗi:</span><br/>{firebaseInitError}
-                            </div>
-                            <p className="text-sm font-medium text-indigo-600 border border-indigo-100 bg-indigo-50 p-3 rounded-xl">
-                                Hãy mở file <code>index.html</code>, tìm biến <b>myFirebaseConfig</b> (khoảng dòng 68) và dán cấu hình Firebase của bạn vào nhé!
-                            </p>
-                        </div>
-                    </div>
-                );
-            }
+            if (firebaseInitError) return <div className="p-10 text-red-500 font-bold">Lỗi CSDL: {firebaseInitError}</div>;
 
-            // 1. Xác thực bảo mật Đám mây
             useEffect(() => {
                 if (!auth) return;
-                
                 const initAuth = async () => {
                     try {
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                            await signInWithCustomToken(auth, __initial_auth_token);
-                        } else {
-                            await signInAnonymously(auth);
-                        }
-                    } catch (err) {
-                        console.error("Lỗi xác thực", err);
-                    }
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
+                        else await signInAnonymously(auth);
+                    } catch (err) {}
                 };
                 initAuth();
-                
-                const unsubscribe = onAuthStateChanged(auth, (u) => {
-                    setFirebaseUser(u);
-                    if (u) setIsFirebaseReady(true);
-                });
+                const unsubscribe = onAuthStateChanged(auth, (u) => { setFirebaseUser(u); if (u) setIsFirebaseReady(true); });
                 return () => unsubscribe();
             }, []);
 
-            // 2. Lắng nghe và đồng bộ dữ liệu theo thời gian thực
             useEffect(() => {
                 if (!firebaseUser || !db) return;
-                
-                // Đồng bộ danh sách học viên
                 const usersRef = collection(db, 'artifacts', appId, 'public', 'data', 'bob_users');
                 const unsubUsers = onSnapshot(usersRef, (snapshot) => {
                     const users = [];
                     snapshot.forEach(doc => users.push({ id: doc.id, ...doc.data() }));
-                    
-                    // Tạo tài khoản mặc định nếu danh sách trống
-                    if (users.length === 0) {
-                        setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_users', 'admin_root'), { username: 'admin', password: '123', role: 'admin', name: 'Quản trị viên' });
-                    } else {
-                        setUsersList(users);
-                        setIsLoadingData(false);
-                    }
-                }, (err) => {
-                    console.error("Lỗi tải danh sách", err);
-                    setIsLoadingData(false);
+                    if (users.length === 0) setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_users', 'admin_root'), { username: 'admin', password: '123', role: 'admin', name: 'Quản trị viên' });
+                    else { setUsersList(users); setIsLoadingData(false); }
                 });
 
-                // Đồng bộ thời gian học
                 const timeRef = collection(db, 'artifacts', appId, 'public', 'data', 'bob_timeData');
                 const unsubTime = onSnapshot(timeRef, (snapshot) => {
                     const tData = {};
@@ -233,76 +228,46 @@
                 return () => { unsubUsers(); unsubTime(); };
             }, [firebaseUser]);
 
-            // 3. Xử lý trường hợp admin xóa tài khoản đang đăng nhập
             useEffect(() => {
                 if (user && usersList.length > 0) {
                     const stillExists = usersList.find(x => x.id === user.id);
-                    if (!stillExists) {
-                        setUser(null);
-                        localStorage.removeItem('bob_currentUser');
-                    } else {
-                        setUser(stillExists);
-                        localStorage.setItem('bob_currentUser', JSON.stringify(stillExists));
-                    }
+                    if (!stillExists) { setUser(null); localStorage.removeItem('bob_currentUser'); } 
+                    else { setUser(stillExists); localStorage.setItem('bob_currentUser', JSON.stringify(stillExists)); }
                 }
             }, [usersList]);
 
             const handleLogin = (u, p) => {
                 const found = usersList.find(x => x.username.toLowerCase() === u.trim().toLowerCase() && x.password === p.trim());
-                if (found) {
-                    setUser(found);
-                    setError('');
-                } else {
-                    setError("Tài khoản hoặc mật khẩu không đúng.");
-                }
+                if (found) { setUser(found); setError(''); } else setError("Tài khoản hoặc mật khẩu không đúng.");
             };
 
-            const handleLogout = () => {
-                setUser(null);
-                localStorage.removeItem('bob_currentUser');
-            };
+            const handleLogout = () => { setUser(null); localStorage.removeItem('bob_currentUser'); };
 
-            if (!isFirebaseReady || isLoadingData) {
-                return (
-                    <div className="min-h-screen flex items-center justify-center bg-slate-50">
-                        <div className="flex flex-col items-center gap-4 animate-fade-up">
-                            <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-                            <p className="text-slate-500 font-bold text-xs uppercase tracking-widest">Đang tải dữ liệu đám mây...</p>
-                        </div>
-                    </div>
-                );
-            }
+            if (!isFirebaseReady || isLoadingData) return (
+                <div className="min-h-screen flex items-center justify-center bg-slate-50">
+                    <div className="flex flex-col items-center gap-4 animate-fade-up"><div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div><p className="text-slate-500 font-bold text-xs uppercase tracking-widest">Đang tải...</p></div>
+                </div>
+            );
 
             return (
                 <div className="min-h-screen pb-10">
-                    {!user ? (
-                        <LoginScreen onLogin={handleLogin} error={error} />
-                    ) : (
+                    {!user ? <LoginScreen onLogin={handleLogin} error={error} /> : (
                         <div className="animate-fade-in">
-                            <nav className="glass-nav sticky top-0 z-50 border-b border-slate-200/60 px-4 sm:px-6 h-16 flex items-center justify-between">
+                            <nav className="glass-nav sticky top-0 z-40 border-b border-slate-200/60 px-4 sm:px-6 h-16 flex items-center justify-between">
                                 <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.location.reload()}>
-                                    <div className="w-9 h-9 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-lg">
-                                        <Icon name="graduation-cap" size={20} />
-                                    </div>
+                                    <div className="w-9 h-9 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-lg"><Icon name="graduation-cap" size={20} /></div>
                                     <span className="text-xl font-black text-indigo-600 tracking-tight hidden sm:block">BobEnglish</span>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <div className="text-right">
-                                        <p className="text-xs font-bold leading-none">{user.name}</p>
+                                    <div className="text-right hidden sm:block">
+                                        <p className="text-xs font-bold leading-none text-slate-800">{user.name}</p>
                                         <p className="text-[9px] uppercase font-black text-indigo-500 mt-1">{user.role}</p>
                                     </div>
-                                    <button onClick={handleLogout} className="w-9 h-9 flex items-center justify-center bg-slate-100 text-slate-500 rounded-xl active:bg-red-50 active:text-red-500 transition-colors">
-                                        <Icon name="log-out" size={16} />
-                                    </button>
+                                    <button onClick={handleLogout} className="w-9 h-9 flex items-center justify-center bg-slate-100 text-slate-500 rounded-xl active:bg-red-50 hover:bg-slate-200 active:text-red-500 transition-colors"><Icon name="log-out" size={16} /></button>
                                 </div>
                             </nav>
-
                             <main className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8">
-                                {user.role === 'admin' ? (
-                                    <AdminPanel users={usersList} timeData={timeData} db={db} />
-                                ) : (
-                                    <StudentHub user={user} timeData={timeData} db={db} />
-                                )}
+                                {user.role === 'admin' ? <AdminPanel users={usersList} timeData={timeData} db={db} /> : <StudentHub user={user} users={usersList} timeData={timeData} db={db} />}
                             </main>
                         </div>
                     )}
@@ -312,38 +277,26 @@
 
         // --- LOGIN COMPONENT ---
         const LoginScreen = ({ onLogin, error }) => {
-            const [u, setU] = useState('');
-            const [p, setP] = useState('');
-
+            const [u, setU] = useState(''); const [p, setP] = useState('');
             return (
-                <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50">
+                <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]">
                     <div className="w-full max-w-sm animate-fade-up">
                         <div className="bg-white p-8 rounded-[2rem] shadow-xl border border-white">
                             <div className="text-center mb-8">
-                                <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white shadow-lg">
-                                    <Icon name="zap" size={28} />
-                                </div>
-                                <h1 className="text-2xl font-black text-slate-800">Chào bạn!</h1>
-                                <p className="text-slate-400 text-sm">Học tập hiệu quả cùng BobEnglish</p>
+                                <div className="w-16 h-16 bg-gradient-to-tr from-indigo-600 to-indigo-400 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white shadow-lg shadow-indigo-200"><Icon name="rocket" size={32} /></div>
+                                <h1 className="text-2xl font-black text-slate-800">Chào mừng!</h1>
                             </div>
-                            
                             <form onSubmit={e => { e.preventDefault(); onLogin(u, p); }} className="space-y-4">
-                                {error && (
-                                    <div className="p-3 bg-red-50 text-red-600 text-xs font-bold rounded-xl border border-red-100 flex items-center gap-2 animate-fade-in">
-                                        <Icon name="alert-circle" size={14} /> {error}
-                                    </div>
-                                )}
+                                {error && <div className="p-3 bg-red-50 text-red-600 text-xs font-bold rounded-xl border border-red-100 flex items-center gap-2"><Icon name="alert-circle" size={14} /> {error}</div>}
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Tài khoản</label>
-                                    <input type="text" value={u} onChange={e=>setU(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white transition-all text-sm" placeholder="Tên đăng nhập..." required />
+                                    <input type="text" value={u} onChange={e=>setU(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white text-sm font-medium" placeholder="Username..." required />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Mật khẩu</label>
-                                    <input type="password" value={p} onChange={e=>setP(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white transition-all text-sm" placeholder="••••••••" required />
+                                    <input type="password" value={p} onChange={e=>setP(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white text-sm font-medium" placeholder="••••••••" required />
                                 </div>
-                                <button className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-lg hover:bg-indigo-700 active:scale-95 transition-all uppercase text-xs tracking-[0.2em] mt-2">
-                                    Đăng nhập
-                                </button>
+                                <button className="w-full py-4 bg-slate-900 text-white font-black rounded-2xl shadow-lg hover:bg-indigo-600 active:scale-95 transition-all uppercase text-xs tracking-[0.2em] mt-2">Vào học ngay</button>
                             </form>
                         </div>
                     </div>
@@ -352,146 +305,280 @@
         };
 
         // --- STUDENT HUB COMPONENT ---
-        const StudentHub = ({ user, timeData, db }) => {
+        const StudentHub = ({ user, users, timeData, db }) => {
             const [activeLesson, setActiveLesson] = useState(null);
+            const [currentTab, setCurrentTab] = useState('lessons'); 
+            
             const todayStr = getTodayStr();
-
-            // 1. Khởi tạo và lấy ID Thiết bị duy nhất
+            const weekDates = useMemo(() => getCurrentWeekDates(), []);
+            const monthDates = useMemo(() => getCurrentMonthDates(), []);
+            
             const [deviceId] = useState(() => {
                 let id = localStorage.getItem('bob_deviceId');
-                if (!id) {
-                    id = 'dev_' + Math.random().toString(36).substr(2, 9);
-                    localStorage.setItem('bob_deviceId', id);
-                }
+                if (!id) { id = 'dev_' + Math.random().toString(36).substr(2, 9); localStorage.setItem('bob_deviceId', id); }
                 return id;
             });
-
-            // 2. Quản lý Tên người học/Tên máy
             const [deviceName, setDeviceName] = useState(() => localStorage.getItem('bob_deviceName'));
             const [tempName, setTempName] = useState('');
 
-            // Quản lý đếm ngược và đồng bộ Đám mây
-            const [localSeconds, setLocalSeconds] = useState(() => timeData[user.id]?.[deviceId]?.times?.[todayStr] || 0);
+            // TÍNH NĂNG ĐỔI TÊN THIẾT BỊ
+            const [isEditingName, setIsEditingName] = useState(false);
+            const [editNameValue, setEditNameValue] = useState(deviceName || '');
+            
+            const handleUpdateDeviceName = (e) => {
+                e.preventDefault();
+                if(editNameValue.trim()) {
+                    const newName = editNameValue.trim();
+                    localStorage.setItem('bob_deviceName', newName);
+                    setDeviceName(newName);
+                    setIsEditingName(false);
+                    // Cập nhật lên Firebase ngay lập tức để Bảng xếp hạng đổi theo
+                    if (db) {
+                        const timeRef = doc(db, 'artifacts', appId, 'public', 'data', 'bob_timeData', user.id);
+                        setDoc(timeRef, { [deviceId]: { name: newName } }, { merge: true }).catch(console.error);
+                    }
+                }
+            };
+
+            // ANTI-CHEAT & TIME TRACKING STATE
+            const [localSeconds, setLocalSeconds] = useState(() => Number(timeData[user.id]?.[deviceId]?.times?.[todayStr] || 0));
+            const [localLessonStats, setLocalLessonStats] = useState(() => timeData[user.id]?.[deviceId]?.lessonStats || {});
+            
+            const [isIdle, setIsIdle] = useState(false);
+            const idleTimeoutRef = useRef(null);
+            const isIdleRef = useRef(isIdle); 
+            const activeLessonRef = useRef(activeLesson);
+            
             const lastSyncedSeconds = useRef(localSeconds);
             const latestLocalSeconds = useRef(localSeconds);
+            const latestLessonStats = useRef(localLessonStats);
+            const IDLE_LIMIT = 5 * 60 * 1000;
 
-            // Đồng bộ bộ đếm cục bộ nếu có sự khác biệt lớn từ DB
+            useEffect(() => { activeLessonRef.current = activeLesson; }, [activeLesson]);
+            useEffect(() => { isIdleRef.current = isIdle; }, [isIdle]);
+
+            const resetIdleTimer = () => {
+                if (isIdle) return; 
+                clearTimeout(idleTimeoutRef.current);
+                idleTimeoutRef.current = setTimeout(() => { setIsIdle(true); }, IDLE_LIMIT);
+            };
+
             useEffect(() => {
-                if (deviceName && timeData[user.id]?.[deviceId]?.times?.[todayStr] > localSeconds) {
-                    setLocalSeconds(timeData[user.id][deviceId].times[todayStr]);
-                    lastSyncedSeconds.current = timeData[user.id][deviceId].times[todayStr];
+                if (!deviceName) return;
+                window.addEventListener('mousemove', resetIdleTimer);
+                window.addEventListener('keydown', resetIdleTimer);
+                window.addEventListener('scroll', resetIdleTimer);
+                window.addEventListener('touchstart', resetIdleTimer);
+                resetIdleTimer();
+                return () => {
+                    clearTimeout(idleTimeoutRef.current);
+                    window.removeEventListener('mousemove', resetIdleTimer); window.removeEventListener('keydown', resetIdleTimer);
+                    window.removeEventListener('scroll', resetIdleTimer); window.removeEventListener('touchstart', resetIdleTimer);
+                };
+            }, [deviceName, isIdle]);
+
+            // Sync from DB if updated elsewhere
+            useEffect(() => {
+                const dbSeconds = Number(timeData[user.id]?.[deviceId]?.times?.[todayStr] || 0);
+                if (deviceName && dbSeconds > localSeconds) {
+                    setLocalSeconds(dbSeconds);
+                    lastSyncedSeconds.current = dbSeconds;
+                    if(timeData[user.id][deviceId].lessonStats) {
+                        setLocalLessonStats(timeData[user.id][deviceId].lessonStats);
+                    }
                 }
             }, [timeData, user.id, deviceId, todayStr, deviceName]);
 
-            // Đếm giờ mỗi giây
+            // Core Timer Loop
             useEffect(() => {
-                if (!deviceName) return; // Không đếm giờ nếu chưa đặt tên
+                if (!deviceName) return;
                 const timer = setInterval(() => {
-                    setLocalSeconds(prev => prev + 1);
+                    if (!isIdleRef.current) {
+                        setLocalSeconds(prev => prev + 1);
+                        
+                        // Nếu đang trong bài học, tăng thời gian cho bài đó
+                        if (activeLessonRef.current) {
+                            const path = activeLessonRef.current.path;
+                            setLocalLessonStats(prev => ({
+                                ...prev,
+                                [path]: Number(prev[path] || 0) + 1
+                            }));
+                        }
+                    }
                 }, 1000);
                 return () => clearInterval(timer);
             }, [deviceName]);
 
-            // Lưu lên Đám mây sau mỗi 10 giây học
+            // Save to DB
             useEffect(() => {
                 if (!deviceName || !db) return;
                 latestLocalSeconds.current = localSeconds;
+                latestLessonStats.current = localLessonStats;
                 
                 if (localSeconds - lastSyncedSeconds.current >= 10) {
                     const timeRef = doc(db, 'artifacts', appId, 'public', 'data', 'bob_timeData', user.id);
                     setDoc(timeRef, { 
                         [deviceId]: {
                             name: deviceName,
-                            times: { [todayStr]: localSeconds }
+                            times: { [todayStr]: localSeconds },
+                            lessonStats: localLessonStats
                         }
                     }, { merge: true }).catch(console.error);
                     lastSyncedSeconds.current = localSeconds;
                 }
-            }, [localSeconds, user.id, todayStr, deviceId, deviceName, db]);
+            }, [localSeconds, localLessonStats, user.id, todayStr, deviceId, deviceName, db]);
 
-            // Lưu nốt phần dư khi thoát
-            useEffect(() => {
-                return () => {
-                    if (deviceName && db && latestLocalSeconds.current > lastSyncedSeconds.current) {
-                        const timeRef = doc(db, 'artifacts', appId, 'public', 'data', 'bob_timeData', user.id);
-                        setDoc(timeRef, { 
-                            [deviceId]: {
-                                name: deviceName,
-                                times: { [todayStr]: latestLocalSeconds.current }
+            // THUẬT TOÁN ĐỒNG BỘ HIỂN THỊ (SỬA LỖI LỆCH GIỜ)
+            // Lấy tổng giờ của 1 mảng ngày CHỈ CHO THIẾT BỊ HIỆN TẠI (Không cộng dồn máy khác)
+            const getDeviceTotal = (datesArray) => {
+                let total = 0;
+                const deviceData = timeData[user.id]?.[deviceId];
+                if (deviceData && deviceData.times) {
+                    datesArray.forEach(date => {
+                        if (date === todayStr) {
+                            total += Number(localSeconds || 0);
+                        } else {
+                            total += Number(deviceData.times[date] || 0);
+                        }
+                    });
+                } else if (datesArray.includes(todayStr)) {
+                    total += Number(localSeconds || 0);
+                }
+                return total;
+            };
+
+            // Tính hạng dựa trên tất cả Tên Máy (Devices)
+            const getRank = (datesArray) => {
+                let allDevices = [];
+                Object.keys(timeData).forEach(uid => {
+                    const userDevices = timeData[uid];
+                    Object.keys(userDevices).forEach(devId => {
+                        let total = 0;
+                        datesArray.forEach(date => {
+                            if (uid === user.id && devId === deviceId && date === todayStr) {
+                                total += Number(localSeconds || 0);
+                            } else {
+                                total += Number(userDevices[devId].times?.[date] || 0);
                             }
-                        }, { merge: true }).catch(console.error);
-                    }
-                };
-            }, [user.id, todayStr, deviceId, deviceName, db]);
+                        });
+                        if (total > 0) allDevices.push({ id: devId, total });
+                    });
+                });
+                allDevices.sort((a, b) => b.total - a.total);
+                const index = allDevices.findIndex(d => d.id === deviceId);
+                return index !== -1 ? index + 1 : 0;
+            };
 
-            // Giao diện hỏi tên nếu là máy mới
+            // Lấy phân bổ % của môn học (Chỉ của máy hiện tại)
+            const getMyLessonDistribution = () => {
+                const aggregatedStats = {};
+                Object.entries(localLessonStats).forEach(([path, sec]) => { aggregatedStats[path] = Number(sec); });
+
+                const totalLessonTime = Object.values(aggregatedStats).reduce((sum, val) => sum + val, 0);
+                if (totalLessonTime === 0) return [];
+
+                return Object.entries(aggregatedStats)
+                    .map(([path, sec]) => ({ path, sec, percent: Math.round((sec / totalLessonTime) * 100) }))
+                    .sort((a, b) => b.sec - a.sec)
+                    .slice(0, 3);
+            };
+
+            const myDailyTotal = getDeviceTotal([todayStr]); 
+            const myWeeklyTotal = getDeviceTotal(weekDates);
+            const myMonthlyTotal = getDeviceTotal(monthDates);
+            
+            const myWeekRank = getRank(weekDates);
+            const myMonthRank = getRank(monthDates);
+            const myLessonStats = getMyLessonDistribution();
+
+            // Rank Badge Render Helper
+            const RankBadge = ({ rank, title }) => {
+                if (rank === 0) return (
+                    <div className="flex flex-col items-center p-3 bg-white/5 rounded-xl border border-white/10 w-full sm:w-28 shrink-0">
+                        <Icon name="minus" size={20} className="text-white/40 mb-1" />
+                        <p className="text-[10px] text-white/50 uppercase font-bold tracking-widest">{title}</p>
+                    </div>
+                );
+                
+                let iconName = 'star'; let iconColor = 'text-slate-300'; let bgClass = 'bg-white/10'; let textGlow = '';
+                if (rank === 1) { iconName = 'crown'; iconColor = 'text-yellow-300'; bgClass = 'bg-gradient-to-br from-yellow-400/20 to-yellow-600/20 border-yellow-400/30'; textGlow = 'text-yellow-300 drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]'; }
+                else if (rank === 2) { iconName = 'medal'; iconColor = 'text-slate-200'; bgClass = 'bg-gradient-to-br from-slate-300/20 to-slate-500/20 border-slate-300/30'; textGlow = 'text-slate-200 drop-shadow-[0_0_8px_rgba(226,232,240,0.8)]'; }
+                else if (rank === 3) { iconName = 'award'; iconColor = 'text-orange-300'; bgClass = 'bg-gradient-to-br from-orange-400/20 to-orange-600/20 border-orange-400/30'; textGlow = 'text-orange-300 drop-shadow-[0_0_8px_rgba(253,186,116,0.8)]'; }
+
+                return (
+                    <div className={`flex flex-col items-center p-3 rounded-xl border ${bgClass} w-full sm:w-28 shrink-0 relative overflow-hidden group`}>
+                        <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <Icon name={iconName} size={20} className={`${iconColor} mb-1`} />
+                        <p className={`font-black text-lg leading-none mb-0.5 ${textGlow}`}>Top {rank}</p>
+                        <p className="text-[9px] text-white/70 uppercase font-bold tracking-widest">{title}</p>
+                    </div>
+                );
+            };
+
+            // Device Name Prompt
             if (!deviceName) {
                 return (
                     <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
                         <div className="bg-white p-8 rounded-[2rem] w-full max-w-sm shadow-2xl animate-fade-up">
-                            <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mb-4">
-                                <Icon name="smartphone" size={24} />
-                            </div>
-                            <h3 className="font-black text-xl mb-2 text-slate-800">Định danh thiết bị</h3>
-                            <p className="text-sm text-slate-500 mb-6">Bạn đang dùng chung tài khoản. Vui lòng nhập tên của bạn (hoặc tên máy) để theo dõi thời gian học riêng biệt.</p>
-                            
-                            <form onSubmit={(e) => {
-                                e.preventDefault();
-                                if(tempName.trim()) {
-                                    localStorage.setItem('bob_deviceName', tempName.trim());
-                                    setDeviceName(tempName.trim());
-                                }
-                            }}>
-                                <input 
-                                    type="text" 
-                                    placeholder="VD: Nam, Điện thoại mẹ, iPad Lan..." 
-                                    value={tempName} 
-                                    onChange={e => setTempName(e.target.value)}
-                                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white transition-all text-sm mb-4"
-                                    required 
-                                    autoFocus
-                                />
-                                <button className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-lg hover:bg-indigo-700 active:scale-95 transition-all text-sm">
-                                    Bắt đầu học
-                                </button>
+                            <div className="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mb-6"><Icon name="monitor-smartphone" size={28} /></div>
+                            <h3 className="font-black text-2xl mb-2 text-slate-800">Tên thiết bị</h3>
+                            <p className="text-sm text-slate-500 mb-6">Nhập tên máy để phân biệt khi bạn dùng nhiều thiết bị nhé.</p>
+                            <form onSubmit={(e) => { e.preventDefault(); if(tempName.trim()) { localStorage.setItem('bob_deviceName', tempName.trim()); setDeviceName(tempName.trim()); }}}>
+                                <input type="text" placeholder="VD: Laptop của Tuấn..." value={tempName} onChange={e => setTempName(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-indigo-500 text-sm font-medium mb-4" required autoFocus />
+                                <button className="w-full py-4 bg-slate-900 text-white font-black rounded-2xl shadow-lg hover:bg-indigo-600 active:scale-95 transition-all uppercase tracking-wider">Bắt đầu đếm giờ</button>
                             </form>
                         </div>
                     </div>
                 );
             }
 
-            const isGoalReached = localSeconds >= 3600;
+            // Idle Warning Component
+            const IdleWarningModal = () => {
+                if (!isIdle) return null;
+                return (
+                    <div className="fixed inset-0 z-[99999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+                        <div className="bg-white p-8 rounded-[2rem] max-w-sm w-full text-center shadow-2xl border-t-4 border-amber-500 animate-fade-up">
+                            <div className="w-20 h-20 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-6"><Icon name="coffee" size={40} className="animate-pulse-fast" /></div>
+                            <h2 className="text-2xl font-black text-slate-800 mb-2">Đang nghỉ ngơi?</h2>
+                            <p className="text-slate-500 text-sm mb-6 leading-relaxed">Không thấy thao tác nào trong 5 phút. Thời gian học đang tạm dừng.</p>
+                            <button onClick={() => { setIsIdle(false); resetIdleTimer(); }} className="w-full py-4 bg-amber-500 text-white font-black rounded-xl shadow-lg hover:bg-amber-600 active:scale-95 transition-all text-sm uppercase tracking-widest">Tôi vẫn đang học!</button>
+                        </div>
+                    </div>
+                );
+            };
 
-            const lessons = [
-                { title: "200 Conversations", subtitle: "Giao tiếp thực tế", desc: "Học qua 200 đoạn hội thoại tiếng Anh giao tiếp thông dụng nhất.", icon: "messages-square", color: "text-cyan-600", bg: "bg-cyan-50", path: "200conversation.html" },
-                { title: "Reading", subtitle: "Luyện đọc hiểu", desc: "Cải thiện kỹ năng đọc thông qua bài báo, truyện ngắn.", icon: "book-open", color: "text-indigo-600", bg: "bg-indigo-50", path: "reading.html" },
-                { title: "Bảng IPA", subtitle: "Phát âm chuẩn", desc: "Học cách đọc 44 âm trong bảng phiên âm Quốc tế.", icon: "mic-2", color: "text-blue-600", bg: "bg-blue-50", path: "ipa.html" },
-                { title: "Listening", subtitle: "Luyện nghe hiểu", desc: "Cải thiện khả năng nghe qua hội thoại thực tế.", icon: "headphones", color: "text-emerald-600", bg: "bg-emerald-50", path: "listening.html" },
-                { title: "Speaking", subtitle: "Luyện nói tự tự", desc: "Thực hành giao tiếp để tăng phản xạ nói lưu loát.", icon: "message-circle", color: "text-violet-600", bg: "bg-violet-50", path: "speaking.html" },
-                { title: "Vocabulary", subtitle: "Vốn từ vựng", desc: "Ghi nhớ từ mới theo chủ đề thông qua hình ảnh.", icon: "sparkles", color: "text-amber-600", bg: "bg-amber-50", path: "vocabulary.html" },
-                { title: "Bilingual", subtitle: "Song ngữ Anh-Việt", desc: "Đọc tin tức và truyện ngắn song ngữ.", icon: "languages", color: "text-rose-600", bg: "bg-rose-50", path: "bilingual.html" },
-                { title: "Taboo Game", subtitle: "Trò chơi đố chữ", desc: "Vừa chơi vừa học, giải đố từ vựng.", icon: "gamepad-2", color: "text-orange-600", bg: "bg-orange-50", path: "taboo.html" }
-            ];
+            // Modal: Giao diện Đổi tên máy
+            const EditNameModal = () => {
+                if (!isEditingName) return null;
+                return (
+                    <div className="fixed inset-0 z-[99999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+                        <div className="bg-white p-6 rounded-[2rem] max-w-sm w-full shadow-2xl animate-fade-up">
+                            <h3 className="font-black text-xl mb-2 text-slate-800">Đổi tên hiển thị</h3>
+                            <p className="text-sm text-slate-500 mb-4">Tên này sẽ đại diện cho bạn trên Bảng xếp hạng thi đua.</p>
+                            <form onSubmit={handleUpdateDeviceName}>
+                                <input type="text" value={editNameValue} onChange={e => setEditNameValue(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-indigo-500 text-sm font-medium mb-4" required autoFocus />
+                                <div className="flex gap-2">
+                                    <button type="button" onClick={() => setIsEditingName(false)} className="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 active:scale-95 transition-all text-sm">Hủy</button>
+                                    <button type="submit" className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-700 active:scale-95 transition-all text-sm">Lưu cập nhật</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                );
+            };
 
+            // Active Lesson Render
             if (activeLesson) {
                 return (
                     <div className="fixed inset-0 z-[9999] bg-white flex flex-col animate-fade-in" style={{ height: '100dvh' }}>
-                        <div className="h-12 sm:h-14 bg-white border-b border-slate-200 flex items-center px-4 shrink-0 shadow-sm relative z-10 justify-between">
-                            <button onClick={() => setActiveLesson(null)} className="flex items-center gap-1.5 text-slate-600 hover:text-red-600 font-bold transition-colors active:scale-95 z-20">
-                                <Icon name="arrow-left" size={20} /> <span className="text-sm">Thoát</span>
-                            </button>
-                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-20">
-                                <span className="font-black text-slate-800 text-sm sm:text-base truncate flex items-center gap-2">
-                                    <Icon name={activeLesson.icon} size={16} className={activeLesson.color} />
-                                    {activeLesson.title}
-                                </span>
-                            </div>
-                            <div className="z-20 text-[10px] font-mono font-bold text-slate-400 flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
-                                <Icon name="clock" size={12} /> {formatTime(localSeconds)}
-                            </div>
+                        <IdleWarningModal />
+                        <div className="h-14 sm:h-16 bg-white border-b border-slate-200 flex items-center px-4 shrink-0 shadow-sm relative z-10 justify-between">
+                            <button onClick={() => setActiveLesson(null)} className="flex items-center gap-2 text-slate-500 hover:text-red-600 font-bold transition-colors active:scale-95 z-20 bg-slate-50 px-3 py-1.5 rounded-lg"><Icon name="arrow-left" size={18} /> <span className="text-sm hidden sm:block">Thoát bài</span></button>
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-20"><span className="font-black text-slate-800 text-sm sm:text-base truncate flex items-center gap-2"><Icon name={activeLesson.icon} size={20} className={activeLesson.color} />{activeLesson.title}</span></div>
+                            <div className="z-20 text-xs font-mono font-bold text-slate-700 flex items-center gap-2 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100"><Icon name="clock" size={14} className="text-indigo-500" /> <span className={isIdle ? 'text-red-500 animate-pulse' : ''}>{formatTime(localSeconds)}</span></div>
                         </div>
-                        <div className="flex-1 w-full bg-white relative overflow-hidden">
-                            <iframe src={activeLesson.path} className="absolute top-0 left-0 w-full h-full border-0" title={activeLesson.title} allow="camera; microphone; fullscreen; autoplay" style={{ display: 'block' }}></iframe>
+                        <div className="flex-1 w-full bg-slate-50 relative overflow-hidden">
+                            <iframe src={activeLesson.path} className="absolute top-0 left-0 w-full h-full border-0" title={activeLesson.title}></iframe>
                         </div>
                     </div>
                 );
@@ -499,239 +586,396 @@
 
             return (
                 <div className="space-y-6 animate-fade-in">
-                    <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-[2rem] p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
-                        <div className="relative z-10">
-                            <h2 className="text-2xl sm:text-3xl font-black mb-2">Chào, {user.name.split(' ').pop()}! 👋</h2>
-                            <p className="text-indigo-100 text-sm sm:text-base font-medium opacity-90">
-                                Đang học trên: <span className="font-bold text-white bg-white/20 px-2 py-0.5 rounded">{deviceName}</span>
-                            </p>
-                            
-                            <div className="mt-5 inline-block">
-                                <div className="flex items-center gap-3 bg-white/20 p-3 rounded-2xl backdrop-blur-sm border border-white/10">
-                                    <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-white">
-                                        <Icon name="timer" size={20} />
-                                    </div>
+                    <IdleWarningModal />
+                    <EditNameModal />
+                    
+                    {/* SUPER DASHBOARD WIDGET */}
+                    <div className="bg-[#0f172a] rounded-[2rem] p-6 sm:p-8 text-white shadow-2xl relative overflow-hidden flex flex-col gap-8 border border-slate-800">
+                        {/* Top Section: User Info & Ranks */}
+                        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start gap-6">
+                            <div>
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="w-12 h-12 bg-indigo-500/20 rounded-full flex items-center justify-center border border-indigo-500/30 text-indigo-400 font-black text-xl">{user.name.charAt(0)}</div>
                                     <div>
-                                        <p className="text-[10px] uppercase font-bold text-indigo-100 tracking-wider">Thời gian học hôm nay</p>
-                                        <div className="flex items-end gap-1">
-                                            <p className="font-mono font-black text-xl leading-none tracking-tight">{formatTime(localSeconds)}</p>
-                                            <p className="text-xs font-medium text-indigo-200 mb-0.5">/ 01:00:00</p>
+                                        <h2 className="text-2xl sm:text-3xl font-black leading-none">Hi, {user.name.split(' ').pop()}! 👋</h2>
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <p className="text-slate-400 text-xs font-medium">Đang dùng <span className="text-white bg-white/10 px-1.5 py-0.5 rounded font-bold">{deviceName}</span></p>
+                                            <button onClick={() => { setEditNameValue(deviceName); setIsEditingName(true); }} className="text-indigo-300 hover:text-white bg-white/5 hover:bg-indigo-500/50 p-1.5 rounded-lg transition-colors" title="Đổi tên thiết bị">
+                                                <Icon name="pencil" size={14} />
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
-                                {isGoalReached && (
-                                    <div className="mt-3 flex items-center gap-2 bg-gradient-to-r from-emerald-400 to-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg animate-fade-up">
-                                        <Icon name="party-popper" size={18} className="animate-bounce-slow" />
-                                        Quá tuyệt vời! Bạn đã vượt mục tiêu 1 giờ học hôm nay!
+                            </div>
+                            
+                            <div className="flex gap-2 w-full md:w-auto">
+                                <RankBadge rank={myWeekRank} title="Tuần này" />
+                                <RankBadge rank={myMonthRank} title="Tháng này" />
+                            </div>
+                        </div>
+                        
+                        <div className="w-full h-px bg-gradient-to-r from-transparent via-slate-700 to-transparent relative z-10"></div>
+
+                        {/* Bottom Section: Time Stats & Lesson Distribution */}
+                        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            {/* Time Blocks */}
+                            <div className="grid grid-cols-3 gap-3">
+                                <div className="bg-white/5 backdrop-blur-md border border-white/10 p-4 rounded-2xl flex flex-col justify-center text-center">
+                                    <Icon name="sun" size={16} className="text-indigo-400 mx-auto mb-1 opacity-70" />
+                                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Hôm nay</p>
+                                    <p className="font-mono font-black text-lg text-white">{formatTime(myDailyTotal)}</p>
+                                </div>
+                                <div className="bg-white/5 backdrop-blur-md border border-white/10 p-4 rounded-2xl flex flex-col justify-center text-center">
+                                    <Icon name="calendar" size={16} className="text-amber-400 mx-auto mb-1 opacity-70" />
+                                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Tuần này</p>
+                                    <p className="font-mono font-black text-lg text-amber-400">{formatTime(myWeeklyTotal)}</p>
+                                </div>
+                                <div className="bg-white/5 backdrop-blur-md border border-white/10 p-4 rounded-2xl flex flex-col justify-center text-center">
+                                    <Icon name="calendar-days" size={16} className="text-emerald-400 mx-auto mb-1 opacity-70" />
+                                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Tháng này</p>
+                                    <p className="font-mono font-black text-lg text-emerald-400">{formatTime(myMonthlyTotal)}</p>
+                                </div>
+                            </div>
+
+                            {/* Lesson Stats */}
+                            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col justify-center">
+                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Icon name="pie-chart" size={14} /> Tỷ trọng bài học</h4>
+                                {myLessonStats.length === 0 ? (
+                                    <p className="text-sm text-slate-500 italic text-center py-2">Bạn chưa học bài nào.</p>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {myLessonStats.map((stat, idx) => (
+                                            <div key={idx} className="flex items-center gap-3">
+                                                <div className="w-20 truncate text-xs font-bold text-slate-200">{getLessonTitle(stat.path)}</div>
+                                                <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+                                                    <div className={`h-full ${getLessonColor(stat.path)} progress-bar-fill rounded-full`} style={{ width: `${stat.percent}%` }}></div>
+                                                </div>
+                                                <div className="w-8 text-right text-xs font-mono text-slate-400">{stat.percent}%</div>
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
                             </div>
                         </div>
-                        <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
+
+                        {/* Background Effects */}
+                        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/20 rounded-full blur-[100px] pointer-events-none -translate-y-1/2 translate-x-1/3"></div>
+                        <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-600/10 rounded-full blur-[80px] pointer-events-none translate-y-1/2 -translate-x-1/2"></div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {lessons.map((item, i) => (
-                            <div key={i} onClick={() => setActiveLesson(item)} className="lesson-card bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col cursor-pointer active:bg-slate-50 transition-colors">
-                                <div className="flex items-center gap-4 mb-4">
-                                    <div className={`w-12 h-12 shrink-0 ${item.bg} ${item.color} rounded-2xl flex items-center justify-center`}>
-                                        <Icon name={item.icon} size={24} />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-extrabold text-lg text-slate-800 leading-none">{item.title}</h3>
-                                        <p className="text-[10px] uppercase font-bold text-slate-400 mt-1 tracking-wider">{item.subtitle}</p>
-                                    </div>
-                                </div>
-                                <p className="text-slate-500 text-xs leading-relaxed font-medium mb-4 flex-1">{item.desc}</p>
-                                <div className="flex items-center text-indigo-600 font-bold text-[10px] uppercase tracking-widest gap-2">
-                                    Vào học ngay <Icon name="chevron-right" size={12} />
-                                </div>
-                            </div>
-                        ))}
+                    {/* Tabs Navigation */}
+                    <div className="flex flex-wrap gap-2 bg-slate-200/50 p-1.5 rounded-2xl w-fit">
+                        <button onClick={() => setCurrentTab('lessons')} className={`px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all ${currentTab === 'lessons' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}><Icon name="book-open" size={16} /> Bài học</button>
+                        <button onClick={() => setCurrentTab('leaderboard_week')} className={`px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all ${currentTab === 'leaderboard_week' ? 'bg-white text-amber-500 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}><Icon name="trophy" size={16} /> BXH Tuần</button>
+                        <button onClick={() => setCurrentTab('leaderboard_month')} className={`px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all ${currentTab === 'leaderboard_month' ? 'bg-white text-emerald-500 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}><Icon name="award" size={16} /> BXH Tháng</button>
                     </div>
+
+                    {/* Tab Content */}
+                    {currentTab === 'lessons' && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-up">
+                            {lessonsData.map((item, i) => (
+                                <div key={i} onClick={() => setActiveLesson(item)} className="lesson-card bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col cursor-pointer hover:border-indigo-100 group">
+                                    <div className="flex items-center gap-4 mb-4">
+                                        <div className={`w-12 h-12 shrink-0 ${item.bg} ${item.color} rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform`}><Icon name={item.icon} size={24} /></div>
+                                        <div>
+                                            <h3 className="font-extrabold text-base text-slate-800 leading-tight">{item.title}</h3>
+                                            <p className="text-[10px] uppercase font-bold text-slate-400 mt-1 tracking-wider">{item.subtitle}</p>
+                                        </div>
+                                    </div>
+                                    <p className="text-slate-500 text-xs leading-relaxed font-medium mb-4 flex-1">{item.desc}</p>
+                                    <div className="flex items-center text-indigo-600 font-bold text-[10px] uppercase tracking-widest gap-1 group-hover:gap-2 transition-all">Vào học <Icon name="arrow-right" size={12} /></div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {currentTab === 'leaderboard_week' && <Leaderboard title="Vinh danh Tuần này" subtitle="Top học viên chăm chỉ nhất tuần" users={users} timeData={timeData} dates={weekDates} label="Thời gian tuần" currentUser={user} currentDevice={deviceId} localSeconds={localSeconds} todayStr={todayStr} />}
+                    {currentTab === 'leaderboard_month' && <Leaderboard title="Tổng kết Tháng" subtitle="Vinh danh học viên xuất sắc" users={users} timeData={timeData} dates={monthDates} label="Thời gian tháng" currentUser={user} currentDevice={deviceId} localSeconds={localSeconds} todayStr={todayStr} />}
+                </div>
+            );
+        };
+
+        // --- LEADERBOARD COMPONENT (SỬA LỖI ĐỒNG BỘ) ---
+        const Leaderboard = ({ title, subtitle, users, timeData, dates, label, currentUser, currentDevice, localSeconds, todayStr }) => {
+            // Thay đổi xếp hạng: Duyệt qua toàn bộ từng TÊN MÁY (Device) thay vì chỉ Tài khoản
+            let allDevices = [];
+            
+            Object.keys(timeData).forEach(uid => {
+                const userDevices = timeData[uid];
+                Object.keys(userDevices).forEach(devId => {
+                    const dev = userDevices[devId];
+                    let total = 0;
+                    dates.forEach(date => {
+                        if (currentUser && uid === currentUser.id && devId === currentDevice && date === todayStr) {
+                            total += Number(localSeconds || 0);
+                        } else {
+                            total += Number(dev.times?.[date] || 0);
+                        }
+                    });
+                    
+                    if (total > 0) {
+                        const accountInfo = users.find(u => u.id === uid);
+                        // Chỉ hiển thị thiết bị nếu tài khoản của học viên đó vẫn còn tồn tại (Chống lỗi UNKNOWN)
+                        if (accountInfo) {
+                            allDevices.push({
+                                id: devId,
+                                uid: uid,
+                                name: dev.name || 'Máy ẩn danh',
+                                accountName: accountInfo.name,
+                                total: total
+                            });
+                        }
+                    }
+                });
+            });
+            
+            const ranking = allDevices.sort((a, b) => b.total - a.total);
+
+            return (
+                <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 sm:p-8 animate-fade-up">
+                    <div className="text-center mb-8">
+                        <div className="w-14 h-14 bg-amber-100 text-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-4"><Icon name="crown" size={28} /></div>
+                        <h2 className="text-2xl font-black text-slate-800">{title}</h2>
+                        <p className="text-slate-500 text-sm mt-1">{subtitle}</p>
+                    </div>
+
+                    {ranking.length === 0 ? (
+                        <div className="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                            <Icon name="ghost" size={40} className="mx-auto text-slate-300 mb-2" />
+                            <p className="text-slate-500 font-bold text-sm">Chưa có dữ liệu học tập. Hãy là người dẫn đầu!</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {ranking.map((student, index) => {
+                                const isTop3 = index < 3;
+                                const rankClass = index === 0 ? 'rank-1 scale-[1.02]' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : 'bg-slate-50 border border-slate-100 text-slate-800';
+                                const rankIcon = index === 0 ? 'crown' : index === 1 ? 'medal' : index === 2 ? 'award' : '';
+                                
+                                return (
+                                    <div key={student.id + index} className={`rank-card p-4 rounded-2xl flex items-center justify-between ${rankClass}`}>
+                                        <div className="flex items-center gap-4 overflow-hidden">
+                                            <div className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center font-black text-xl icon-bg ${!isTop3 ? 'bg-white text-slate-400 border border-slate-200' : ''}`}>
+                                                {isTop3 ? <Icon name={rankIcon} size={24} /> : `#${index + 1}`}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <h3 className={`font-extrabold truncate ${index === 0 ? 'text-lg' : 'text-base'}`}>{student.name}</h3>
+                                                <p className="text-[10px] font-bold mt-0.5 opacity-80 uppercase tracking-wider text-slate-500 truncate">Học viên: {student.accountName}</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right shrink-0 ml-4">
+                                            <p className={`font-mono font-black ${index === 0 ? 'text-xl' : 'text-lg'}`}>{formatTime(student.total)}</p>
+                                            <p className="text-[10px] uppercase font-bold opacity-70 tracking-widest mt-0.5">{label}</p>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             );
         };
 
         // --- ADMIN PANEL ---
         const AdminPanel = ({ users, timeData, db }) => {
-            const [n, setN] = useState('');
-            const [u, setU] = useState('');
-            const [p, setP] = useState('');
-            const [addError, setAddError] = useState('');
-            const [deletingId, setDeletingId] = useState(null);
+            const [n, setN] = useState(''); const [u, setU] = useState(''); const [p, setP] = useState('');
+            const [addError, setAddError] = useState(''); const [deletingId, setDeletingId] = useState(null);
+            
+            // State quản lý Modal Reset Dữ liệu
+            const [showResetModal, setShowResetModal] = useState(false);
+            const [isResetting, setIsResetting] = useState(false);
+            
+            // THÊM: State quản lý sắp xếp thời gian
+            const [sortBy, setSortBy] = useState('month');
             
             const todayStr = getTodayStr();
+            const weekDates = useMemo(() => getCurrentWeekDates(), []);
+            const monthDates = useMemo(() => getCurrentMonthDates(), []);
             
-            // SẮP XẾP HỌC VIÊN TỪ CAO ĐẾN THẤP THEO TỔNG THỜI GIAN
-            const students = users
-                .filter(x => x.role === 'student')
-                .map(s => {
-                    const userDevices = timeData[s.id] || {};
-                    const deviceKeys = Object.keys(userDevices);
-                    
-                    let totalToday = 0;
-                    deviceKeys.forEach(key => {
-                        totalToday += (userDevices[key].times?.[todayStr] || 0);
-                    });
+            // Helper để lấy bài học nhiều nhất của 1 user
+            const getTopLesson = (userId) => {
+                const userDevices = timeData[userId] || {};
+                let stats = {};
+                Object.values(userDevices).forEach(dev => {
+                    if(dev.lessonStats) {
+                        Object.entries(dev.lessonStats).forEach(([path, sec]) => { 
+                            stats[path] = (stats[path] || 0) + Number(sec); 
+                        });
+                    }
+                });
+                
+                const total = Object.values(stats).reduce((sum, val) => sum + val, 0);
+                if (total === 0) return null;
+                
+                // Sort to get top 1
+                const topPath = Object.keys(stats).sort((a, b) => stats[b] - stats[a])[0];
+                return { path: topPath, percent: Math.round((stats[topPath] / total) * 100) };
+            };
 
-                    return { ...s, totalToday, userDevices, deviceKeys };
-                })
-                .sort((a, b) => b.totalToday - a.totalToday);
+            const students = users.filter(x => x.role === 'student').map(s => {
+                const userDevices = timeData[s.id] || {};
+                let totalToday = 0; let weeklyTotal = 0; let monthlyTotal = 0;
+                const deviceNames = []; // Lấy danh sách tên thiết bị
+                Object.keys(userDevices).forEach(key => {
+                    if (userDevices[key].name) deviceNames.push(userDevices[key].name);
+                    totalToday += Number(userDevices[key].times?.[todayStr] || 0);
+                    weekDates.forEach(date => { weeklyTotal += Number(userDevices[key].times?.[date] || 0); });
+                    monthDates.forEach(date => { monthlyTotal += Number(userDevices[key].times?.[date] || 0); });
+                });
+                return { ...s, totalToday, weeklyTotal, monthlyTotal, topLesson: getTopLesson(s.id), deviceNames: [...new Set(deviceNames)] };
+            }).sort((a, b) => {
+                // Logic sắp xếp từ cao xuống thấp
+                if (sortBy === 'today') return b.totalToday - a.totalToday;
+                if (sortBy === 'week') return b.weeklyTotal - a.weeklyTotal;
+                return b.monthlyTotal - a.monthlyTotal;
+            });
 
             const handleAdd = async (e) => {
-                e.preventDefault();
-                setAddError('');
-                
-                if(users.some(x => x.username.toLowerCase() === u.trim().toLowerCase())) {
-                    setAddError("Tên tài khoản này đã tồn tại!");
-                    return;
-                }
-
-                if (!db) {
-                    setAddError("Chưa kết nối CSDL, không thể thêm.");
-                    return;
-                }
-
+                e.preventDefault(); setAddError('');
+                if(users.some(x => x.username.toLowerCase() === u.trim().toLowerCase())) { setAddError("Tên tài khoản này đã tồn tại!"); return; }
+                if (!db) { setAddError("Chưa kết nối CSDL."); return; }
                 const newId = 'stu_' + Date.now();
-                const newUser = { username: u.trim().toLowerCase(), password: p, role: 'student', name: n };
-                
                 try {
-                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_users', newId), newUser);
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_users', newId), { username: u.trim().toLowerCase(), password: p, role: 'student', name: n });
                     setN(''); setU(''); setP('');
-                } catch(err) {
-                    setAddError("Có lỗi xảy ra khi lưu lên Đám mây.");
-                }
+                } catch(err) { setAddError("Lỗi lưu Đám mây."); }
             };
 
             const confirmDelete = async (id) => {
                 try {
-                    if (db) {
-                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_users', id));
-                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_timeData', id));
-                    }
+                    if (db) { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_users', id)); await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_timeData', id)); }
                     setDeletingId(null);
-                } catch(err) {
-                    console.error("Lỗi xóa tài khoản", err);
+                } catch(err) {}
+            };
+
+            // Hàm xóa toàn bộ dữ liệu để tạo khóa học mới
+            const handleResetSystem = async () => {
+                setIsResetting(true);
+                try {
+                    if (db) {
+                        const timePromises = Object.keys(timeData).map(uid => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_timeData', uid)));
+                        await Promise.all(timePromises);
+                        
+                        const studentPromises = users.filter(x => x.role === 'student').map(s => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_users', s.id)));
+                        await Promise.all(studentPromises);
+                    }
+                    setShowResetModal(false);
+                } catch (err) {
+                    console.error("Lỗi khi làm mới:", err);
                 }
+                setIsResetting(false);
             };
 
             return (
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-in">
-                    <div className="lg:col-span-5 order-2 lg:order-1">
-                        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
-                            <h3 className="font-black text-lg mb-6 flex items-center gap-3">
-                                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><Icon name="user-plus" size={18} /></div>
-                                THÊM HỌC VIÊN
-                            </h3>
+                <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 animate-fade-in">
+                    {/* Custom Modal Khôi phục cài đặt gốc */}
+                    {showResetModal && (
+                        <div className="fixed inset-0 z-[99999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+                            <div className="bg-white p-8 rounded-[2rem] max-w-sm w-full shadow-2xl animate-fade-up border-t-4 border-red-500 text-center">
+                                <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4"><Icon name="alert-triangle" size={32} /></div>
+                                <h3 className="font-black text-xl mb-2 text-slate-800">Cảnh báo Nguy hiểm</h3>
+                                <p className="text-sm text-slate-500 mb-6 leading-relaxed">Bạn đang chuẩn bị <b className="text-red-500">xóa toàn bộ tài khoản học viên và thời gian học</b> để bắt đầu khóa mới. Hành động này không thể hoàn tác!</p>
+                                <div className="flex gap-2">
+                                    <button disabled={isResetting} onClick={() => setShowResetModal(false)} className="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 active:scale-95 transition-all text-sm">Hủy bỏ</button>
+                                    <button disabled={isResetting} onClick={handleResetSystem} className="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl shadow-lg hover:bg-red-700 active:scale-95 transition-all text-sm flex justify-center items-center">
+                                        {isResetting ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 'Xóa toàn bộ'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="xl:col-span-3 order-2 xl:order-1">
+                        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm sticky top-24">
+                            <h3 className="font-black text-lg mb-6 flex items-center gap-3"><div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><Icon name="user-plus" size={18} /></div>THÊM HỌC VIÊN</h3>
                             <form onSubmit={handleAdd} className="space-y-4">
-                                {addError && (
-                                    <div className="p-3 bg-red-50 text-red-600 text-xs font-bold rounded-xl border border-red-100 flex items-center gap-2">
-                                        <Icon name="alert-circle" size={14} /> {addError}
-                                    </div>
-                                )}
-                                <div className="space-y-1">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Tên học viên</label>
-                                    <input placeholder="Họ và tên..." value={n} onChange={e=>setN(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 text-sm" required />
-                                </div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="space-y-1">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Tài khoản</label>
-                                        <input placeholder="Username" value={u} onChange={e=>setU(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 text-sm" required />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Mật khẩu</label>
-                                        <input placeholder="Mật khẩu" value={p} onChange={e=>setP(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 text-sm" required />
-                                    </div>
-                                </div>
-                                <button className="w-full py-4 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 active:scale-95 transition-all text-sm shadow-lg shadow-indigo-100 mt-2">
-                                    Xác nhận thêm
-                                </button>
+                                {addError && <div className="p-3 bg-red-50 text-red-600 text-xs font-bold rounded-xl border border-red-100">{addError}</div>}
+                                <div className="space-y-1"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Tên học viên</label><input placeholder="Họ và tên..." value={n} onChange={e=>setN(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 text-sm" required /></div>
+                                <div className="space-y-1"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Tài khoản</label><input placeholder="Username" value={u} onChange={e=>setU(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 text-sm" required /></div>
+                                <div className="space-y-1"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Mật khẩu</label><input placeholder="Mật khẩu" value={p} onChange={e=>setP(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 text-sm" required /></div>
+                                <button className="w-full py-4 bg-slate-900 text-white font-bold rounded-2xl hover:bg-indigo-600 active:scale-95 transition-all text-sm shadow-lg mt-2">Thêm tài khoản</button>
                             </form>
                         </div>
                     </div>
 
-                    <div className="lg:col-span-7 order-1 lg:order-2">
-                        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col h-[500px]">
-                            <div className="p-4 bg-slate-50/50 border-b flex justify-between items-center">
-                                <div className="flex items-center gap-2">
-                                    <Icon name="users" size={14} className="text-slate-400" />
-                                    <span className="font-black uppercase tracking-widest text-slate-400 text-[10px]">Quản lý học viên</span>
-                                </div>
-                                <span className="bg-indigo-600 text-white px-3 py-1 rounded-full text-[9px] font-black">{students.length} tài khoản</span>
-                            </div>
-                            <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
-                                {students.length === 0 ? (
-                                    <div className="h-full flex flex-col items-center justify-center opacity-20">
-                                        <Icon name="user-x" size={48} />
-                                        <p className="font-bold text-xs mt-2">Chưa có học viên</p>
+                    <div className="xl:col-span-9 order-1 xl:order-2">
+                        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col h-[800px]">
+                            <div className="p-5 bg-slate-50/80 border-b flex justify-between items-center flex-wrap gap-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center"><Icon name="users" size={20} /></div>
+                                    <div>
+                                        <h2 className="font-black text-slate-800">Quản lý học viên</h2>
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Sắp xếp theo:</span>
+                                            <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="text-[11px] border border-slate-200 bg-white rounded-md px-1.5 py-0.5 outline-none font-bold text-indigo-600 cursor-pointer">
+                                                <option value="month">Tháng này</option>
+                                                <option value="week">Tuần này</option>
+                                                <option value="today">Hôm nay</option>
+                                            </select>
+                                        </div>
                                     </div>
-                                ) : students.map(s => {
-                                    const { userDevices, deviceKeys, totalToday } = s;
-                                    
-                                    // Sắp xếp các thiết bị bên trong học viên (từ cao đến thấp)
-                                    const sortedDeviceKeys = [...deviceKeys].sort((a, b) => {
-                                        const timeA = userDevices[a].times?.[todayStr] || 0;
-                                        const timeB = userDevices[b].times?.[todayStr] || 0;
-                                        return timeB - timeA;
-                                    });
-
-                                    return (
-                                        <div key={s.id} className="p-4 flex justify-between items-start bg-white border border-slate-50 rounded-2xl hover:shadow-md transition-all">
-                                            <div className="flex items-start gap-3 w-full">
-                                                <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-black text-sm shrink-0">{s.name.charAt(0)}</div>
-                                                <div className="flex-1">
-                                                    <p className="font-bold text-sm text-slate-800 flex items-center gap-2">
-                                                        {s.name}
-                                                        {totalToday > 0 && (
-                                                            <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full whitespace-nowrap">
-                                                                Tổng: {formatTime(totalToday)}
-                                                            </span>
-                                                        )}
-                                                    </p>
-                                                    <div className="flex items-center gap-2 mt-1 mb-2">
-                                                        <p className="text-[10px] font-mono text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
-                                                            U: {s.username} <span className="mx-1 text-slate-300">|</span> P: {s.password}
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <span className="bg-indigo-600 text-white px-3 py-1.5 rounded-xl text-xs font-black shadow-sm">{students.length} User</span>
+                                    <button onClick={() => setShowResetModal(true)} className="bg-red-50 text-red-600 px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 hover:bg-red-100 transition-colors border border-red-100 shadow-sm"><Icon name="rotate-ccw" size={14} /> Làm mới Dữ liệu</button>
+                                </div>
+                            </div>
+                            
+                            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-3">
+                                {students.length === 0 ? <div className="h-full flex flex-col items-center justify-center opacity-40"><Icon name="user-x" size={48} className="mb-3" /><p className="font-bold text-sm">Chưa có học viên nào</p></div> 
+                                : students.map(s => (
+                                    <div key={s.id} className="p-4 flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center bg-white border border-slate-100 rounded-2xl hover:border-indigo-200 hover:shadow-md transition-all">
+                                        <div className="flex items-start sm:items-center gap-3 w-full lg:w-auto flex-1 min-w-0">
+                                            <div className="w-10 h-10 bg-gradient-to-tr from-indigo-100 to-indigo-50 text-indigo-600 rounded-full flex items-center justify-center font-black text-base shrink-0 border border-indigo-100">{s.name.charAt(0)}</div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-bold text-sm text-slate-800 truncate">{s.name}</p>
+                                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5">
+                                                    <p className="text-[10px] font-mono text-slate-500">U: {s.username} <span className="mx-0.5">|</span> P: {s.password}</p>
+                                                    {s.deviceNames.length > 0 && (
+                                                        <p className="text-[10px] text-slate-400 flex items-center gap-1 truncate max-w-[150px]" title={s.deviceNames.join(', ')}>
+                                                            <Icon name="monitor" size={10} /> {s.deviceNames.join(', ')}
                                                         </p>
+                                                    )}
+                                                </div>
+                                                
+                                                {/* Dòng hiển thị bài học yêu thích cho Admin */}
+                                                {s.topLesson ? (
+                                                    <div className="mt-1.5 flex items-center gap-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 w-fit px-2 py-0.5 rounded border border-indigo-100">
+                                                        <Icon name="star" size={10} />
+                                                        Thích nhất: {getLessonTitle(s.topLesson.path)} ({s.topLesson.percent}%)
                                                     </div>
-                                                    
-                                                    {/* Hiển thị chi tiết từng thiết bị học */}
-                                                    <div className="space-y-1">
-                                                        {sortedDeviceKeys.length === 0 ? (
-                                                            <span className="text-[10px] text-slate-400 italic">Chưa có dữ liệu học</span>
-                                                        ) : (
-                                                            sortedDeviceKeys.map(dKey => {
-                                                                const dData = userDevices[dKey];
-                                                                const dSeconds = dData.times?.[todayStr] || 0;
-                                                                if (dSeconds === 0) return null; // Ẩn máy nếu hôm nay chưa học
-                                                                
-                                                                const dGoal = dSeconds >= 3600;
-                                                                return (
-                                                                    <div key={dKey} className={`text-[10px] font-bold px-2 py-1 rounded inline-flex items-center gap-1.5 mr-1.5 mb-1 ${dGoal ? 'bg-emerald-50 border border-emerald-100 text-emerald-700' : 'bg-slate-50 border border-slate-100 text-slate-600'}`}>
-                                                                        <Icon name="smartphone" size={10} className="text-slate-400" /> 
-                                                                        <span className="truncate max-w-[100px]">{dData.name}</span>: {formatTime(dSeconds)}
-                                                                        {dGoal && <Icon name="check-circle-2" size={10} />}
-                                                                    </div>
-                                                                );
-                                                            })
-                                                        )}
-                                                    </div>
+                                                ) : (
+                                                    <div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-slate-400 italic">Chưa học bài nào</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="flex items-center justify-between lg:justify-end gap-3 w-full lg:w-auto mt-1 lg:mt-0 pt-3 lg:pt-0 border-t border-slate-50 lg:border-none">
+                                            {/* Giao diện thời gian mới: Khối nhỏ gọn hiển thị dọc */}
+                                            <div className="flex flex-col gap-1 bg-slate-50/50 p-2 rounded-xl border border-slate-100 w-full sm:w-auto">
+                                                <div className="flex justify-between items-center sm:justify-start sm:gap-6 min-w-[140px]">
+                                                    <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Hôm nay</span>
+                                                    <span className="font-mono font-bold text-xs text-slate-700">{formatTime(s.totalToday)}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center sm:justify-start sm:gap-6">
+                                                    <span className="text-[9px] uppercase font-bold text-amber-500 tracking-wider">Tuần</span>
+                                                    <span className="font-mono font-bold text-xs text-amber-600">{formatTime(s.weeklyTotal)}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center sm:justify-start sm:gap-6">
+                                                    <span className="text-[9px] uppercase font-bold text-emerald-500 tracking-wider">Tháng</span>
+                                                    <span className="font-mono font-black text-xs text-emerald-600">{formatTime(s.monthlyTotal)}</span>
                                                 </div>
                                             </div>
                                             
                                             {deletingId === s.id ? (
-                                                <div className="flex items-center gap-2 animate-fade-in">
-                                                    <button onClick={() => confirmDelete(s.id)} className="text-[10px] font-black bg-red-500 text-white px-3 py-2 rounded-xl active:scale-95 transition-transform uppercase tracking-wider">Xóa ngay</button>
-                                                    <button onClick={() => setDeletingId(null)} className="text-[10px] font-black bg-slate-100 text-slate-500 px-3 py-2 rounded-xl active:scale-95 transition-transform uppercase tracking-wider">Hủy</button>
+                                                <div className="flex flex-col gap-1 shrink-0 ml-1">
+                                                    <button onClick={() => confirmDelete(s.id)} className="text-[9px] font-black bg-red-500 text-white px-2 py-1.5 rounded-lg active:scale-95 uppercase">Xóa</button>
+                                                    <button onClick={() => setDeletingId(null)} className="text-[9px] font-black bg-slate-200 text-slate-600 px-2 py-1.5 rounded-lg active:scale-95 uppercase">Hủy</button>
                                                 </div>
                                             ) : (
-                                                <button onClick={() => setDeletingId(s.id)} className="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors">
-                                                    <Icon name="trash-2" size={16} />
-                                                </button>
+                                                <button onClick={() => setDeletingId(s.id)} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors shrink-0 border border-transparent hover:border-red-100 ml-1"><Icon name="trash-2" size={14} /></button>
                                             )}
                                         </div>
-                                    )
-                                })}
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>
