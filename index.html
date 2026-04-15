@@ -467,7 +467,7 @@
                 { title: "Reading", subtitle: "Luyện đọc hiểu", desc: "Cải thiện kỹ năng đọc thông qua bài báo, truyện ngắn.", icon: "book-open", color: "text-indigo-600", bg: "bg-indigo-50", path: "reading.html" },
                 { title: "Bảng IPA", subtitle: "Phát âm chuẩn", desc: "Học cách đọc 44 âm trong bảng phiên âm Quốc tế.", icon: "mic-2", color: "text-blue-600", bg: "bg-blue-50", path: "ipa.html" },
                 { title: "Listening", subtitle: "Luyện nghe hiểu", desc: "Cải thiện khả năng nghe qua hội thoại thực tế.", icon: "headphones", color: "text-emerald-600", bg: "bg-emerald-50", path: "listening.html" },
-                { title: "Speaking", subtitle: "Luyện nói tự tin", desc: "Thực hành giao tiếp để tăng phản xạ nói lưu loát.", icon: "message-circle", color: "text-violet-600", bg: "bg-violet-50", path: "speaking.html" },
+                { title: "Speaking", subtitle: "Luyện nói tự tự", desc: "Thực hành giao tiếp để tăng phản xạ nói lưu loát.", icon: "message-circle", color: "text-violet-600", bg: "bg-violet-50", path: "speaking.html" },
                 { title: "Vocabulary", subtitle: "Vốn từ vựng", desc: "Ghi nhớ từ mới theo chủ đề thông qua hình ảnh.", icon: "sparkles", color: "text-amber-600", bg: "bg-amber-50", path: "vocabulary.html" },
                 { title: "Bilingual", subtitle: "Song ngữ Anh-Việt", desc: "Đọc tin tức và truyện ngắn song ngữ.", icon: "languages", color: "text-rose-600", bg: "bg-rose-50", path: "bilingual.html" },
                 { title: "Taboo Game", subtitle: "Trò chơi đố chữ", desc: "Vừa chơi vừa học, giải đố từ vựng.", icon: "gamepad-2", color: "text-orange-600", bg: "bg-orange-50", path: "taboo.html" }
@@ -562,7 +562,22 @@
             const [deletingId, setDeletingId] = useState(null);
             
             const todayStr = getTodayStr();
-            const students = users.filter(x => x.role === 'student');
+            
+            // SẮP XẾP HỌC VIÊN TỪ CAO ĐẾN THẤP THEO TỔNG THỜI GIAN
+            const students = users
+                .filter(x => x.role === 'student')
+                .map(s => {
+                    const userDevices = timeData[s.id] || {};
+                    const deviceKeys = Object.keys(userDevices);
+                    
+                    let totalToday = 0;
+                    deviceKeys.forEach(key => {
+                        totalToday += (userDevices[key].times?.[todayStr] || 0);
+                    });
+
+                    return { ...s, totalToday, userDevices, deviceKeys };
+                })
+                .sort((a, b) => b.totalToday - a.totalToday);
 
             const handleAdd = async (e) => {
                 e.preventDefault();
@@ -652,14 +667,13 @@
                                         <p className="font-bold text-xs mt-2">Chưa có học viên</p>
                                     </div>
                                 ) : students.map(s => {
-                                    // Lấy tất cả thiết bị của tài khoản này
-                                    const userDevices = timeData[s.id] || {};
-                                    const deviceKeys = Object.keys(userDevices);
+                                    const { userDevices, deviceKeys, totalToday } = s;
                                     
-                                    // Tính tổng thời gian của tất cả các máy (Tùy chọn hiển thị)
-                                    let totalToday = 0;
-                                    deviceKeys.forEach(key => {
-                                        totalToday += (userDevices[key].times?.[todayStr] || 0);
+                                    // Sắp xếp các thiết bị bên trong học viên (từ cao đến thấp)
+                                    const sortedDeviceKeys = [...deviceKeys].sort((a, b) => {
+                                        const timeA = userDevices[a].times?.[todayStr] || 0;
+                                        const timeB = userDevices[b].times?.[todayStr] || 0;
+                                        return timeB - timeA;
                                     });
 
                                     return (
@@ -667,7 +681,14 @@
                                             <div className="flex items-start gap-3 w-full">
                                                 <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-black text-sm shrink-0">{s.name.charAt(0)}</div>
                                                 <div className="flex-1">
-                                                    <p className="font-bold text-sm text-slate-800 flex items-center gap-2">{s.name}</p>
+                                                    <p className="font-bold text-sm text-slate-800 flex items-center gap-2">
+                                                        {s.name}
+                                                        {totalToday > 0 && (
+                                                            <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full whitespace-nowrap">
+                                                                Tổng: {formatTime(totalToday)}
+                                                            </span>
+                                                        )}
+                                                    </p>
                                                     <div className="flex items-center gap-2 mt-1 mb-2">
                                                         <p className="text-[10px] font-mono text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
                                                             U: {s.username} <span className="mx-1 text-slate-300">|</span> P: {s.password}
@@ -676,10 +697,10 @@
                                                     
                                                     {/* Hiển thị chi tiết từng thiết bị học */}
                                                     <div className="space-y-1">
-                                                        {deviceKeys.length === 0 ? (
+                                                        {sortedDeviceKeys.length === 0 ? (
                                                             <span className="text-[10px] text-slate-400 italic">Chưa có dữ liệu học</span>
                                                         ) : (
-                                                            deviceKeys.map(dKey => {
+                                                            sortedDeviceKeys.map(dKey => {
                                                                 const dData = userDevices[dKey];
                                                                 const dSeconds = dData.times?.[todayStr] || 0;
                                                                 if (dSeconds === 0) return null; // Ẩn máy nếu hôm nay chưa học
