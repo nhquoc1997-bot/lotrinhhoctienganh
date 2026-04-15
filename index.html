@@ -1124,13 +1124,11 @@
                                                 {/* Hiển thị To và Rõ TÊN MÁY (Tên người học) */}
                                                 <div className="flex items-center gap-2">
                                                     <p className="font-bold text-sm text-slate-800 truncate">{l.deviceName}</p>
-                                                    {/* Nhãn trạng thái Offline/Online */}
-                                                    {l.lastActive > 0 && (
-                                                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full flex items-center gap-1 border shrink-0 ${isOnline ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200 font-medium'}`}>
-                                                            <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></span>
-                                                            {isOnline ? 'Đang học' : `Offline ${getTimeAgo(l.lastActive)}`}
-                                                        </span>
-                                                    )}
+                                                    {/* Nhãn trạng thái Offline/Online luôn hiển thị */}
+                                                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full flex items-center gap-1 border shrink-0 ${isOnline ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200 font-medium'}`}>
+                                                        <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></span>
+                                                        {isOnline ? 'Đang học' : (l.lastActive > 0 ? `Offline ${getTimeAgo(l.lastActive)}` : 'Chưa có thông tin')}
+                                                    </span>
                                                 </div>
                                                 
                                                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5">
