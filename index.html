@@ -322,21 +322,35 @@
             const [deviceName, setDeviceName] = useState(() => localStorage.getItem('bob_deviceName'));
             const [tempName, setTempName] = useState('');
 
-            // TÍNH NĂNG ĐỔI TÊN THIẾT BỊ
+            // TÍNH NĂNG ĐỔI TÊN THIẾT BỊ (Đã nâng cấp: Cập nhật đồng loạt các thiết bị cùng tên cũ)
             const [isEditingName, setIsEditingName] = useState(false);
             const [editNameValue, setEditNameValue] = useState(deviceName || '');
             
-            const handleUpdateDeviceName = (e) => {
+            const handleUpdateDeviceName = async (e) => {
                 e.preventDefault();
                 if(editNameValue.trim()) {
                     const newName = editNameValue.trim();
+                    const oldNameKey = (deviceName || '').trim().toLowerCase();
+                    
                     localStorage.setItem('bob_deviceName', newName);
                     setDeviceName(newName);
                     setIsEditingName(false);
-                    // Cập nhật lên Firebase ngay lập tức để Bảng xếp hạng đổi theo
+                    
+                    // Cập nhật lên Firebase: Tìm tất cả thiết bị có tên cũ và đổi thành tên mới
                     if (db) {
                         const timeRef = doc(db, 'artifacts', appId, 'public', 'data', 'bob_timeData', user.id);
-                        setDoc(timeRef, { [deviceId]: { name: newName } }, { merge: true }).catch(console.error);
+                        const userDevices = timeData[user.id] || {};
+                        const payload = {};
+                        
+                        payload[deviceId] = { name: newName }; // Máy hiện tại
+                        
+                        Object.entries(userDevices).forEach(([dId, dev]) => {
+                            if ((dev.name || '').trim().toLowerCase() === oldNameKey) {
+                                payload[dId] = { name: newName };
+                            }
+                        });
+                        
+                        await setDoc(timeRef, payload, { merge: true }).catch(console.error);
                     }
                 }
             };
@@ -391,89 +405,89 @@
             }, [timeData, user.id, deviceId, todayStr, deviceName]);
 
             // Core Timer Loop
-            useEffect(() => {
-                if (!deviceName) return;
-                const timer = setInterval(() => {
-                    if (!isIdleRef.current) {
-                        setLocalSeconds(prev => prev + 1);
-                        
-                        // Nếu đang trong bài học, tăng thời gian cho bài đó
-                        if (activeLessonRef.current) {
-                            const path = activeLessonRef.current.path;
-                            setLocalLessonStats(prev => ({
-                                ...prev,
-                                [path]: Number(prev[path] || 0) + 1
-                            }));
-                        }
-                    }
-                }, 1000);
-                return () => clearInterval(timer);
-            }, [deviceName]);
-
-            // Save to DB
-            useEffect(() => {
-                if (!deviceName || !db) return;
-                latestLocalSeconds.current = localSeconds;
-                latestLessonStats.current = localLessonStats;
-                
-                if (localSeconds - lastSyncedSeconds.current >= 10) {
-                    const timeRef = doc(db, 'artifacts', appId, 'public', 'data', 'bob_timeData', user.id);
-                    setDoc(timeRef, { 
-                        [deviceId]: {
-                            name: deviceName,
-                            times: { [todayStr]: localSeconds },
-                            lessonStats: localLessonStats
-                        }
-                    }, { merge: true }).catch(console.error);
-                    lastSyncedSeconds.current = localSeconds;
-                }
-            }, [localSeconds, localLessonStats, user.id, todayStr, deviceId, deviceName, db]);
-
-            // THUẬT TOÁN ĐỒNG BỘ HIỂN THỊ (SỬA LỖI LỆCH GIỜ)
-            // Lấy tổng giờ của 1 mảng ngày CHỈ CHO THIẾT BỊ HIỆN TẠI (Không cộng dồn máy khác)
-            const getDeviceTotal = (datesArray) => {
+            // THUẬT TOÁN ĐỒNG BỘ HIỂN THỊ (ĐÃ NÂNG CẤP: GOM NHÓM THEO TÊN NGƯỜI HỌC)
+            // Tính tổng giờ của TẤT CẢ các thiết bị có CÙNG TÊN với máy hiện tại
+            const getProfileTotal = (datesArray) => {
                 let total = 0;
-                const deviceData = timeData[user.id]?.[deviceId];
-                if (deviceData && deviceData.times) {
-                    datesArray.forEach(date => {
-                        if (date === todayStr) {
-                            total += Number(localSeconds || 0);
-                        } else {
-                            total += Number(deviceData.times[date] || 0);
-                        }
-                    });
-                } else if (datesArray.includes(todayStr)) {
+                const userDevices = timeData[user.id] || {};
+                const myNameKey = (deviceName || '').trim().toLowerCase();
+                
+                Object.entries(userDevices).forEach(([devId, dev]) => {
+                    const devNameKey = (dev.name || '').trim().toLowerCase();
+                    if (devNameKey === myNameKey) { // Chỉ cộng dồn nếu CÙNG TÊN
+                        datesArray.forEach(date => {
+                            if (devId === deviceId && date === todayStr) {
+                                // Skip: sẽ cộng localSeconds ở dưới
+                            } else {
+                                total += Number(dev.times?.[date] || 0);
+                            }
+                        });
+                    }
+                });
+                
+                // Cộng số giây thực tế đang chạy trên máy này
+                if (datesArray.includes(todayStr)) {
                     total += Number(localSeconds || 0);
                 }
                 return total;
             };
 
-            // Tính hạng dựa trên tất cả Tên Máy (Devices)
+            // Tính hạng dựa trên tất cả Hồ sơ Tên (Gom các thiết bị trùng tên lại)
             const getRank = (datesArray) => {
-                let allDevices = [];
+                let allProfiles = [];
                 Object.keys(timeData).forEach(uid => {
                     const userDevices = timeData[uid];
-                    Object.keys(userDevices).forEach(devId => {
-                        let total = 0;
+                    const profilesInUser = {};
+                    
+                    Object.entries(userDevices).forEach(([devId, dev]) => {
+                        const nameKey = (dev.name || 'Máy ẩn danh').trim().toLowerCase();
+                        if (!profilesInUser[nameKey]) profilesInUser[nameKey] = 0;
+                        
                         datesArray.forEach(date => {
-                            if (uid === user.id && devId === deviceId && date === todayStr) {
-                                total += Number(localSeconds || 0);
+                            if (user && uid === user.id && devId === deviceId && date === todayStr) {
+                                profilesInUser[nameKey] += Number(localSeconds || 0);
                             } else {
-                                total += Number(userDevices[devId].times?.[date] || 0);
+                                profilesInUser[nameKey] += Number(dev.times?.[date] || 0);
                             }
                         });
-                        if (total > 0) allDevices.push({ id: devId, total });
+                    });
+                    
+                    // Thêm dữ liệu máy hiện tại nếu chưa lưu lên Cloud
+                    if (user && uid === user.id && localSeconds > 0 && !userDevices[deviceId]) {
+                        const myNameKey = (deviceName || 'Máy ẩn danh').trim().toLowerCase();
+                        if (!profilesInUser[myNameKey]) profilesInUser[myNameKey] = 0;
+                        if (datesArray.includes(todayStr)) profilesInUser[myNameKey] += Number(localSeconds || 0);
+                    }
+
+                    Object.entries(profilesInUser).forEach(([nameKey, total]) => {
+                        if (total > 0) allProfiles.push({ id: uid + '_' + nameKey, total });
                     });
                 });
-                allDevices.sort((a, b) => b.total - a.total);
-                const index = allDevices.findIndex(d => d.id === deviceId);
+                
+                allProfiles.sort((a, b) => b.total - a.total);
+                const myTargetId = user.id + '_' + (deviceName || 'Máy ẩn danh').trim().toLowerCase();
+                const index = allProfiles.findIndex(p => p.id === myTargetId);
                 return index !== -1 ? index + 1 : 0;
             };
 
-            // Lấy phân bổ % của môn học (Chỉ của máy hiện tại)
+            // Lấy phân bổ % của môn học (Gom theo TÊN HỌC VIÊN)
             const getMyLessonDistribution = () => {
+                const userDevices = timeData[user.id] || {};
+                const myNameKey = (deviceName || '').trim().toLowerCase();
                 const aggregatedStats = {};
+
+                // Ưu tiên local stats cho máy hiện tại
                 Object.entries(localLessonStats).forEach(([path, sec]) => { aggregatedStats[path] = Number(sec); });
+
+                // Lấy thêm stats từ các máy khác CÙNG TÊN
+                Object.entries(userDevices).forEach(([devId, dev]) => {
+                    const devNameKey = (dev.name || '').trim().toLowerCase();
+                    if (devNameKey === myNameKey && devId !== deviceId && dev.lessonStats) {
+                        Object.entries(dev.lessonStats).forEach(([path, sec]) => {
+                            aggregatedStats[path] = (aggregatedStats[path] || 0) + Number(sec);
+                        });
+                    }
+                });
 
                 const totalLessonTime = Object.values(aggregatedStats).reduce((sum, val) => sum + val, 0);
                 if (totalLessonTime === 0) return [];
@@ -484,9 +498,9 @@
                     .slice(0, 3);
             };
 
-            const myDailyTotal = getDeviceTotal([todayStr]); 
-            const myWeeklyTotal = getDeviceTotal(weekDates);
-            const myMonthlyTotal = getDeviceTotal(monthDates);
+            const myDailyTotal = getProfileTotal([todayStr]); 
+            const myWeeklyTotal = getProfileTotal(weekDates);
+            const myMonthlyTotal = getProfileTotal(monthDates);
             
             const myWeekRank = getRank(weekDates);
             const myMonthRank = getRank(monthDates);
@@ -521,11 +535,11 @@
                 return (
                     <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
                         <div className="bg-white p-8 rounded-[2rem] w-full max-w-sm shadow-2xl animate-fade-up">
-                            <div className="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mb-6"><Icon name="monitor-smartphone" size={28} /></div>
-                            <h3 className="font-black text-2xl mb-2 text-slate-800">Tên thiết bị</h3>
-                            <p className="text-sm text-slate-500 mb-6">Nhập tên máy để phân biệt khi bạn dùng nhiều thiết bị nhé.</p>
+                            <div className="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mb-6"><Icon name="contact" size={28} /></div>
+                            <h3 className="font-black text-2xl mb-2 text-slate-800">Tên hiển thị của bạn</h3>
+                            <p className="text-sm text-slate-500 mb-6 bg-amber-50 p-3 rounded-xl border border-amber-100 text-amber-800"><b className="font-bold">Lưu ý quan trọng:</b> Hãy nhập đúng 1 tên duy nhất trên mọi thiết bị (điện thoại, máy tính...) để hệ thống tự động cộng dồn thời gian chung cho bạn nhé!</p>
                             <form onSubmit={(e) => { e.preventDefault(); if(tempName.trim()) { localStorage.setItem('bob_deviceName', tempName.trim()); setDeviceName(tempName.trim()); }}}>
-                                <input type="text" placeholder="VD: Laptop của Tuấn..." value={tempName} onChange={e => setTempName(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-indigo-500 text-sm font-medium mb-4" required autoFocus />
+                                <input type="text" placeholder="VD: Hùng, Lan, Tài..." value={tempName} onChange={e => setTempName(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-indigo-500 text-sm font-medium mb-4" required autoFocus />
                                 <button className="w-full py-4 bg-slate-900 text-white font-black rounded-2xl shadow-lg hover:bg-indigo-600 active:scale-95 transition-all uppercase tracking-wider">Bắt đầu đếm giờ</button>
                             </form>
                         </div>
@@ -689,47 +703,63 @@
                             ))}
                         </div>
                     )}
-                    {currentTab === 'leaderboard_week' && <Leaderboard title="Vinh danh Tuần này" subtitle="Top học viên chăm chỉ nhất tuần" users={users} timeData={timeData} dates={weekDates} label="Thời gian tuần" currentUser={user} currentDevice={deviceId} localSeconds={localSeconds} todayStr={todayStr} />}
-                    {currentTab === 'leaderboard_month' && <Leaderboard title="Tổng kết Tháng" subtitle="Vinh danh học viên xuất sắc" users={users} timeData={timeData} dates={monthDates} label="Thời gian tháng" currentUser={user} currentDevice={deviceId} localSeconds={localSeconds} todayStr={todayStr} />}
+                    {currentTab === 'leaderboard_week' && <Leaderboard title="Vinh danh Tuần này" subtitle="Top học viên chăm chỉ nhất tuần" users={users} timeData={timeData} dates={weekDates} label="Thời gian tuần" currentUser={user} currentDevice={deviceId} localSeconds={localSeconds} todayStr={todayStr} deviceName={deviceName} />}
+                    {currentTab === 'leaderboard_month' && <Leaderboard title="Tổng kết Tháng" subtitle="Vinh danh học viên xuất sắc" users={users} timeData={timeData} dates={monthDates} label="Thời gian tháng" currentUser={user} currentDevice={deviceId} localSeconds={localSeconds} todayStr={todayStr} deviceName={deviceName} />}
                 </div>
             );
         };
 
-        // --- LEADERBOARD COMPONENT (SỬA LỖI ĐỒNG BỘ) ---
-        const Leaderboard = ({ title, subtitle, users, timeData, dates, label, currentUser, currentDevice, localSeconds, todayStr }) => {
-            // Thay đổi xếp hạng: Duyệt qua toàn bộ từng TÊN MÁY (Device) thay vì chỉ Tài khoản
-            let allDevices = [];
+        // --- LEADERBOARD COMPONENT (ĐÃ NÂNG CẤP: GOM NHÓM THEO TÊN NGƯỜI HỌC) ---
+        const Leaderboard = ({ title, subtitle, users, timeData, dates, label, currentUser, currentDevice, localSeconds, todayStr, deviceName }) => {
+            
+            let allProfiles = [];
             
             Object.keys(timeData).forEach(uid => {
                 const userDevices = timeData[uid];
-                Object.keys(userDevices).forEach(devId => {
-                    const dev = userDevices[devId];
-                    let total = 0;
+                const profilesInUser = {};
+                
+                // Gom tất cả thiết bị trùng tên vào 1 hồ sơ duy nhất
+                Object.entries(userDevices).forEach(([devId, dev]) => {
+                    const nameKey = (dev.name || 'Máy ẩn danh').trim().toLowerCase();
+                    const displayName = dev.name || 'Máy ẩn danh';
+                    
+                    if (!profilesInUser[nameKey]) {
+                        profilesInUser[nameKey] = { total: 0, displayName: displayName };
+                    }
+                    
                     dates.forEach(date => {
                         if (currentUser && uid === currentUser.id && devId === currentDevice && date === todayStr) {
-                            total += Number(localSeconds || 0);
+                            profilesInUser[nameKey].total += Number(localSeconds || 0);
                         } else {
-                            total += Number(dev.times?.[date] || 0);
+                            profilesInUser[nameKey].total += Number(dev.times?.[date] || 0);
                         }
                     });
-                    
-                    if (total > 0) {
+                });
+                
+                // Dự phòng: Thêm máy hiện tại vào tính toán nếu máy này chưa kịp push lên Firebase
+                if (currentUser && uid === currentUser.id && localSeconds > 0 && !userDevices[currentDevice]) {
+                    const nameKey = (deviceName || 'Máy ẩn danh').trim().toLowerCase();
+                    if (!profilesInUser[nameKey]) profilesInUser[nameKey] = { total: 0, displayName: deviceName || 'Máy ẩn danh' };
+                    if (dates.includes(todayStr)) profilesInUser[nameKey].total += Number(localSeconds || 0);
+                }
+                
+                Object.entries(profilesInUser).forEach(([nameKey, data]) => {
+                    if (data.total > 0) {
                         const accountInfo = users.find(u => u.id === uid);
-                        // Chỉ hiển thị thiết bị nếu tài khoản của học viên đó vẫn còn tồn tại (Chống lỗi UNKNOWN)
                         if (accountInfo) {
-                            allDevices.push({
-                                id: devId,
+                            allProfiles.push({
+                                id: uid + '_' + nameKey,
                                 uid: uid,
-                                name: dev.name || 'Máy ẩn danh',
+                                name: data.displayName,
                                 accountName: accountInfo.name,
-                                total: total
+                                total: data.total
                             });
                         }
                     }
                 });
             });
             
-            const ranking = allDevices.sort((a, b) => b.total - a.total);
+            const ranking = allProfiles.sort((a, b) => b.total - a.total);
 
             return (
                 <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 sm:p-8 animate-fade-up">
@@ -791,25 +821,7 @@
             const weekDates = useMemo(() => getCurrentWeekDates(), []);
             const monthDates = useMemo(() => getCurrentMonthDates(), []);
             
-            // Lấy bài học nhiều nhất theo TỪNG THIẾT BỊ (Tên học viên)
-            const getDeviceTopLesson = (userId, devId) => {
-                const device = timeData[userId]?.[devId];
-                if (!device || !device.lessonStats) return null;
-                
-                let stats = {};
-                Object.entries(device.lessonStats).forEach(([path, sec]) => { 
-                    stats[path] = Number(sec); 
-                });
-                
-                const total = Object.values(stats).reduce((sum, val) => sum + val, 0);
-                if (total === 0) return null;
-                
-                // Sort to get top 1
-                const topPath = Object.keys(stats).sort((a, b) => stats[b] - stats[a])[0];
-                return { path: topPath, percent: Math.round((stats[topPath] / total) * 100) };
-            };
-
-            // TÁCH TỪNG TÊN THIẾT BỊ THÀNH MỘT DÒNG ĐỘC LẬP TRÊN BẢNG ADMIN
+            // TÁCH VÀ GOM TỪNG TÊN THIẾT BỊ THÀNH MỘT HỒ SƠ ĐỘC LẬP TRÊN BẢNG ADMIN
             let allLearners = [];
             users.filter(x => x.role === 'student').forEach(s => {
                 const userDevices = timeData[s.id] || {};
@@ -831,27 +843,58 @@
                         topLesson: null
                     });
                 } else {
-                    // Tách riêng từng bạn trong 1 tài khoản
+                    const profiles = {};
+                    
+                    // Gom thiết bị theo tên giống nhau
                     deviceKeys.forEach(devId => {
                         const dev = userDevices[devId];
-                        let totalToday = Number(dev.times?.[todayStr] || 0);
-                        let weeklyTotal = 0; let monthlyTotal = 0;
-                        weekDates.forEach(date => { weeklyTotal += Number(dev.times?.[date] || 0); });
-                        monthDates.forEach(date => { monthlyTotal += Number(dev.times?.[date] || 0); });
+                        const nameKey = (dev.name || 'Máy ẩn danh').trim().toLowerCase();
+                        
+                        if (!profiles[nameKey]) {
+                            profiles[nameKey] = {
+                                originalName: dev.name || 'Máy ẩn danh',
+                                devIds: [], // Lưu trữ danh sách các mã máy để xoá đồng bộ
+                                totalToday: 0,
+                                weeklyTotal: 0,
+                                monthlyTotal: 0,
+                                lessonStats: {}
+                            };
+                        }
+                        
+                        profiles[nameKey].devIds.push(devId);
+                        profiles[nameKey].totalToday += Number(dev.times?.[todayStr] || 0);
+                        weekDates.forEach(date => { profiles[nameKey].weeklyTotal += Number(dev.times?.[date] || 0); });
+                        monthDates.forEach(date => { profiles[nameKey].monthlyTotal += Number(dev.times?.[date] || 0); });
+                        
+                        if (dev.lessonStats) {
+                            Object.entries(dev.lessonStats).forEach(([path, sec]) => {
+                                profiles[nameKey].lessonStats[path] = (profiles[nameKey].lessonStats[path] || 0) + Number(sec);
+                            });
+                        }
+                    });
+                    
+                    // Chuyển đổi thành mảng để hiển thị
+                    Object.entries(profiles).forEach(([nameKey, pData]) => {
+                        let topLesson = null;
+                        const totalStats = Object.values(pData.lessonStats).reduce((sum, val) => sum + val, 0);
+                        if (totalStats > 0) {
+                            const topPath = Object.keys(pData.lessonStats).sort((a, b) => pData.lessonStats[b] - pData.lessonStats[a])[0];
+                            topLesson = { path: topPath, percent: Math.round((pData.lessonStats[topPath] / totalStats) * 100) };
+                        }
                         
                         allLearners.push({
-                            uniqueId: s.id + '_' + devId,
+                            uniqueId: s.id + '_' + nameKey,
                             accountId: s.id,
-                            deviceId: devId,
+                            devIds: pData.devIds,
                             isDeviceRow: true,
                             accountName: s.name,
                             username: s.username,
                             password: s.password,
-                            deviceName: dev.name || 'Máy ẩn danh',
-                            totalToday,
-                            weeklyTotal,
-                            monthlyTotal,
-                            topLesson: getDeviceTopLesson(s.id, devId)
+                            deviceName: pData.originalName,
+                            totalToday: pData.totalToday,
+                            weeklyTotal: pData.weeklyTotal,
+                            monthlyTotal: pData.monthlyTotal,
+                            topLesson: topLesson
                         });
                     });
                 }
@@ -886,12 +929,14 @@
                 } catch(err) {}
             };
 
-            // XÓA 1 TÊN MÁY CỤ THỂ (Giữ nguyên các bạn khác dùng chung tài khoản)
-            const handleDeleteDevice = async (accountId, deviceId) => {
+            // XÓA TÊN HỒ SƠ (Xóa tất cả các thiết bị dùng chung tên đó)
+            const handleDeleteProfile = async (accountId, devIds) => {
                 try {
                     if (db) {
                         const timeRef = doc(db, 'artifacts', appId, 'public', 'data', 'bob_timeData', accountId);
-                        await updateDoc(timeRef, { [deviceId]: deleteField() });
+                        const updates = {};
+                        devIds.forEach(id => { updates[id] = deleteField(); });
+                        await updateDoc(timeRef, updates);
                     }
                     setDeletingId(null);
                 } catch(err) { console.error(err); }
@@ -1019,7 +1064,7 @@
                                             {deletingId === l.uniqueId ? (
                                                 <div className="flex flex-row sm:flex-col gap-2 shrink-0 w-full sm:w-auto mt-1 sm:mt-0">
                                                     {/* Tính năng xóa Tên hoặc Xóa cả tài khoản */}
-                                                    {l.isDeviceRow && <button onClick={() => handleDeleteDevice(l.accountId, l.deviceId)} className="flex-1 sm:flex-none text-[9px] font-black bg-orange-500 text-white px-2 py-2 sm:py-1 rounded-lg sm:rounded active:scale-95 uppercase text-center" title="Chỉ xóa tên máy này khỏi bảng">Xóa Tên</button>}
+                                                    {l.isDeviceRow && <button onClick={() => handleDeleteProfile(l.accountId, l.devIds)} className="flex-1 sm:flex-none text-[9px] font-black bg-orange-500 text-white px-2 py-2 sm:py-1 rounded-lg sm:rounded active:scale-95 uppercase text-center" title="Xóa tên hồ sơ này khỏi bảng">Xóa Tên</button>}
                                                     <button onClick={() => handleDeleteAccount(l.accountId)} className="flex-1 sm:flex-none text-[9px] font-black bg-red-600 text-white px-2 py-2 sm:py-1 rounded-lg sm:rounded active:scale-95 uppercase text-center" title="Xóa tài khoản gốc">Xóa TK</button>
                                                     <button onClick={() => setDeletingId(null)} className="flex-1 sm:flex-none text-[9px] font-black bg-slate-200 text-slate-600 px-2 py-2 sm:py-1 rounded-lg sm:rounded active:scale-95 uppercase text-center">Hủy</button>
                                                 </div>
