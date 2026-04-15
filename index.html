@@ -77,7 +77,6 @@
     <script type="text/babel" data-type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        // Bổ sung thêm updateDoc và deleteField để hỗ trợ tính năng xóa từng tên máy độc lập
         import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, updateDoc, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const { useState, useEffect, useRef, useMemo } = React;
@@ -165,6 +164,18 @@
             const m = Math.floor((totalSeconds % 3600) / 60);
             const s = totalSeconds % 60;
             return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        };
+
+        const getTimeAgo = (timestamp) => {
+            if (!timestamp) return "Chưa rõ";
+            const diff = Date.now() - timestamp;
+            const minutes = Math.floor(diff / 60000);
+            if (minutes < 2) return "Vừa xong";
+            if (minutes < 60) return `${minutes} phút`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours} giờ`;
+            const days = Math.floor(hours / 24);
+            return `${days} ngày`;
         };
 
         // --- ICON COMPONENT ---
@@ -322,32 +333,55 @@
             const [deviceName, setDeviceName] = useState(() => localStorage.getItem('bob_deviceName'));
             const [tempName, setTempName] = useState('');
 
-            // TÍNH NĂNG ĐỔI TÊN THIẾT BỊ (Đã nâng cấp: Cập nhật đồng loạt các thiết bị cùng tên cũ)
+            // TÍNH NĂNG ĐỔI TÊN THIẾT BỊ (Cập nhật đồng loạt và Tự động đồng bộ)
             const [isEditingName, setIsEditingName] = useState(false);
             const [editNameValue, setEditNameValue] = useState(deviceName || '');
+            
+            // TỰ ĐỘNG LẤY HOẶC ĐỒNG BỘ TÊN TỪ CLOUD XUỐNG
+            useEffect(() => {
+                if (timeData[user.id]) {
+                    const userDevices = timeData[user.id];
+                    
+                    // 1. Nếu thiết bị mới chưa có tên, tự động lấy tên cũ đã có của tài khoản
+                    if (!deviceName) {
+                        const existingNames = Object.values(userDevices).map(d => d.name).filter(n => n && n !== 'Máy ẩn danh');
+                        if (existingNames.length > 0) {
+                            const autoName = existingNames[0];
+                            localStorage.setItem('bob_deviceName', autoName);
+                            setDeviceName(autoName);
+                            if (db) setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_timeData', user.id), { [deviceId]: { name: autoName } }, { merge: true }).catch(console.error);
+                        }
+                    } 
+                    // 2. Nếu Admin hoặc thiết bị khác đã ép đổi tên, tự động đồng bộ xuống máy này
+                    else if (userDevices[deviceId] && userDevices[deviceId].name) {
+                        const dbName = userDevices[deviceId].name;
+                        if (dbName !== deviceName) {
+                            localStorage.setItem('bob_deviceName', dbName);
+                            setDeviceName(dbName);
+                            setEditNameValue(dbName);
+                        }
+                    }
+                }
+            }, [deviceName, timeData, user.id, db, deviceId]);
             
             const handleUpdateDeviceName = async (e) => {
                 e.preventDefault();
                 if(editNameValue.trim()) {
                     const newName = editNameValue.trim();
-                    const oldNameKey = (deviceName || '').trim().toLowerCase();
                     
                     localStorage.setItem('bob_deviceName', newName);
                     setDeviceName(newName);
                     setIsEditingName(false);
                     
-                    // Cập nhật lên Firebase: Tìm tất cả thiết bị có tên cũ và đổi thành tên mới
+                    // Cập nhật lên Firebase: Ép đổi tên cho TẤT CẢ thiết bị (PC, Phone) của tài khoản này
                     if (db) {
                         const timeRef = doc(db, 'artifacts', appId, 'public', 'data', 'bob_timeData', user.id);
                         const userDevices = timeData[user.id] || {};
                         const payload = {};
                         
-                        payload[deviceId] = { name: newName }; // Máy hiện tại
-                        
-                        Object.entries(userDevices).forEach(([dId, dev]) => {
-                            if ((dev.name || '').trim().toLowerCase() === oldNameKey) {
-                                payload[dId] = { name: newName };
-                            }
+                        payload[deviceId] = { name: newName };
+                        Object.keys(userDevices).forEach(dId => {
+                            payload[dId] = { name: newName };
                         });
                         
                         await setDoc(timeRef, payload, { merge: true }).catch(console.error);
@@ -387,25 +421,64 @@
                 resetIdleTimer();
                 return () => {
                     clearTimeout(idleTimeoutRef.current);
-                    window.removeEventListener('mousemove', resetIdleTimer); window.removeEventListener('keydown', resetIdleTimer);
-                    window.removeEventListener('scroll', resetIdleTimer); window.removeEventListener('touchstart', resetIdleTimer);
+                    window.removeEventListener('mousemove', resetIdleTimer);
+                    window.removeEventListener('keydown', resetIdleTimer);
+                    window.removeEventListener('scroll', resetIdleTimer);
+                    window.removeEventListener('touchstart', resetIdleTimer);
                 };
             }, [deviceName, isIdle]);
 
-            // Sync from DB if updated elsewhere
+            // Đồng bộ dữ liệu local từ Cloud
             useEffect(() => {
                 const dbSeconds = Number(timeData[user.id]?.[deviceId]?.times?.[todayStr] || 0);
                 if (deviceName && dbSeconds > localSeconds) {
                     setLocalSeconds(dbSeconds);
                     lastSyncedSeconds.current = dbSeconds;
-                    if(timeData[user.id][deviceId].lessonStats) {
+                    if(timeData[user.id]?.[deviceId]?.lessonStats) {
                         setLocalLessonStats(timeData[user.id][deviceId].lessonStats);
                     }
                 }
             }, [timeData, user.id, deviceId, todayStr, deviceName]);
 
-            // Core Timer Loop
-            // THUẬT TOÁN ĐỒNG BỘ HIỂN THỊ (ĐÃ NÂNG CẤP: GOM NHÓM THEO TÊN NGƯỜI HỌC)
+            // Vòng lặp đếm giờ Timer
+            useEffect(() => {
+                if (!deviceName) return;
+                const timer = setInterval(() => {
+                    if (!isIdleRef.current) {
+                        setLocalSeconds(prev => prev + 1);
+                        
+                        if (activeLessonRef.current) {
+                            const path = activeLessonRef.current.path;
+                            setLocalLessonStats(prev => ({
+                                ...prev,
+                                [path]: Number(prev[path] || 0) + 1
+                            }));
+                        }
+                    }
+                }, 1000);
+                return () => clearInterval(timer);
+            }, [deviceName]);
+
+            // Lưu dữ liệu lên Cloud
+            useEffect(() => {
+                if (!deviceName || !db) return;
+                latestLocalSeconds.current = localSeconds;
+                latestLessonStats.current = localLessonStats;
+                
+                if (localSeconds - lastSyncedSeconds.current >= 10) {
+                    const timeRef = doc(db, 'artifacts', appId, 'public', 'data', 'bob_timeData', user.id);
+                    setDoc(timeRef, { 
+                        [deviceId]: {
+                            name: deviceName,
+                            times: { [todayStr]: localSeconds },
+                            lessonStats: localLessonStats,
+                            lastActive: Date.now()
+                        }
+                    }, { merge: true }).catch(console.error);
+                    lastSyncedSeconds.current = localSeconds;
+                }
+            }, [localSeconds, localLessonStats, user.id, todayStr, deviceId, deviceName, db]);
+
             // Tính tổng giờ của TẤT CẢ các thiết bị có CÙNG TÊN với máy hiện tại
             const getProfileTotal = (datesArray) => {
                 let total = 0;
@@ -840,7 +913,8 @@
                         totalToday: 0,
                         weeklyTotal: 0,
                         monthlyTotal: 0,
-                        topLesson: null
+                        topLesson: null,
+                        lastActive: 0
                     });
                 } else {
                     const profiles = {};
@@ -857,11 +931,13 @@
                                 totalToday: 0,
                                 weeklyTotal: 0,
                                 monthlyTotal: 0,
-                                lessonStats: {}
+                                lessonStats: {},
+                                lastActive: 0
                             };
                         }
                         
                         profiles[nameKey].devIds.push(devId);
+                        profiles[nameKey].lastActive = Math.max(profiles[nameKey].lastActive, dev.lastActive || 0);
                         profiles[nameKey].totalToday += Number(dev.times?.[todayStr] || 0);
                         weekDates.forEach(date => { profiles[nameKey].weeklyTotal += Number(dev.times?.[date] || 0); });
                         monthDates.forEach(date => { profiles[nameKey].monthlyTotal += Number(dev.times?.[date] || 0); });
@@ -894,7 +970,8 @@
                             totalToday: pData.totalToday,
                             weeklyTotal: pData.weeklyTotal,
                             monthlyTotal: pData.monthlyTotal,
-                            topLesson: topLesson
+                            topLesson: topLesson,
+                            lastActive: pData.lastActive
                         });
                     });
                 }
@@ -939,6 +1016,21 @@
                         await updateDoc(timeRef, updates);
                     }
                     setDeletingId(null);
+                } catch(err) { console.error(err); }
+            };
+
+            // ÉP ĐỒNG BỘ TÊN CHO TOÀN BỘ TÀI KHOẢN (Gộp tất cả thời gian về 1 tên)
+            const handleForceSyncName = async (accountId, correctName) => {
+                try {
+                    if (db && timeData[accountId]) {
+                        const userDevices = timeData[accountId];
+                        const payload = {};
+                        Object.keys(userDevices).forEach(dId => {
+                            payload[dId] = { name: correctName };
+                        });
+                        const timeRef = doc(db, 'artifacts', appId, 'public', 'data', 'bob_timeData', accountId);
+                        await setDoc(timeRef, payload, { merge: true });
+                    }
                 } catch(err) { console.error(err); }
             };
 
@@ -1017,20 +1109,49 @@
                             
                             <div className="flex-1 overflow-y-auto custom-scrollbar p-3 sm:p-4 space-y-3">
                                 {allLearners.length === 0 ? <div className="h-full flex flex-col items-center justify-center opacity-40"><Icon name="user-x" size={48} className="mb-3" /><p className="font-bold text-sm">Chưa có học viên nào</p></div> 
-                                : allLearners.map(l => (
+                                : allLearners.map(l => {
+                                    const isOnline = l.lastActive && (Date.now() - l.lastActive < 120000); // Dưới 2 phút coi như đang Online
+                                    
+                                    return (
                                     <div key={l.uniqueId} className="p-4 flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center bg-white border border-slate-100 rounded-2xl hover:border-indigo-200 hover:shadow-md transition-all">
                                         <div className="flex items-start sm:items-center gap-3 w-full lg:w-auto flex-1 min-w-0">
-                                            <div className="w-10 h-10 bg-gradient-to-tr from-indigo-100 to-indigo-50 text-indigo-600 rounded-full flex items-center justify-center font-black text-base shrink-0 border border-indigo-100">
+                                            <div className="w-10 h-10 bg-gradient-to-tr from-indigo-100 to-indigo-50 text-indigo-600 rounded-full flex items-center justify-center font-black text-base shrink-0 border border-indigo-100 relative">
                                                 {l.deviceName.charAt(0).toUpperCase()}
+                                                {/* Chấm xanh lá cây (hiển thị khi Online) */}
+                                                {isOnline && <div className="absolute top-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full animate-pulse"></div>}
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 {/* Hiển thị To và Rõ TÊN MÁY (Tên người học) */}
-                                                <p className="font-bold text-sm text-slate-800 truncate">{l.deviceName}</p>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="font-bold text-sm text-slate-800 truncate">{l.deviceName}</p>
+                                                    {/* Nhãn trạng thái Offline/Online */}
+                                                    {l.lastActive > 0 && (
+                                                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full flex items-center gap-1 border shrink-0 ${isOnline ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200 font-medium'}`}>
+                                                            <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></span>
+                                                            {isOnline ? 'Đang học' : `Offline ${getTimeAgo(l.lastActive)}`}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                
                                                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5">
                                                     <p className="text-[10px] font-medium text-slate-500 truncate w-full sm:w-auto">
                                                         TK: <span className="font-bold text-slate-700">{l.accountName}</span> <span className="mx-0.5 hidden sm:inline">|</span><br className="sm:hidden" /> MK: {l.password}
                                                     </p>
                                                 </div>
+                                                
+                                                {/* Nút ép đồng bộ tên nếu tài khoản bị gõ sai nhiều tên khác nhau */}
+                                                {(() => {
+                                                    const accountDevices = timeData[l.accountId] || {};
+                                                    const hasMultipleNames = Object.values(accountDevices).some(dev => dev.name && dev.name.trim().toLowerCase() !== l.deviceName.trim().toLowerCase());
+                                                    if (hasMultipleNames) {
+                                                        return (
+                                                            <button onClick={() => handleForceSyncName(l.accountId, l.deviceName)} className="mt-1.5 flex items-center gap-1 text-[9px] font-bold bg-indigo-100 text-indigo-700 px-2 py-1 rounded hover:bg-indigo-200 transition-colors w-fit shadow-sm">
+                                                                <Icon name="link" size={10} /> Đồng bộ mọi thiết bị về tên này
+                                                            </button>
+                                                        );
+                                                    }
+                                                    return null;
+                                                })()}
                                                 
                                                 {/* Hiển thị bài học yêu thích của CÁ NHÂN NGƯỜI ĐÓ */}
                                                 {l.topLesson ? (
@@ -1073,7 +1194,7 @@
                                             )}
                                         </div>
                                     </div>
-                                ))}
+                                )})}
                             </div>
                         </div>
                     </div>
