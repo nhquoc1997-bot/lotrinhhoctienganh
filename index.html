@@ -77,7 +77,8 @@
     <script type="text/babel" data-type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // Bổ sung thêm updateDoc và deleteField để hỗ trợ tính năng xóa từng tên máy độc lập
+        import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, updateDoc, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const { useState, useEffect, useRef, useMemo } = React;
 
@@ -617,23 +618,23 @@
                         <div className="w-full h-px bg-gradient-to-r from-transparent via-slate-700 to-transparent relative z-10"></div>
 
                         {/* Bottom Section: Time Stats & Lesson Distribution */}
-                        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
                             {/* Time Blocks */}
-                            <div className="grid grid-cols-3 gap-3">
-                                <div className="bg-white/5 backdrop-blur-md border border-white/10 p-4 rounded-2xl flex flex-col justify-center text-center">
+                            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                                <div className="bg-white/5 backdrop-blur-md border border-white/10 p-2 sm:p-4 rounded-xl sm:rounded-2xl flex flex-col justify-center text-center">
                                     <Icon name="sun" size={16} className="text-indigo-400 mx-auto mb-1 opacity-70" />
-                                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Hôm nay</p>
-                                    <p className="font-mono font-black text-lg text-white">{formatTime(myDailyTotal)}</p>
+                                    <p className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Hôm nay</p>
+                                    <p className="font-mono font-black text-sm sm:text-lg text-white">{formatTime(myDailyTotal)}</p>
                                 </div>
-                                <div className="bg-white/5 backdrop-blur-md border border-white/10 p-4 rounded-2xl flex flex-col justify-center text-center">
+                                <div className="bg-white/5 backdrop-blur-md border border-white/10 p-2 sm:p-4 rounded-xl sm:rounded-2xl flex flex-col justify-center text-center">
                                     <Icon name="calendar" size={16} className="text-amber-400 mx-auto mb-1 opacity-70" />
-                                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Tuần này</p>
-                                    <p className="font-mono font-black text-lg text-amber-400">{formatTime(myWeeklyTotal)}</p>
+                                    <p className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Tuần này</p>
+                                    <p className="font-mono font-black text-sm sm:text-lg text-amber-400">{formatTime(myWeeklyTotal)}</p>
                                 </div>
-                                <div className="bg-white/5 backdrop-blur-md border border-white/10 p-4 rounded-2xl flex flex-col justify-center text-center">
+                                <div className="bg-white/5 backdrop-blur-md border border-white/10 p-2 sm:p-4 rounded-xl sm:rounded-2xl flex flex-col justify-center text-center">
                                     <Icon name="calendar-days" size={16} className="text-emerald-400 mx-auto mb-1 opacity-70" />
-                                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Tháng này</p>
-                                    <p className="font-mono font-black text-lg text-emerald-400">{formatTime(myMonthlyTotal)}</p>
+                                    <p className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Tháng này</p>
+                                    <p className="font-mono font-black text-sm sm:text-lg text-emerald-400">{formatTime(myMonthlyTotal)}</p>
                                 </div>
                             </div>
 
@@ -664,10 +665,10 @@
                     </div>
 
                     {/* Tabs Navigation */}
-                    <div className="flex flex-wrap gap-2 bg-slate-200/50 p-1.5 rounded-2xl w-fit">
-                        <button onClick={() => setCurrentTab('lessons')} className={`px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all ${currentTab === 'lessons' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}><Icon name="book-open" size={16} /> Bài học</button>
-                        <button onClick={() => setCurrentTab('leaderboard_week')} className={`px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all ${currentTab === 'leaderboard_week' ? 'bg-white text-amber-500 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}><Icon name="trophy" size={16} /> BXH Tuần</button>
-                        <button onClick={() => setCurrentTab('leaderboard_month')} className={`px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all ${currentTab === 'leaderboard_month' ? 'bg-white text-emerald-500 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}><Icon name="award" size={16} /> BXH Tháng</button>
+                    <div className="flex flex-wrap gap-2 bg-slate-200/50 p-1.5 rounded-2xl w-full sm:w-fit">
+                        <button onClick={() => setCurrentTab('lessons')} className={`flex-1 sm:flex-none justify-center px-2 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 transition-all ${currentTab === 'lessons' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}><Icon name="book-open" size={16} /> Bài học</button>
+                        <button onClick={() => setCurrentTab('leaderboard_week')} className={`flex-1 sm:flex-none justify-center px-2 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 transition-all ${currentTab === 'leaderboard_week' ? 'bg-white text-amber-500 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}><Icon name="trophy" size={16} /> BXH Tuần</button>
+                        <button onClick={() => setCurrentTab('leaderboard_month')} className={`flex-1 sm:flex-none justify-center px-2 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 transition-all ${currentTab === 'leaderboard_month' ? 'bg-white text-emerald-500 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}><Icon name="award" size={16} /> BXH Tháng</button>
                     </div>
 
                     {/* Tab Content */}
@@ -751,19 +752,19 @@
                                 const rankIcon = index === 0 ? 'crown' : index === 1 ? 'medal' : index === 2 ? 'award' : '';
                                 
                                 return (
-                                    <div key={student.id + index} className={`rank-card p-4 rounded-2xl flex items-center justify-between ${rankClass}`}>
-                                        <div className="flex items-center gap-4 overflow-hidden">
-                                            <div className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center font-black text-xl icon-bg ${!isTop3 ? 'bg-white text-slate-400 border border-slate-200' : ''}`}>
-                                                {isTop3 ? <Icon name={rankIcon} size={24} /> : `#${index + 1}`}
+                                    <div key={student.id + index} className={`rank-card p-3 sm:p-4 rounded-xl sm:rounded-2xl flex items-center justify-between gap-2 sm:gap-4 ${rankClass}`}>
+                                        <div className="flex items-center gap-3 sm:gap-4 overflow-hidden flex-1 min-w-0">
+                                            <div className={`w-10 h-10 sm:w-12 sm:h-12 shrink-0 rounded-xl flex items-center justify-center font-black text-lg sm:text-xl icon-bg ${!isTop3 ? 'bg-white text-slate-400 border border-slate-200' : ''}`}>
+                                                {isTop3 ? <Icon name={rankIcon} size={20} className="sm:w-6 sm:h-6" /> : `#${index + 1}`}
                                             </div>
-                                            <div className="min-w-0">
-                                                <h3 className={`font-extrabold truncate ${index === 0 ? 'text-lg' : 'text-base'}`}>{student.name}</h3>
-                                                <p className="text-[10px] font-bold mt-0.5 opacity-80 uppercase tracking-wider text-slate-500 truncate">Học viên: {student.accountName}</p>
+                                            <div className="min-w-0 flex-1">
+                                                <h3 className={`font-extrabold truncate ${index === 0 ? 'text-base sm:text-lg' : 'text-sm sm:text-base'}`}>{student.name}</h3>
+                                                <p className="text-[9px] sm:text-[10px] font-bold mt-0.5 opacity-80 uppercase tracking-wider text-slate-500 truncate">Học viên: {student.accountName}</p>
                                             </div>
                                         </div>
-                                        <div className="text-right shrink-0 ml-4">
-                                            <p className={`font-mono font-black ${index === 0 ? 'text-xl' : 'text-lg'}`}>{formatTime(student.total)}</p>
-                                            <p className="text-[10px] uppercase font-bold opacity-70 tracking-widest mt-0.5">{label}</p>
+                                        <div className="text-right shrink-0 ml-2 sm:ml-4">
+                                            <p className={`font-mono font-black ${index === 0 ? 'text-lg sm:text-xl' : 'text-base sm:text-lg'}`}>{formatTime(student.total)}</p>
+                                            <p className="text-[8px] sm:text-[10px] uppercase font-bold opacity-70 tracking-widest mt-0.5">{label}</p>
                                         </div>
                                     </div>
                                 );
@@ -790,16 +791,14 @@
             const weekDates = useMemo(() => getCurrentWeekDates(), []);
             const monthDates = useMemo(() => getCurrentMonthDates(), []);
             
-            // Helper để lấy bài học nhiều nhất của 1 user
-            const getTopLesson = (userId) => {
-                const userDevices = timeData[userId] || {};
+            // Lấy bài học nhiều nhất theo TỪNG THIẾT BỊ (Tên học viên)
+            const getDeviceTopLesson = (userId, devId) => {
+                const device = timeData[userId]?.[devId];
+                if (!device || !device.lessonStats) return null;
+                
                 let stats = {};
-                Object.values(userDevices).forEach(dev => {
-                    if(dev.lessonStats) {
-                        Object.entries(dev.lessonStats).forEach(([path, sec]) => { 
-                            stats[path] = (stats[path] || 0) + Number(sec); 
-                        });
-                    }
+                Object.entries(device.lessonStats).forEach(([path, sec]) => { 
+                    stats[path] = Number(sec); 
                 });
                 
                 const total = Object.values(stats).reduce((sum, val) => sum + val, 0);
@@ -810,19 +809,56 @@
                 return { path: topPath, percent: Math.round((stats[topPath] / total) * 100) };
             };
 
-            const students = users.filter(x => x.role === 'student').map(s => {
+            // TÁCH TỪNG TÊN THIẾT BỊ THÀNH MỘT DÒNG ĐỘC LẬP TRÊN BẢNG ADMIN
+            let allLearners = [];
+            users.filter(x => x.role === 'student').forEach(s => {
                 const userDevices = timeData[s.id] || {};
-                let totalToday = 0; let weeklyTotal = 0; let monthlyTotal = 0;
-                const deviceNames = []; // Lấy danh sách tên thiết bị
-                Object.keys(userDevices).forEach(key => {
-                    if (userDevices[key].name) deviceNames.push(userDevices[key].name);
-                    totalToday += Number(userDevices[key].times?.[todayStr] || 0);
-                    weekDates.forEach(date => { weeklyTotal += Number(userDevices[key].times?.[date] || 0); });
-                    monthDates.forEach(date => { monthlyTotal += Number(userDevices[key].times?.[date] || 0); });
-                });
-                return { ...s, totalToday, weeklyTotal, monthlyTotal, topLesson: getTopLesson(s.id), deviceNames: [...new Set(deviceNames)] };
-            }).sort((a, b) => {
-                // Logic sắp xếp từ cao xuống thấp
+                const deviceKeys = Object.keys(userDevices);
+                
+                if (deviceKeys.length === 0) {
+                    // Tài khoản chưa ai dùng
+                    allLearners.push({
+                        uniqueId: s.id + '_none',
+                        accountId: s.id,
+                        isDeviceRow: false,
+                        accountName: s.name,
+                        username: s.username,
+                        password: s.password,
+                        deviceName: 'Chưa có dữ liệu học',
+                        totalToday: 0,
+                        weeklyTotal: 0,
+                        monthlyTotal: 0,
+                        topLesson: null
+                    });
+                } else {
+                    // Tách riêng từng bạn trong 1 tài khoản
+                    deviceKeys.forEach(devId => {
+                        const dev = userDevices[devId];
+                        let totalToday = Number(dev.times?.[todayStr] || 0);
+                        let weeklyTotal = 0; let monthlyTotal = 0;
+                        weekDates.forEach(date => { weeklyTotal += Number(dev.times?.[date] || 0); });
+                        monthDates.forEach(date => { monthlyTotal += Number(dev.times?.[date] || 0); });
+                        
+                        allLearners.push({
+                            uniqueId: s.id + '_' + devId,
+                            accountId: s.id,
+                            deviceId: devId,
+                            isDeviceRow: true,
+                            accountName: s.name,
+                            username: s.username,
+                            password: s.password,
+                            deviceName: dev.name || 'Máy ẩn danh',
+                            totalToday,
+                            weeklyTotal,
+                            monthlyTotal,
+                            topLesson: getDeviceTopLesson(s.id, devId)
+                        });
+                    });
+                }
+            });
+
+            // Sắp xếp theo Tên người học (không phải theo tài khoản gộp)
+            allLearners.sort((a, b) => {
                 if (sortBy === 'today') return b.totalToday - a.totalToday;
                 if (sortBy === 'week') return b.weeklyTotal - a.weeklyTotal;
                 return b.monthlyTotal - a.monthlyTotal;
@@ -839,11 +875,26 @@
                 } catch(err) { setAddError("Lỗi lưu Đám mây."); }
             };
 
-            const confirmDelete = async (id) => {
+            // XÓA CẢ TÀI KHOẢN (Kéo theo tất cả tên máy bên trong)
+            const handleDeleteAccount = async (id) => {
                 try {
-                    if (db) { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_users', id)); await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_timeData', id)); }
+                    if (db) { 
+                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_users', id)); 
+                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_timeData', id)); 
+                    }
                     setDeletingId(null);
                 } catch(err) {}
+            };
+
+            // XÓA 1 TÊN MÁY CỤ THỂ (Giữ nguyên các bạn khác dùng chung tài khoản)
+            const handleDeleteDevice = async (accountId, deviceId) => {
+                try {
+                    if (db) {
+                        const timeRef = doc(db, 'artifacts', appId, 'public', 'data', 'bob_timeData', accountId);
+                        await updateDoc(timeRef, { [deviceId]: deleteField() });
+                    }
+                    setDeletingId(null);
+                } catch(err) { console.error(err); }
             };
 
             // Hàm xóa toàn bộ dữ liệu để tạo khóa học mới
@@ -888,7 +939,7 @@
                             <h3 className="font-black text-lg mb-6 flex items-center gap-3"><div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><Icon name="user-plus" size={18} /></div>THÊM HỌC VIÊN</h3>
                             <form onSubmit={handleAdd} className="space-y-4">
                                 {addError && <div className="p-3 bg-red-50 text-red-600 text-xs font-bold rounded-xl border border-red-100">{addError}</div>}
-                                <div className="space-y-1"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Tên học viên</label><input placeholder="Họ và tên..." value={n} onChange={e=>setN(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 text-sm" required /></div>
+                                <div className="space-y-1"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Tên nhóm / học viên</label><input placeholder="Họ và tên..." value={n} onChange={e=>setN(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 text-sm" required /></div>
                                 <div className="space-y-1"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Tài khoản</label><input placeholder="Username" value={u} onChange={e=>setU(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 text-sm" required /></div>
                                 <div className="space-y-1"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Mật khẩu</label><input placeholder="Mật khẩu" value={p} onChange={e=>setP(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 text-sm" required /></div>
                                 <button className="w-full py-4 bg-slate-900 text-white font-bold rounded-2xl hover:bg-indigo-600 active:scale-95 transition-all text-sm shadow-lg mt-2">Thêm tài khoản</button>
@@ -898,13 +949,13 @@
 
                     <div className="xl:col-span-9 order-1 xl:order-2">
                         <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col h-[800px]">
-                            <div className="p-5 bg-slate-50/80 border-b flex justify-between items-center flex-wrap gap-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center"><Icon name="users" size={20} /></div>
-                                    <div>
-                                        <h2 className="font-black text-slate-800">Quản lý học viên</h2>
+                            <div className="p-4 sm:p-5 bg-slate-50/80 border-b flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                <div className="flex items-center gap-3 w-full sm:w-auto">
+                                    <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center shrink-0"><Icon name="users" size={20} /></div>
+                                    <div className="flex-1">
+                                        <h2 className="font-black text-slate-800">Tiến độ học viên</h2>
                                         <div className="flex items-center gap-2 mt-0.5">
-                                            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Sắp xếp theo:</span>
+                                            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Sắp xếp:</span>
                                             <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="text-[11px] border border-slate-200 bg-white rounded-md px-1.5 py-0.5 outline-none font-bold text-indigo-600 cursor-pointer">
                                                 <option value="month">Tháng này</option>
                                                 <option value="week">Tuần này</option>
@@ -913,65 +964,67 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-3">
-                                    <span className="bg-indigo-600 text-white px-3 py-1.5 rounded-xl text-xs font-black shadow-sm">{students.length} User</span>
-                                    <button onClick={() => setShowResetModal(true)} className="bg-red-50 text-red-600 px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 hover:bg-red-100 transition-colors border border-red-100 shadow-sm"><Icon name="rotate-ccw" size={14} /> Làm mới Dữ liệu</button>
+                                <div className="flex items-center justify-between w-full sm:w-auto gap-3">
+                                    <span className="bg-indigo-600 text-white px-3 py-1.5 rounded-xl text-xs font-black shadow-sm shrink-0">{allLearners.length} Lượt học</span>
+                                    <button onClick={() => setShowResetModal(true)} className="bg-red-50 text-red-600 px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 hover:bg-red-100 transition-colors border border-red-100 shadow-sm shrink-0"><Icon name="rotate-ccw" size={14} /> Làm mới</button>
                                 </div>
                             </div>
                             
-                            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-3">
-                                {students.length === 0 ? <div className="h-full flex flex-col items-center justify-center opacity-40"><Icon name="user-x" size={48} className="mb-3" /><p className="font-bold text-sm">Chưa có học viên nào</p></div> 
-                                : students.map(s => (
-                                    <div key={s.id} className="p-4 flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center bg-white border border-slate-100 rounded-2xl hover:border-indigo-200 hover:shadow-md transition-all">
+                            <div className="flex-1 overflow-y-auto custom-scrollbar p-3 sm:p-4 space-y-3">
+                                {allLearners.length === 0 ? <div className="h-full flex flex-col items-center justify-center opacity-40"><Icon name="user-x" size={48} className="mb-3" /><p className="font-bold text-sm">Chưa có học viên nào</p></div> 
+                                : allLearners.map(l => (
+                                    <div key={l.uniqueId} className="p-4 flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center bg-white border border-slate-100 rounded-2xl hover:border-indigo-200 hover:shadow-md transition-all">
                                         <div className="flex items-start sm:items-center gap-3 w-full lg:w-auto flex-1 min-w-0">
-                                            <div className="w-10 h-10 bg-gradient-to-tr from-indigo-100 to-indigo-50 text-indigo-600 rounded-full flex items-center justify-center font-black text-base shrink-0 border border-indigo-100">{s.name.charAt(0)}</div>
+                                            <div className="w-10 h-10 bg-gradient-to-tr from-indigo-100 to-indigo-50 text-indigo-600 rounded-full flex items-center justify-center font-black text-base shrink-0 border border-indigo-100">
+                                                {l.deviceName.charAt(0).toUpperCase()}
+                                            </div>
                                             <div className="flex-1 min-w-0">
-                                                <p className="font-bold text-sm text-slate-800 truncate">{s.name}</p>
+                                                {/* Hiển thị To và Rõ TÊN MÁY (Tên người học) */}
+                                                <p className="font-bold text-sm text-slate-800 truncate">{l.deviceName}</p>
                                                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5">
-                                                    <p className="text-[10px] font-mono text-slate-500">U: {s.username} <span className="mx-0.5">|</span> P: {s.password}</p>
-                                                    {s.deviceNames.length > 0 && (
-                                                        <p className="text-[10px] text-slate-400 flex items-center gap-1 truncate max-w-[150px]" title={s.deviceNames.join(', ')}>
-                                                            <Icon name="monitor" size={10} /> {s.deviceNames.join(', ')}
-                                                        </p>
-                                                    )}
+                                                    <p className="text-[10px] font-medium text-slate-500 truncate w-full sm:w-auto">
+                                                        TK: <span className="font-bold text-slate-700">{l.accountName}</span> <span className="mx-0.5 hidden sm:inline">|</span><br className="sm:hidden" /> MK: {l.password}
+                                                    </p>
                                                 </div>
                                                 
-                                                {/* Dòng hiển thị bài học yêu thích cho Admin */}
-                                                {s.topLesson ? (
-                                                    <div className="mt-1.5 flex items-center gap-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 w-fit px-2 py-0.5 rounded border border-indigo-100">
-                                                        <Icon name="star" size={10} />
-                                                        Thích nhất: {getLessonTitle(s.topLesson.path)} ({s.topLesson.percent}%)
+                                                {/* Hiển thị bài học yêu thích của CÁ NHÂN NGƯỜI ĐÓ */}
+                                                {l.topLesson ? (
+                                                    <div className="mt-1.5 flex items-center gap-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 w-fit max-w-full px-2 py-0.5 rounded border border-indigo-100 truncate">
+                                                        <Icon name="star" size={10} className="shrink-0" />
+                                                        <span className="truncate">Thích nhất: {getLessonTitle(l.topLesson.path)} ({l.topLesson.percent}%)</span>
                                                     </div>
                                                 ) : (
-                                                    <div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-slate-400 italic">Chưa học bài nào</div>
+                                                    <div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-slate-400 italic">Chưa ghi nhận bài học</div>
                                                 )}
                                             </div>
                                         </div>
                                         
-                                        <div className="flex items-center justify-between lg:justify-end gap-3 w-full lg:w-auto mt-1 lg:mt-0 pt-3 lg:pt-0 border-t border-slate-50 lg:border-none">
-                                            {/* Giao diện thời gian mới: Khối nhỏ gọn hiển thị dọc */}
-                                            <div className="flex flex-col gap-1 bg-slate-50/50 p-2 rounded-xl border border-slate-100 w-full sm:w-auto">
-                                                <div className="flex justify-between items-center sm:justify-start sm:gap-6 min-w-[140px]">
+                                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between lg:justify-end gap-3 w-full lg:w-auto mt-2 lg:mt-0 pt-3 lg:pt-0 border-t border-slate-100 lg:border-none">
+                                            {/* Khối thời gian hiển thị riêng của cá nhân đó */}
+                                            <div className="flex flex-col gap-1 bg-slate-50/50 p-3 sm:p-2 rounded-xl border border-slate-100 w-full sm:w-auto shrink-0">
+                                                <div className="flex justify-between items-center sm:justify-start sm:gap-6 min-w-0 sm:min-w-[140px]">
                                                     <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Hôm nay</span>
-                                                    <span className="font-mono font-bold text-xs text-slate-700">{formatTime(s.totalToday)}</span>
+                                                    <span className="font-mono font-bold text-xs text-slate-700">{formatTime(l.totalToday)}</span>
                                                 </div>
                                                 <div className="flex justify-between items-center sm:justify-start sm:gap-6">
                                                     <span className="text-[9px] uppercase font-bold text-amber-500 tracking-wider">Tuần</span>
-                                                    <span className="font-mono font-bold text-xs text-amber-600">{formatTime(s.weeklyTotal)}</span>
+                                                    <span className="font-mono font-bold text-xs text-amber-600">{formatTime(l.weeklyTotal)}</span>
                                                 </div>
                                                 <div className="flex justify-between items-center sm:justify-start sm:gap-6">
                                                     <span className="text-[9px] uppercase font-bold text-emerald-500 tracking-wider">Tháng</span>
-                                                    <span className="font-mono font-black text-xs text-emerald-600">{formatTime(s.monthlyTotal)}</span>
+                                                    <span className="font-mono font-black text-xs text-emerald-600">{formatTime(l.monthlyTotal)}</span>
                                                 </div>
                                             </div>
                                             
-                                            {deletingId === s.id ? (
-                                                <div className="flex flex-col gap-1 shrink-0 ml-1">
-                                                    <button onClick={() => confirmDelete(s.id)} className="text-[9px] font-black bg-red-500 text-white px-2 py-1.5 rounded-lg active:scale-95 uppercase">Xóa</button>
-                                                    <button onClick={() => setDeletingId(null)} className="text-[9px] font-black bg-slate-200 text-slate-600 px-2 py-1.5 rounded-lg active:scale-95 uppercase">Hủy</button>
+                                            {deletingId === l.uniqueId ? (
+                                                <div className="flex flex-row sm:flex-col gap-2 shrink-0 w-full sm:w-auto mt-1 sm:mt-0">
+                                                    {/* Tính năng xóa Tên hoặc Xóa cả tài khoản */}
+                                                    {l.isDeviceRow && <button onClick={() => handleDeleteDevice(l.accountId, l.deviceId)} className="flex-1 sm:flex-none text-[9px] font-black bg-orange-500 text-white px-2 py-2 sm:py-1 rounded-lg sm:rounded active:scale-95 uppercase text-center" title="Chỉ xóa tên máy này khỏi bảng">Xóa Tên</button>}
+                                                    <button onClick={() => handleDeleteAccount(l.accountId)} className="flex-1 sm:flex-none text-[9px] font-black bg-red-600 text-white px-2 py-2 sm:py-1 rounded-lg sm:rounded active:scale-95 uppercase text-center" title="Xóa tài khoản gốc">Xóa TK</button>
+                                                    <button onClick={() => setDeletingId(null)} className="flex-1 sm:flex-none text-[9px] font-black bg-slate-200 text-slate-600 px-2 py-2 sm:py-1 rounded-lg sm:rounded active:scale-95 uppercase text-center">Hủy</button>
                                                 </div>
                                             ) : (
-                                                <button onClick={() => setDeletingId(s.id)} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors shrink-0 border border-transparent hover:border-red-100 ml-1"><Icon name="trash-2" size={14} /></button>
+                                                <button onClick={() => setDeletingId(l.uniqueId)} className="w-full sm:w-8 h-10 sm:h-8 flex items-center justify-center text-slate-500 sm:text-slate-400 bg-slate-100 sm:bg-transparent hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors shrink-0 border border-transparent hover:border-red-100 sm:ml-1 mt-1 sm:mt-0"><Icon name="trash-2" size={16} className="sm:w-4 sm:h-4" /><span className="sm:hidden ml-2 text-xs font-bold uppercase">Xóa dữ liệu</span></button>
                                             )}
                                         </div>
                                     </div>
