@@ -334,7 +334,7 @@
                 }
             }, [timeData, user.id, deviceId, deviceName]);
             
-            // Đổi Tên Hiển thị (CHỈ thay đổi cho máy này, không ép các máy khác trong tài khoản đổi theo)
+            // VÁ LỖI QUAN TRỌNG 1: Sửa hàm đổi tên, BẢO LƯU dữ liệu lịch sử
             const handleUpdateDeviceName = async (e) => {
                 e.preventDefault();
                 if(editNameValue.trim()) {
@@ -345,8 +345,13 @@
                     
                     if (db) {
                         const timeRef = doc(db, 'artifacts', appId, 'public', 'data', 'bob_timeData', user.id);
+                        const existingDeviceData = timeData[user.id]?.[deviceId] || {};
+                        // Bắt buộc phải Spread Object để không bị mất dữ liệu time và stats
                         await setDoc(timeRef, {
-                            [deviceId]: { name: newName }
+                            [deviceId]: { 
+                                ...existingDeviceData, 
+                                name: newName 
+                            }
                         }, { merge: true }).catch(console.error);
                     }
                 }
@@ -401,14 +406,14 @@
                 }
             }, [timeData, user.id, deviceId, todayStr, deviceName]);
 
-            // VÒNG LẶP ĐẾM GIỜ CHÍNH - Hoạt động liên tục kể cả khi ở trang chủ
+            // VÒNG LẶP ĐẾM GIỜ CHÍNH
             useEffect(() => {
                 if (!deviceName) return;
                 const timer = setInterval(() => {
                     if (!isIdleRef.current) {
-                        setLocalSeconds(prev => prev + 1); // Luôn luôn đếm giờ khi không idle
+                        setLocalSeconds(prev => prev + 1);
                         
-                        if (activeLessonRef.current) { // Lưu thêm phân bổ môn học nếu đang trong phòng
+                        if (activeLessonRef.current) {
                             const path = activeLessonRef.current.path;
                             setLocalLessonStats(prev => ({
                                 ...prev,
@@ -420,16 +425,28 @@
                 return () => clearInterval(timer);
             }, [deviceName]);
 
-            // Lưu dữ liệu lên Cloud mỗi 10 giây
+            // VÁ LỖI QUAN TRỌNG 2: Lưu dữ liệu lên Cloud KHÔNG XÓA lịch sử
             useEffect(() => {
                 if (!deviceName || !db) return;
                 if (localSeconds - lastSyncedSeconds.current >= 10) {
                     const timeRef = doc(db, 'artifacts', appId, 'public', 'data', 'bob_timeData', user.id);
+                    
+                    const existingDeviceData = timeData[user.id]?.[deviceId] || {};
+                    const existingTimes = existingDeviceData.times || {};
+                    const existingStats = existingDeviceData.lessonStats || {};
+
                     setDoc(timeRef, { 
                         [deviceId]: {
+                            ...existingDeviceData, // Bảo lưu mọi thông tin cũ
                             name: deviceName,
-                            times: { [todayStr]: localSeconds },
-                            lessonStats: localLessonStats,
+                            times: { 
+                                ...existingTimes, // Bảo lưu lịch sử các ngày cũ
+                                [todayStr]: localSeconds 
+                            },
+                            lessonStats: { 
+                                ...existingStats, // Bảo lưu lịch sử các bài đã học
+                                ...localLessonStats 
+                            },
                             lastActive: Date.now()
                         }
                     }, { merge: true }).catch(console.error);
@@ -483,7 +500,6 @@
                         });
                     });
                     
-                    // Dự phòng nếu máy này chưa kịp push lên Firebase
                     if (user && uid === user.id && localSeconds > 0 && !userDevices[deviceId]) {
                         const myNameKey = (deviceName || 'Máy ẩn danh').trim().toLowerCase();
                         if (!profilesInUser[myNameKey]) profilesInUser[myNameKey] = 0;
@@ -507,10 +523,8 @@
                 const myNameKey = (deviceName || '').trim().toLowerCase();
                 const aggregatedStats = {};
 
-                // Của máy này
                 Object.entries(localLessonStats).forEach(([path, sec]) => { aggregatedStats[path] = Number(sec); });
 
-                // Của các máy khác CÙNG TÊN thuộc tài khoản này
                 Object.entries(userDevices).forEach(([devId, dev]) => {
                     const devNameKey = (dev.name || '').trim().toLowerCase();
                     if (devNameKey === myNameKey && devId !== deviceId && dev.lessonStats) {
@@ -567,11 +581,26 @@
                             <div className="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mb-6"><Icon name="contact" size={28} /></div>
                             <h3 className="font-black text-2xl mb-2 text-slate-800">Tên hiển thị của bạn</h3>
                             <p className="text-sm text-slate-500 mb-6 bg-amber-50 p-3 rounded-xl border border-amber-100 text-amber-800">
-                                Vui lòng nhập tên của bạn (VD: Hùng, Lan...). <br/><br/>
-                                <b className="font-bold">Mẹo:</b> Nếu bạn dùng nhiều máy (điện thoại, máy tính), hãy nhập <b>cùng một tên</b> để hệ thống tự động cộng dồn thời gian chung cho bạn nhé!
+                                Vui lòng nhập tên của bạn (VD: Kim Ngân, Số 1...). <br/><br/>
+                                <b className="font-bold">Lưu ý:</b> Điểm trên Bảng xếp hạng sẽ tính theo tên này. Bạn hãy dùng chung 1 tên trên mọi thiết bị nhé!
                             </p>
-                            <form onSubmit={(e) => { e.preventDefault(); if(tempName.trim()) { localStorage.setItem('bob_deviceName', tempName.trim()); setDeviceName(tempName.trim()); }}}>
-                                <input type="text" placeholder="VD: Lan, Hùng..." value={tempName} onChange={e => setTempName(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-indigo-500 text-sm font-medium mb-4" required autoFocus />
+                            <form onSubmit={(e) => { 
+                                e.preventDefault(); 
+                                if(tempName.trim()) { 
+                                    const newName = tempName.trim();
+                                    localStorage.setItem('bob_deviceName', newName); 
+                                    setDeviceName(newName); 
+                                    // Bắt buộc lưu ngay lập tức để giữ data
+                                    if (db) {
+                                        const timeRef = doc(db, 'artifacts', appId, 'public', 'data', 'bob_timeData', user.id);
+                                        const existingDeviceData = timeData[user.id]?.[deviceId] || {};
+                                        setDoc(timeRef, {
+                                            [deviceId]: { ...existingDeviceData, name: newName }
+                                        }, { merge: true }).catch(console.error);
+                                    }
+                                }
+                            }}>
+                                <input type="text" placeholder="VD: Kim Ngân..." value={tempName} onChange={e => setTempName(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-indigo-500 text-sm font-medium mb-4" required autoFocus />
                                 <button className="w-full py-4 bg-slate-900 text-white font-black rounded-2xl shadow-lg hover:bg-indigo-600 active:scale-95 transition-all uppercase tracking-wider">Bắt đầu học</button>
                             </form>
                         </div>
@@ -612,16 +641,14 @@
                 );
             };
 
-            // Global Navigation Bar with Active Timer
+            // Global Navigation Bar
             const GlobalNav = () => (
                 <nav className="glass-nav sticky top-0 z-40 border-b border-slate-200/60 px-4 sm:px-6 h-16 flex items-center justify-between rounded-t-none sm:rounded-t-[2rem]">
-                    {/* Left: Logo */}
                     <div className="flex items-center gap-2 cursor-pointer" onClick={() => setActiveLesson(null)}>
                         <div className="w-9 h-9 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-lg"><Icon name="graduation-cap" size={20} /></div>
                         <span className="text-xl font-black text-indigo-600 tracking-tight hidden sm:block">BobEnglish</span>
                     </div>
 
-                    {/* Middle: ĐỒNG HỒ THỜI GIAN NHẢY LIÊN TỤC */}
                     <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none">
                         <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-300 shadow-sm ${isIdle ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}>
                             <div className={`w-2.5 h-2.5 rounded-full shadow-inner ${isIdle ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`}></div>
@@ -635,7 +662,6 @@
                         </div>
                     </div>
 
-                    {/* Right: User */}
                     <div className="flex items-center gap-3">
                         <div className="text-right hidden sm:block">
                             <p className="text-xs font-bold leading-none text-slate-800">{deviceName}</p>
@@ -670,7 +696,6 @@
                     
                     {/* SUPER DASHBOARD WIDGET */}
                     <div className="bg-[#0f172a] sm:rounded-[2rem] p-6 sm:p-8 text-white shadow-2xl relative overflow-hidden flex flex-col gap-8 border border-slate-800">
-                        {/* Top Section */}
                         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start gap-6">
                             <div>
                                 <div className="flex items-center gap-3 mb-2">
@@ -697,7 +722,6 @@
                         
                         <div className="w-full h-px bg-gradient-to-r from-transparent via-slate-700 to-transparent relative z-10"></div>
 
-                        {/* Bottom Section */}
                         <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
                             <div className="grid grid-cols-3 gap-2 sm:gap-3">
                                 <div className="bg-white/5 backdrop-blur-md border border-white/10 p-2 sm:p-4 rounded-xl sm:rounded-2xl flex flex-col justify-center text-center relative overflow-hidden">
@@ -738,19 +762,16 @@
                             </div>
                         </div>
 
-                        {/* Background Effects */}
                         <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/20 rounded-full blur-[100px] pointer-events-none -translate-y-1/2 translate-x-1/3"></div>
                         <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-600/10 rounded-full blur-[80px] pointer-events-none translate-y-1/2 -translate-x-1/2"></div>
                     </div>
 
-                    {/* Tabs Navigation */}
                     <div className="flex flex-wrap gap-2 bg-slate-200/50 p-1.5 rounded-2xl w-full sm:w-fit mx-4 sm:mx-0">
                         <button onClick={() => setCurrentTab('lessons')} className={`flex-1 sm:flex-none justify-center px-2 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 transition-all ${currentTab === 'lessons' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}><Icon name="book-open" size={16} /> Bài học</button>
                         <button onClick={() => setCurrentTab('leaderboard_week')} className={`flex-1 sm:flex-none justify-center px-2 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 transition-all ${currentTab === 'leaderboard_week' ? 'bg-white text-amber-500 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}><Icon name="trophy" size={16} /> BXH Tuần</button>
                         <button onClick={() => setCurrentTab('leaderboard_month')} className={`flex-1 sm:flex-none justify-center px-2 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 transition-all ${currentTab === 'leaderboard_month' ? 'bg-white text-emerald-500 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}><Icon name="award" size={16} /> BXH Tháng</button>
                     </div>
 
-                    {/* Tab Content */}
                     <div className="px-4 sm:px-0">
                         {currentTab === 'lessons' && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-up">
@@ -776,7 +797,7 @@
             );
         };
 
-        // --- LEADERBOARD COMPONENT (GOM THEO TÊN NGƯỜI HỌC THAY VÌ TÊN GỐC TÀI KHOẢN) ---
+        // --- LEADERBOARD COMPONENT (GOM THEO TÊN NGƯỜI HỌC) ---
         const Leaderboard = ({ title, subtitle, users, timeData, dates, label, currentUser, currentDevice, localSeconds, todayStr, deviceName }) => {
             
             let allProfiles = [];
@@ -802,7 +823,6 @@
                     });
                 });
                 
-                // Cập nhật điểm cho thiết bị hiện hành nếu chưa được đẩy lên Firebase
                 if (currentUser && uid === currentUser.id && localSeconds > 0 && !userDevices[currentDevice]) {
                     const nameKey = (deviceName || 'Máy ẩn danh').trim().toLowerCase();
                     if (!profilesInUser[nameKey]) profilesInUser[nameKey] = { total: 0, displayName: deviceName || 'Máy ẩn danh' };
@@ -816,8 +836,8 @@
                             allProfiles.push({
                                 id: uid + '_' + nameKey,
                                 uid: uid,
-                                name: data.displayName, // ĐÂY LÀ TÊN THIẾT BỊ/TÊN HỌC VIÊN
-                                accountName: accountInfo.name, // ĐÂY LÀ TÊN TÀI KHOẢN GỐC
+                                name: data.displayName, 
+                                accountName: accountInfo.name, 
                                 total: data.total
                             });
                         }
@@ -884,7 +904,6 @@
             const weekDates = useMemo(() => getCurrentWeekDates(), []);
             const monthDates = useMemo(() => getCurrentMonthDates(), []);
             
-            // ADMIN LOGIC: Hiển thị minh bạch từng TÊN HỌC VIÊN của từng tài khoản
             let allLearners = [];
             users.filter(x => x.role === 'student').forEach(s => {
                 const userDevices = timeData[s.id] || {};
@@ -990,7 +1009,6 @@
                 } catch(err) {}
             };
 
-            // Xóa toàn bộ các thiết bị dùng chung 1 Tên (Nếu nhập sai)
             const handleDeleteProfile = async (accountId, devIds) => {
                 try {
                     if (db) {
@@ -1003,17 +1021,20 @@
                 } catch(err) { console.error(err); }
             };
 
-            // Tính năng phụ (Chỉ dành cho Admin): Ép đồng bộ tất cả các máy trong tài khoản về chung 1 tên (Dành cho trường hợp học viên gõ sai chính tả)
+            // VÁ LỖI QUAN TRỌNG 3: Nút Đồng Bộ bây giờ dùng cú pháp UpdateDoc, CHỈ thay đổi Tên, KHÔNG XÓA thời gian!
             const handleForceSyncName = async (accountId, correctName) => {
                 try {
                     if (db && timeData[accountId]) {
                         const userDevices = timeData[accountId];
-                        const payload = {};
-                        Object.keys(userDevices).forEach(dId => {
-                            payload[dId] = { name: correctName };
-                        });
                         const timeRef = doc(db, 'artifacts', appId, 'public', 'data', 'bob_timeData', accountId);
-                        await setDoc(timeRef, payload, { merge: true });
+                        
+                        const updates = {};
+                        Object.keys(userDevices).forEach(dId => {
+                            // Dùng dot notation để chỉ sửa mục name trong thiết bị đó, không đụng tới times
+                            updates[`${dId}.name`] = correctName;
+                        });
+                        
+                        await updateDoc(timeRef, updates);
                     }
                 } catch(err) { console.error(err); }
             };
@@ -1126,7 +1147,7 @@
                                                     </p>
                                                 </div>
 
-                                                {/* Nút hỗ trợ cho Admin: Ép đồng bộ tên khi Học viên gõ sai tên khiến 1 người bị chia thành 2 dòng */}
+                                                {/* Nút hỗ trợ cho Admin: Ép đồng bộ tên */}
                                                 {(() => {
                                                     const accountDevices = timeData[l.accountId] || {};
                                                     const hasMultipleNames = Object.values(accountDevices).some(dev => dev.name && dev.name.trim().toLowerCase() !== l.deviceName.trim().toLowerCase());
