@@ -252,7 +252,12 @@
                 if (found) { setUser(found); setError(''); } else setError("Tài khoản hoặc mật khẩu không đúng.");
             };
 
-            const handleLogout = () => { setUser(null); localStorage.removeItem('bob_currentUser'); };
+            const handleLogout = () => { 
+                setUser(null); 
+                localStorage.removeItem('bob_currentUser'); 
+                localStorage.removeItem('bob_deviceName'); // Xóa bộ nhớ tên tạm để máy này thành máy mới cho người sau đăng nhập
+                localStorage.removeItem('bob_deviceId'); // QUAN TRỌNG: Xóa ID máy để chống ghi đè dữ liệu nếu nhiều học viên dùng chung 1 máy tính
+            };
 
             if (!isFirebaseReady || isLoadingData) return (
                 <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -898,6 +903,7 @@
             
             const [showResetModal, setShowResetModal] = useState(false);
             const [isResetting, setIsResetting] = useState(false);
+            const [resetMode, setResetMode] = useState('data_only'); // Thêm state cho chế độ reset
             const [sortBy, setSortBy] = useState('month');
             
             const todayStr = getTodayStr();
@@ -1043,11 +1049,15 @@
                 setIsResetting(true);
                 try {
                     if (db) {
+                        // 1. Xóa toàn bộ thời gian và tên hiển thị (luôn chạy)
                         const timePromises = Object.keys(timeData).map(uid => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_timeData', uid)));
                         await Promise.all(timePromises);
                         
-                        const studentPromises = users.filter(x => x.role === 'student').map(s => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_users', s.id)));
-                        await Promise.all(studentPromises);
+                        // 2. Nếu chọn xóa cả tài khoản
+                        if (resetMode === 'all') {
+                            const studentPromises = users.filter(x => x.role === 'student').map(s => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_users', s.id)));
+                            await Promise.all(studentPromises);
+                        }
                     }
                     setShowResetModal(false);
                 } catch (err) {
@@ -1070,14 +1080,34 @@
 
                     {showResetModal && (
                         <div className="fixed inset-0 z-[99999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-                            <div className="bg-white p-8 rounded-[2rem] max-w-sm w-full shadow-2xl animate-fade-up border-t-4 border-red-500 text-center">
-                                <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4"><Icon name="alert-triangle" size={32} /></div>
-                                <h3 className="font-black text-xl mb-2 text-slate-800">Cảnh báo Nguy hiểm</h3>
-                                <p className="text-sm text-slate-500 mb-6 leading-relaxed">Bạn đang chuẩn bị <b className="text-red-500">xóa toàn bộ tài khoản học viên và thời gian học</b> để bắt đầu khóa mới. Hành động này không thể hoàn tác!</p>
+                            <div className="bg-white p-6 sm:p-8 rounded-[2rem] max-w-md w-full shadow-2xl animate-fade-up border-t-4 border-red-500">
+                                <div className="text-center mb-6">
+                                    <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4"><Icon name="alert-triangle" size={32} /></div>
+                                    <h3 className="font-black text-xl mb-2 text-slate-800">Làm mới Hệ thống</h3>
+                                    <p className="text-sm text-slate-500 leading-relaxed">Bạn đang chuẩn bị reset lại dữ liệu của khóa học. Vui lòng chọn chế độ reset phù hợp:</p>
+                                </div>
+                                
+                                <div className="space-y-3 mb-6">
+                                    <label className={`flex gap-3 p-3 sm:p-4 border rounded-xl cursor-pointer transition-all ${resetMode === 'data_only' ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-200 hover:border-indigo-300'}`}>
+                                        <input type="radio" name="resetMode" checked={resetMode === 'data_only'} onChange={() => setResetMode('data_only')} className="mt-1 w-4 h-4 text-indigo-600 focus:ring-indigo-500" />
+                                        <div>
+                                            <p className="font-bold text-slate-800 text-sm">Chỉ xóa Dữ liệu học & Thời gian</p>
+                                            <p className="text-xs text-slate-500 mt-1">Học viên sẽ mất hết thời gian học và phải nhập lại Tên hiển thị, nhưng <b className="text-indigo-600">tài khoản đăng nhập vẫn được giữ nguyên</b>.</p>
+                                        </div>
+                                    </label>
+                                    <label className={`flex gap-3 p-3 sm:p-4 border rounded-xl cursor-pointer transition-all ${resetMode === 'all' ? 'border-red-500 bg-red-50/50' : 'border-slate-200 hover:border-red-300'}`}>
+                                        <input type="radio" name="resetMode" checked={resetMode === 'all'} onChange={() => setResetMode('all')} className="mt-1 w-4 h-4 text-red-600 focus:ring-red-500" />
+                                        <div>
+                                            <p className="font-bold text-red-700 text-sm">Xóa trắng Toàn bộ hệ thống</p>
+                                            <p className="text-xs text-red-500/80 mt-1">Xóa sạch thời gian VÀ <b className="text-red-600">xóa luôn tất cả tài khoản học viên</b>. Trả hệ thống về nguyên trạng lúc mới tinh.</p>
+                                        </div>
+                                    </label>
+                                </div>
+
                                 <div className="flex gap-2">
                                     <button disabled={isResetting} onClick={() => setShowResetModal(false)} className="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 active:scale-95 transition-all text-sm">Hủy bỏ</button>
                                     <button disabled={isResetting} onClick={handleResetSystem} className="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl shadow-lg hover:bg-red-700 active:scale-95 transition-all text-sm flex justify-center items-center">
-                                        {isResetting ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 'Xóa toàn bộ'}
+                                        {isResetting ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 'Xác nhận Reset'}
                                     </button>
                                 </div>
                             </div>
