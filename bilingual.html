@@ -127,6 +127,17 @@
                     <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
                         <i class="ph-fill ph-check-circle text-green-500"></i> Kết quả Song Ngữ
                     </h2>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button id="copyEnBtn" class="text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 py-2 px-3 rounded-lg flex items-center gap-1 border border-slate-300 transition-colors">
+                            <i class="ph ph-copy"></i> Tiếng Anh
+                        </button>
+                        <button id="copyViBtn" class="text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 py-2 px-3 rounded-lg flex items-center gap-1 border border-slate-300 transition-colors">
+                            <i class="ph ph-copy"></i> Tiếng Việt
+                        </button>
+                        <button id="copyAllBtn" class="text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 py-2 px-3 rounded-lg flex items-center gap-1 border border-blue-200 transition-colors">
+                            <i class="ph ph-copy"></i> Tất cả
+                        </button>
+                    </div>
                 </div>
                 <div id="outputArea" class="flex flex-col gap-6"></div>
             </section>
@@ -316,6 +327,21 @@
         });
 
         // --- UTILS ---
+        function copyTextToClipboard(text, successMsg) {
+            if (!text.trim()) return;
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = text.trim();
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            try {
+                document.execCommand('copy');
+                showToast(successMsg, 'success');
+            } catch (err) {
+                showToast('Lỗi khi sao chép!', 'error');
+            }
+            document.body.removeChild(tempTextArea);
+        }
+
         function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
             const toastMsg = document.getElementById('toastMsg');
@@ -585,6 +611,39 @@
                 showToast('Lỗi dịch thuật', 'error');
                 exitToMain();
             }
+        });
+
+        // --- CÁC HÀM XỬ LÝ NÚT COPY ---
+        document.getElementById('copyAllBtn').addEventListener('click', () => {
+            const rows = document.getElementById('outputArea').querySelectorAll('.grid');
+            if (rows.length === 0) return;
+            let finalString = '';
+            rows.forEach(row => {
+                finalString += row.children[0].textContent.trim() + '\n' + row.children[1].textContent.trim() + '\n\n';
+            });
+            copyTextToClipboard(finalString, 'Đã sao chép toàn bộ!');
+        });
+
+        document.getElementById('copyEnBtn').addEventListener('click', () => {
+            const rows = document.getElementById('outputArea').querySelectorAll('.grid');
+            if (rows.length === 0) return;
+            const isEnVi = document.getElementById('langDirection').value === 'en-vi';
+            let finalString = '';
+            rows.forEach(row => {
+                finalString += (isEnVi ? row.children[0].textContent : row.children[1].textContent).trim() + '\n\n';
+            });
+            copyTextToClipboard(finalString, 'Đã sao chép phần Tiếng Anh!');
+        });
+
+        document.getElementById('copyViBtn').addEventListener('click', () => {
+            const rows = document.getElementById('outputArea').querySelectorAll('.grid');
+            if (rows.length === 0) return;
+            const isEnVi = document.getElementById('langDirection').value === 'en-vi';
+            let finalString = '';
+            rows.forEach(row => {
+                finalString += (isEnVi ? row.children[1].textContent : row.children[0].textContent).trim() + '\n\n';
+            });
+            copyTextToClipboard(finalString, 'Đã sao chép phần Tiếng Việt!');
         });
 
         // --- CHẾ ĐỘ 2: LUYỆN DỊCH ---
