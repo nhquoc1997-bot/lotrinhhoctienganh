@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trình Tạo Văn Bản Song Ngữ</title>
+    <title>Trình Tạo Song Ngữ & Luyện Tập Toàn Diện</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <style>
-        /* Tùy chỉnh thanh cuộn cho đẹp mắt */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -19,7 +18,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Styles cho tính năng Click từ tiếng Anh */
         .word-clickable {
             cursor: pointer;
             transition: background-color 0.2s, color 0.2s;
@@ -31,47 +29,37 @@
             border-bottom-color: #3b82f6;
         }
 
-        /* Chữ đúng/sai trong chế độ luyện tập */
         .word-correct { color: #16a34a; font-weight: 600; }
         .word-incorrect { color: #dc2626; text-decoration: line-through; opacity: 0.8; }
         .word-missing { color: #d97706; text-decoration: underline; text-decoration-style: dashed; }
 
-        /* Tooltip từ điển */
         #dictPopup {
-            position: fixed;
-            z-index: 100;
-            background: white;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-            border-radius: 0.75rem;
-            padding: 1rem;
-            min-width: 200px;
-            display: none;
-            transform: translate(-50%, calc(-100% - 15px));
-            pointer-events: none;
+            position: fixed; z-index: 100; background: white; border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); border-radius: 0.75rem;
+            padding: 1rem; min-width: 200px; display: none;
+            transform: translate(-50%, calc(-100% - 15px)); pointer-events: none;
         }
         #dictPopup::after {
-            content: '';
-            position: absolute;
-            bottom: -8px;
-            left: 50%;
-            transform: translateX(-50%);
-            border-width: 8px 8px 0;
-            border-style: solid;
-            border-color: white transparent transparent transparent;
+            content: ''; position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
+            border-width: 8px 8px 0; border-style: solid; border-color: white transparent transparent transparent;
             filter: drop-shadow(0 2px 1px rgba(0,0,0,0.05));
         }
+
+        .ai-spinner {
+            border: 2px solid rgba(255,255,255,0.3); border-radius: 50%;
+            border-top: 2px solid currentColor; width: 1.2rem; height: 1.2rem;
+            animation: spin 1s linear infinite; display: inline-block;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
 
-    <!-- THANH THÔNG BÁO (TOAST GLOBAL) -->
     <div id="toast" class="fixed top-4 right-4 px-6 py-3 rounded-xl shadow-xl transform transition-all duration-300 translate-y-[-150%] opacity-0 z-[100] flex items-center gap-3 font-medium">
         <i id="toastIcon" class="ph-fill ph-info text-xl"></i>
         <span id="toastMsg">Thông báo</span>
     </div>
 
-    <!-- MÀN HÌNH ỨNG DỤNG DỊCH (Hiển thị mặc định) -->
     <div id="app-view" class="flex-grow flex flex-col">
         <header class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-40">
             <div class="max-w-6xl mx-auto px-4 py-4 flex flex-wrap gap-4 justify-between items-center">
@@ -79,10 +67,9 @@
                     <div class="bg-blue-600 text-white p-2 rounded-lg shadow-md">
                         <i class="ph ph-translate text-2xl"></i>
                     </div>
-                    <h1 class="text-xl font-bold text-slate-900">Trình Tạo Song Ngữ</h1>
+                    <h1 class="text-xl font-bold text-slate-900 hidden sm:block">Trình Tạo Song Ngữ</h1>
                 </div>
                 <div class="flex items-center gap-4">
-                    <!-- Tùy chọn chia câu (MỚI) -->
                     <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-lg border border-slate-200">
                         <i class="ph ph-list-numbers text-slate-500 ml-1"></i>
                         <select id="chunkSize" class="bg-transparent border-none outline-none text-sm font-medium text-slate-700 py-1 pr-2 cursor-pointer">
@@ -90,118 +77,176 @@
                             <option value="1">Gộp 1 câu</option>
                             <option value="2">Gộp 2 câu</option>
                             <option value="3">Gộp 3 câu</option>
-                            <option value="4">Gộp 4 câu</option>
                         </select>
                     </div>
-                    <!-- Tùy chọn ngôn ngữ -->
                     <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-lg border border-slate-200">
                         <select id="langDirection" class="bg-transparent border-none outline-none text-sm font-medium text-slate-700 py-1 px-2 cursor-pointer">
                             <option value="en-vi">Tiếng Anh ➔ Tiếng Việt</option>
                             <option value="vi-en">Tiếng Việt ➔ Tiếng Anh</option>
                         </select>
                     </div>
+                    <!-- Nút Cài đặt API Key -->
+                    <button id="settingsBtn" class="bg-slate-100 p-1.5 rounded-lg border border-slate-200 hover:bg-slate-200 transition-colors" title="Cài đặt AI">
+                        <i class="ph ph-gear text-slate-700 text-xl"></i>
+                    </button>
                 </div>
             </div>
         </header>
 
         <main class="flex-grow max-w-6xl mx-auto w-full px-4 py-8 flex flex-col gap-8">
+            
             <!-- Khu vực nhập liệu -->
             <section id="inputSection" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-1 flex flex-col focus-within:ring-2 focus-within:ring-blue-500 transition-all">
-                <textarea id="sourceText" class="w-full h-48 md:h-64 p-5 md:p-6 resize-none outline-none text-slate-700 text-lg md:text-xl leading-relaxed placeholder-slate-400 bg-transparent" placeholder="Dán văn bản tiếng Anh của bạn vào đây..."></textarea>
+                <textarea id="sourceText" class="w-full h-48 md:h-64 p-5 md:p-6 resize-none outline-none text-slate-700 text-lg md:text-xl leading-relaxed placeholder-slate-400 bg-transparent" placeholder="Dán văn bản của bạn vào đây..."></textarea>
                 <div class="flex flex-col md:flex-row justify-between items-center p-3 border-t border-slate-100 bg-slate-50 rounded-b-xl gap-3">
                     <span class="text-xs text-slate-500 font-medium" id="charCount">0 ký tự</span>
-                    <div class="flex gap-2 w-full md:w-auto">
-                        <button id="translateBtn" class="flex-1 md:flex-none bg-slate-800 hover:bg-slate-900 text-white font-medium py-2.5 px-6 rounded-lg shadow-sm transition-colors flex justify-center items-center gap-2">
-                            <i class="ph ph-translate text-lg"></i> Dịch & Chia đoạn
+                    <div class="flex flex-wrap gap-2 w-full md:w-auto">
+                        <button id="translateBtn" class="flex-1 md:flex-none bg-slate-800 hover:bg-slate-900 text-white font-medium py-2.5 px-4 rounded-lg shadow-sm transition-colors flex justify-center items-center gap-2">
+                            <i class="ph ph-translate text-lg"></i> Dịch & Đọc
                         </button>
-                        <button id="startPracticeBtn" class="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-lg shadow-sm transition-colors flex justify-center items-center gap-2">
-                            <i class="ph ph-barbell text-lg"></i> Luyện dịch từng câu
+                        <button id="startPracticeBtn" class="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg shadow-sm transition-colors flex justify-center items-center gap-2">
+                            <i class="ph ph-pencil-simple text-lg"></i> Luyện Dịch
+                        </button>
+                        <!-- NÚT LUYỆN ĐẶT CÂU HỎI -->
+                        <button id="startAskBtn" class="flex-1 md:flex-none bg-purple-600 hover:bg-purple-700 text-white font-medium py-2.5 px-4 rounded-lg shadow-sm transition-colors flex justify-center items-center gap-2">
+                            <i class="ph ph-question text-lg"></i> Luyện Đặt Câu Hỏi
                         </button>
                     </div>
                 </div>
             </section>
 
-            <!-- Trạng thái đang tải -->
+            <!-- Trạng thái đang tải chung -->
             <div id="loadingIndicator" class="hidden flex-col items-center justify-center py-12 gap-4">
                 <div class="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-blue-600"></div>
-                <p class="text-slate-500 font-medium animate-pulse">Đang xử lý từng đoạn văn bản...</p>
+                <p id="loadingMsg" class="text-slate-500 font-medium animate-pulse">Đang xử lý dữ liệu...</p>
             </div>
 
-            <!-- Khu vực hiển thị kết quả -->
+            <!-- 1. KẾT QUẢ DỊCH SONG NGỮ -->
             <section id="resultSection" class="hidden flex-col gap-4">
                 <div class="flex flex-col md:flex-row md:justify-between items-start md:items-center gap-4 mb-2">
-                    <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2 shrink-0">
+                    <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
                         <i class="ph-fill ph-check-circle text-green-500"></i> Kết quả Song Ngữ
                     </h2>
-                    <div class="flex flex-wrap items-center gap-2">
-                        <button id="copyEnBtn" class="text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 py-2 px-3 rounded-lg flex items-center gap-1 border border-slate-300 transition-colors">
-                            <i class="ph ph-copy"></i> Tiếng Anh
-                        </button>
-                        <button id="copyViBtn" class="text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 py-2 px-3 rounded-lg flex items-center gap-1 border border-slate-300 transition-colors">
-                            <i class="ph ph-copy"></i> Tiếng Việt
-                        </button>
-                        <button id="copyAllBtn" class="text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 py-2 px-3 rounded-lg flex items-center gap-1 border border-blue-200 transition-colors">
-                            <i class="ph ph-copy"></i> Tất cả
-                        </button>
-                    </div>
                 </div>
-                <div id="outputArea" class="flex flex-col gap-4"></div>
+                <div id="outputArea" class="flex flex-col gap-6"></div>
             </section>
 
-            <!-- Khu vực Luyện Tập (Mới) -->
+            <!-- 2. CHẾ ĐỘ LUYỆN DỊCH -->
             <section id="practiceSection" class="hidden flex-col gap-6 max-w-3xl mx-auto w-full">
                 <div class="flex justify-between items-center">
                     <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
-                        <i class="ph-fill ph-student text-blue-600"></i> Chế độ Luyện Tập
+                        <i class="ph-fill ph-pencil-simple text-blue-600"></i> Luyện Dịch Sang Tiếng Anh
                     </h2>
-                    <button id="exitPracticeBtn" class="text-sm font-medium text-slate-500 hover:text-red-600 py-1 px-3 rounded-lg flex items-center gap-1 border border-slate-200 bg-white">
-                        <i class="ph ph-x"></i> Thoát
-                    </button>
+                    <button onclick="exitToMain()" class="text-sm font-medium text-slate-500 hover:text-red-600 py-1 px-3 rounded-lg border border-slate-200 bg-white">Thoát</button>
                 </div>
-
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 flex flex-col gap-6">
                     <div class="flex justify-between items-center border-b border-slate-100 pb-4">
-                        <span id="practiceProgress" class="bg-blue-100 text-blue-800 text-sm font-bold px-3 py-1 rounded-full">Câu 1 / 10</span>
-                        <span id="practiceScore" class="text-slate-500 text-sm font-medium"></span>
+                        <span id="practiceProgress" class="bg-blue-100 text-blue-800 text-sm font-bold px-3 py-1 rounded-full">Câu 1</span>
                     </div>
-                    
                     <div>
                         <p class="text-sm text-slate-500 mb-1 font-medium">Dịch câu sau sang tiếng Anh:</p>
                         <p id="practiceViText" class="text-xl md:text-2xl text-slate-800 font-medium leading-relaxed"></p>
                     </div>
-
                     <div class="flex flex-col gap-3">
-                        <textarea id="practiceInput" class="w-full h-28 p-4 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-lg text-slate-800 resize-none transition-all" placeholder="Gõ câu trả lời tiếng Anh của bạn vào đây..."></textarea>
-                        <button id="checkPracticeBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2 w-full text-lg">
-                            <i class="ph ph-check-circle"></i> Kiểm tra đáp án
+                        <textarea id="practiceInput" class="w-full h-28 p-4 rounded-xl border border-slate-300 focus:border-blue-500 outline-none text-lg resize-none" placeholder="Gõ câu trả lời tiếng Anh..."></textarea>
+                        <button id="checkPracticeBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-xl w-full transition-colors">Kiểm tra đáp án</button>
+                    </div>
+                    <div id="practiceFeedback" class="hidden flex-col gap-4 p-5 rounded-xl border">
+                        <div id="feedbackTitle" class="font-bold text-lg"></div>
+                        <div>
+                            <span class="text-sm text-slate-500">Bài làm của bạn:</span>
+                            <div id="userAnswerDiff" class="text-lg bg-slate-50 p-3 rounded-lg border mt-1 font-medium"></div>
+                        </div>
+                        <div>
+                            <span class="text-sm text-slate-500">Câu gốc chuẩn (Click vào từ để tra):</span>
+                            <div id="correctAnswerOriginal" class="text-lg text-blue-900 bg-blue-50 p-4 rounded-lg border mt-1 font-medium"></div>
+                        </div>
+                        <button id="nextPracticeBtn" class="mt-4 bg-slate-800 hover:bg-slate-900 text-white font-medium py-3 rounded-xl w-full transition-colors">Tiếp theo</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. CHẾ ĐỘ LUYỆN ĐẶT CÂU HỎI -->
+            <section id="askSection" class="hidden flex-col gap-6 max-w-3xl mx-auto w-full">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <i class="ph-fill ph-question text-purple-600"></i> Luyện Đặt Câu Hỏi Từ Văn Bản
+                    </h2>
+                    <button onclick="exitToMain()" class="text-sm font-medium text-slate-500 hover:text-red-600 py-1 px-3 rounded-lg flex items-center gap-1 border border-slate-200 bg-white">
+                        <i class="ph ph-x"></i> Thoát
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 flex flex-col gap-6 relative overflow-hidden">
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+                        <span id="askProgress" class="bg-purple-100 text-purple-800 text-sm font-bold px-3 py-1 rounded-full">Đoạn 1</span>
+                    </div>
+                    
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-5">
+                        <p class="text-sm text-slate-500 mb-2 font-medium flex items-center gap-1">
+                            <i class="ph ph-book-open"></i> Đọc đoạn văn sau (1-2 câu):
+                        </p>
+                        <p id="askContextText" class="text-lg text-slate-800 font-medium leading-relaxed"></p>
+                    </div>
+
+                    <button id="getHintBtn" class="self-start text-sm font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 py-2 px-4 rounded-lg flex items-center gap-2 transition-colors">
+                        <i class="ph-fill ph-sparkle text-purple-500"></i> Gợi ý cách đặt câu hỏi (AI)
+                    </button>
+
+                    <div id="hintBox" class="hidden flex-col gap-3 p-4 bg-purple-50 rounded-xl border border-purple-100">
+                        <p class="text-sm font-bold text-purple-800">Dựa vào nội dung trên, bạn có thể hỏi về:</p>
+                        <ul id="hintList" class="flex flex-col gap-2"></ul>
+                    </div>
+
+                    <div class="flex flex-col gap-3 border-t border-slate-100 pt-6">
+                        <label class="text-sm font-medium text-slate-700">Dựa vào nội dung trên, hãy đặt một câu hỏi bằng Tiếng Anh:</label>
+                        <textarea id="askInput" class="w-full h-24 p-4 rounded-xl border border-slate-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none text-lg text-slate-800 resize-none transition-all shadow-inner" placeholder="Ví dụ: Where did he go?"></textarea>
+                        
+                        <button id="checkAskBtn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2 w-full text-lg">
+                            <i class="ph ph-paper-plane-right"></i> Gửi AI chấm điểm
                         </button>
                     </div>
 
-                    <!-- Kết quả kiểm tra -->
-                    <div id="practiceFeedback" class="hidden flex-col gap-4 p-5 rounded-xl border">
-                        <div id="feedbackTitle" class="font-bold text-lg flex items-center gap-2"></div>
+                    <div id="askFeedback" class="hidden flex-col gap-4 p-5 rounded-xl border mt-2">
+                        <div id="askResultTitle" class="font-bold text-lg flex items-center gap-2"></div>
+                        <p id="askFeedbackText" class="text-slate-700 leading-relaxed"></p>
                         
-                        <div class="flex flex-col gap-2">
-                            <span class="text-sm font-medium text-slate-500">Bài làm của bạn:</span>
-                            <div id="userAnswerDiff" class="text-lg leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-200"></div>
+                        <div class="bg-white p-3 rounded-lg border border-slate-200 mt-2">
+                            <p class="text-xs text-slate-500 mb-1">Câu hỏi của bạn (đã sửa lỗi ngữ pháp bằng tiếng Anh):</p>
+                            <div id="askUserDiff" class="text-lg font-medium"></div>
+                            <!-- PHẦN DỊCH NGHĨA CÂU ĐÃ SỬA -->
+                            <p class="text-sm text-slate-600 mt-3 pt-2 border-t border-slate-100 flex items-start gap-1">
+                                <i class="ph ph-translate mt-0.5 text-slate-400"></i>
+                                <span>Nghĩa là: <span id="askCorrectedVi" class="font-medium"></span></span>
+                            </p>
                         </div>
 
-                        <div class="flex flex-col gap-2 mt-2">
-                            <span class="text-sm font-medium text-slate-500">Câu gốc (Click vào từ để tra/nghe):</span>
-                            <div id="correctAnswerOriginal" class="text-lg md:text-xl leading-relaxed text-blue-900 font-medium bg-blue-50 p-4 rounded-lg border border-blue-100"></div>
+                        <div class="bg-blue-50 p-3 rounded-lg border border-blue-100 mt-1">
+                            <p class="text-xs text-blue-500 mb-1">Hoặc có thể hỏi cách khác tự nhiên hơn:</p>
+                            <div id="askImproved" class="text-lg text-blue-900 font-medium"></div>
+                            <p class="text-sm text-blue-700 mt-2 pt-2 border-t border-blue-200 flex items-start gap-1">
+                                <i class="ph ph-translate mt-0.5 text-blue-500"></i>
+                                <span>Nghĩa là: <span id="askImprovedVi" class="font-medium"></span></span>
+                            </p>
                         </div>
 
-                        <button id="nextPracticeBtn" class="mt-4 bg-slate-800 hover:bg-slate-900 text-white font-medium py-3 px-6 rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2 w-full">
-                            Tiếp theo <i class="ph ph-arrow-right"></i>
+                        <div class="flex flex-col sm:flex-row gap-3 mt-4">
+                            <button id="retryAskBtn" class="flex-1 bg-white hover:bg-slate-50 text-slate-700 font-medium py-2.5 px-4 rounded-xl border border-slate-300 shadow-sm transition-colors flex items-center justify-center gap-2">
+                                <i class="ph ph-arrow-counter-clockwise"></i> Sửa lại câu này
+                            </button>
+                            <button id="askMoreBtn" class="flex-1 bg-purple-100 hover:bg-purple-200 text-purple-700 font-medium py-2.5 px-4 rounded-xl border border-purple-200 shadow-sm transition-colors flex items-center justify-center gap-2">
+                                <i class="ph ph-plus"></i> Đặt câu hỏi khác
+                            </button>
+                        </div>
+
+                        <button id="nextAskBtn" class="mt-2 bg-slate-800 hover:bg-slate-900 text-white font-medium py-3 px-6 rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2 w-full">
+                            Đoạn văn tiếp theo <i class="ph ph-arrow-right"></i>
                         </button>
                     </div>
                 </div>
             </section>
-        </main>
 
-        <footer class="bg-slate-900 text-slate-400 py-6 text-center text-sm mt-auto">
-            <p>Sử dụng Google Translate API để dịch thuật tự động.</p>
-        </footer>
+        </main>
 
         <!-- Popup Từ Điển -->
         <div id="dictPopup" class="flex flex-col gap-2">
@@ -211,79 +256,99 @@
             </div>
             <div id="dictMeaning" class="text-slate-600 text-base font-medium">Đang tra...</div>
         </div>
+
+        <!-- Popup Cài đặt AI -->
+        <div id="apiModal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-[110] backdrop-blur-sm">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 m-4 flex flex-col gap-4 fade-in">
+                <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                    <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <i class="ph-fill ph-robot text-blue-600"></i> Cấu hình AI Thông minh
+                    </h3>
+                    <button id="closeApiModal" class="text-slate-400 hover:text-red-500"><i class="ph ph-x text-xl"></i></button>
+                </div>
+                <div class="flex flex-col gap-3">
+                    <div class="bg-green-50 border border-green-200 text-green-800 text-sm p-3 rounded-lg flex items-start gap-2">
+                        <i class="ph-fill ph-check-circle mt-0.5"></i>
+                        <p>Hệ thống mặc định sử dụng <b>AI Công cộng Miễn phí</b>. Bạn không cần thiết lập gì vẫn có thể dùng ngay!</p>
+                    </div>
+                    <p class="text-sm text-slate-600">Nếu AI miễn phí bị chậm, bạn có thể tự thêm Gemini API Key của Google (Miễn phí) để ổn định hơn.</p>
+                    <input type="password" id="apiKeyInput" class="w-full p-3 rounded-lg border border-slate-300 focus:border-blue-500 outline-none text-slate-800" placeholder="Nhập Gemini API Key (Không bắt buộc)">
+                </div>
+                <button id="saveApiBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-sm transition-colors w-full mt-2">
+                    Lưu Cấu Hình
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- LOGIC ỨNG DỤNG -->
     <script>
-        // --- UTILS (TOAST) ---
+        // --- QUẢN LÝ CẤU HÌNH AI ---
+        let userApiKey = localStorage.getItem('gemini_api_key') || "";
+
+        const apiModal = document.getElementById('apiModal');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+
+        document.getElementById('settingsBtn').addEventListener('click', () => {
+            apiKeyInput.value = userApiKey;
+            apiModal.classList.remove('hidden');
+            apiModal.classList.add('flex');
+        });
+
+        document.getElementById('closeApiModal').addEventListener('click', () => {
+            apiModal.classList.remove('flex');
+            apiModal.classList.add('hidden');
+        });
+
+        document.getElementById('saveApiBtn').addEventListener('click', () => {
+            const key = apiKeyInput.value.trim();
+            if (key) {
+                localStorage.setItem('gemini_api_key', key);
+                userApiKey = key;
+                showToast('Đã lưu API Key ưu tiên!');
+            } else {
+                localStorage.removeItem('gemini_api_key');
+                userApiKey = "";
+                showToast('Đã chuyển về dùng AI Miễn phí mặc định!');
+            }
+            apiModal.classList.remove('flex');
+            apiModal.classList.add('hidden');
+        });
+
+        // --- UTILS ---
         function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
             const toastMsg = document.getElementById('toastMsg');
             const toastIcon = document.getElementById('toastIcon');
-            
             toastMsg.textContent = message;
             if (type === 'error') {
                 toast.className = "fixed top-4 right-4 px-6 py-3 rounded-xl shadow-xl transform transition-all duration-300 z-[100] flex items-center gap-3 font-medium bg-red-500 text-white";
                 toastIcon.className = "ph-fill ph-warning-circle text-xl";
+            } else if (type === 'info') {
+                toast.className = "fixed top-4 right-4 px-6 py-3 rounded-xl shadow-xl transform transition-all duration-300 z-[100] flex items-center gap-3 font-medium bg-blue-500 text-white";
+                toastIcon.className = "ph-fill ph-info text-xl";
             } else {
                 toast.className = "fixed top-4 right-4 px-6 py-3 rounded-xl shadow-xl transform transition-all duration-300 z-[100] flex items-center gap-3 font-medium bg-green-500 text-white";
                 toastIcon.className = "ph-fill ph-check-circle text-xl";
             }
             toast.style.transform = 'translateY(0)';
             toast.style.opacity = '1';
-            setTimeout(() => {
-                toast.style.transform = 'translateY(-150%)';
-                toast.style.opacity = '0';
-            }, 3000);
+            setTimeout(() => { toast.style.transform = 'translateY(-150%)'; toast.style.opacity = '0'; }, 3000);
         }
 
-        // Helper function copy text to clipboard
-        function copyTextToClipboard(text, successMsg) {
-            if (!text.trim()) return;
-            const tempTextArea = document.createElement('textarea');
-            tempTextArea.value = text.trim();
-            document.body.appendChild(tempTextArea);
-            tempTextArea.select();
-            
-            try {
-                document.execCommand('copy');
-                showToast(successMsg, 'success');
-            } catch (err) {
-                showToast('Lỗi khi sao chép!', 'error');
-            }
-            document.body.removeChild(tempTextArea);
-        }
+        function cleanWord(w) { return w.toLowerCase().replace(/[^\w\s]/gi, ''); }
 
-        // --- APP LOGIC (TRANSLATOR) ---
-        const sourceText = document.getElementById('sourceText');
-        const translateBtn = document.getElementById('translateBtn');
-        const startPracticeBtn = document.getElementById('startPracticeBtn');
-        const inputSection = document.getElementById('inputSection');
-        const loadingIndicator = document.getElementById('loadingIndicator');
-        const resultSection = document.getElementById('resultSection');
-        const practiceSection = document.getElementById('practiceSection');
-        const outputArea = document.getElementById('outputArea');
-        const langDirection = document.getElementById('langDirection');
-        const chunkSizeSelect = document.getElementById('chunkSize'); // Thêm truy xuất element gộp câu
-        const charCount = document.getElementById('charCount');
-        const copyAllBtn = document.getElementById('copyAllBtn');
-        const copyEnBtn = document.getElementById('copyEnBtn');
-        const copyViBtn = document.getElementById('copyViBtn');
-
-        sourceText.addEventListener('input', () => {
-            charCount.textContent = `${sourceText.value.length} ký tự`;
-        });
-
-        async function translateText(text, sl, tl) {
-            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`;
-            try {
-                const response = await fetch(url);
-                if (!response.ok) throw new Error('Network response was not ok');
-                const data = await response.json();
-                return data[0].map(item => item[0]).join('');
-            } catch (error) {
-                return "[Lỗi dịch thuật. Vui lòng kiểm tra kết nối mạng]";
-            }
+        function generateDiffHtml(userText, correctText) {
+            const targetWordsClean = correctText.split(/\s+/).map(cleanWord);
+            const userWords = userText.split(/\s+/);
+            let diffHtml = '';
+            userWords.forEach(word => {
+                const cWord = cleanWord(word);
+                if (!cWord) { diffHtml += word + ' '; return; }
+                if (targetWordsClean.includes(cWord)) diffHtml += `<span class="word-correct">${word}</span> `;
+                else diffHtml += `<span class="word-incorrect">${word}</span> `;
+            });
+            return diffHtml.trim();
         }
 
         function wrapWordsForEnglish(text) {
@@ -298,8 +363,6 @@
 
         window.handleWordClick = async function(event, word) {
             event.stopPropagation();
-            
-            // Text-to-Speech
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(word);
@@ -307,8 +370,6 @@
                 utterance.rate = 0.8;
                 window.speechSynthesis.speak(utterance);
             }
-
-            // Popup
             const popup = document.getElementById('dictPopup');
             const dictWord = document.getElementById('dictWord');
             const dictMeaning = document.getElementById('dictMeaning');
@@ -326,7 +387,6 @@
             } catch (e) {
                 dictMeaning.textContent = 'Không tra được.';
             }
-
             setTimeout(() => { popup.style.display = 'none'; }, 4000);
         };
 
@@ -335,285 +395,273 @@
             if (popup) popup.style.display = 'none';
         });
 
-        // HÀM TÁCH CÂU DỰA VÀO DẤU CHẤM, CHẤM HỎI, CHẤM THAN
-        function splitIntoSentences(text) {
-            const regex = /[^.!?]+[.!?]+(?:\s|$)/g;
-            let sentences = text.match(regex);
-            
-            if (!sentences) {
-                return [text.trim()].filter(s => s);
+        function extractJSON(text) {
+            try {
+                const backticks = String.fromCharCode(96, 96, 96);
+                const regex = new RegExp(backticks + '(?:json)?\\s*([\\s\\S]*?)\\s*' + backticks);
+                const match = text.match(regex);
+                if (match) return JSON.parse(match[1]);
+                return JSON.parse(text);
+            } catch (e) {
+                console.error("Lỗi parse JSON:", text);
+                throw new Error("Lỗi đọc dữ liệu AI");
             }
-            return sentences.map(s => s.trim()).filter(s => s !== '');
         }
 
-        // --- TÍNH NĂNG 1: DỊCH & CHIA ĐOẠN (ĐÃ CẬP NHẬT) ---
-        translateBtn.addEventListener('click', async () => {
-            const text = sourceText.value.trim();
-            if (!text) {
-                showToast('Vui lòng nhập đoạn văn bản cần dịch!', 'error');
-                return;
+        // --- CÁC HÀM GỌI API ---
+        async function translateText(text, sl, tl) {
+            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`;
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                return data[0].map(item => item[0]).join('');
+            } catch (error) { return "[Lỗi dịch thuật]"; }
+        }
+
+        // Core AI Function
+        async function callAI(promptText) {
+            if (userApiKey) {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${userApiKey}`;
+                const payload = { contents: [{ parts: [{ text: promptText }] }] };
+                const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!res.ok) throw new Error("Lỗi API Gemini");
+                const data = await res.json();
+                return extractJSON(data.candidates[0].content.parts[0].text);
+            } else {
+                const url = "https://text.pollinations.ai/";
+                const res = await fetch(url, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        messages: [
+                            { role: "system", content: "You are a JSON-only API. You must strictly output valid JSON and absolutely no other markdown or explanations." },
+                            { role: "user", content: promptText }
+                        ],
+                        jsonMode: true
+                    })
+                });
+                if (!res.ok) throw new Error("Lỗi API Miễn phí");
+                const text = await res.text();
+                return extractJSON(text);
             }
+        }
 
-            const dir = langDirection.value.split('-');
-            const sourceLang = dir[0];
-            const targetLang = dir[1];
-            const chunkConfig = chunkSizeSelect.value;
+        async function aiSuggestQuestions(contextText) {
+            const prompt = `Đoạn văn: "${contextText}"
+            Nhiệm vụ: Dựa vào thông tin cụ thể CÓ TRONG ĐOẠN VĂN TRÊN, hãy gợi ý 3 cách đặt câu hỏi GIAO TIẾP ĐƠN GIẢN cho người đang đọc.
+            Ví dụ: Nếu đoạn văn là "I go to the park with my friends tomorrow", hãy gợi ý hỏi "Where do you go?" hoặc "Who do you go with?" hoặc "When do you go?".
+            Tuyệt đối không dùng từ phức tạp. Sử dụng các từ để hỏi cơ bản: Who, What, Where, When, Why, How gắn với hành động/sự việc trong đoạn.
+            BẮT BUỘC TRẢ VỀ CHÍNH XÁC ĐỊNH DẠNG JSON SAU:
+            {
+              "suggestions": [
+                { "whWord": "TỪ ĐỂ HỎI (VD: When)", "hintVi": "Ý nghĩa câu hỏi gợi ý bằng tiếng Việt (VD: Hỏi xem khi nào thì đi...)" }
+              ]
+            }`;
+            return await callAI(prompt);
+        }
 
-            // Gom cụm câu linh hoạt dựa vào lựa chọn
-            let chunks = [];
-            const paragraphs = text.split(/\n+/).filter(p => p.trim() !== '');
+        async function aiEvaluateQuestion(contextText, userQuestion) {
+            const prompt = `Đoạn văn: "${contextText}"
+            Câu hỏi người dùng đặt: "${userQuestion}"
             
+            Nhiệm vụ:
+            1. Câu hỏi tiếng Anh này có đúng ngữ pháp giao tiếp cơ bản không?
+            2. Câu hỏi này có bám sát thông tin trong đoạn văn không?
+            Yêu cầu: Khuyến khích sự tự nhiên, đơn giản. Chấp nhận văn nói ngắn gọn. Không ép dùng cấu trúc học thuật.
+            
+            BẮT BUỘC TRẢ VỀ CHÍNH XÁC ĐỊNH DẠNG JSON SAU (không markdown, không chữ khác):
+            {
+              "isGood": true,
+              "feedbackVi": "Nhận xét ngắn gọn, thân thiện bằng tiếng Việt...",
+              "correctedQuestion": "Câu hỏi bằng TIẾNG ANH đã sửa lỗi ngữ pháp (giữ nguyên tiếng Anh nếu đã đúng)",
+              "correctedQuestionVi": "Dịch nghĩa tiếng Việt của câu tiếng Anh đã sửa",
+              "alternativeQuestion": "1 cách hỏi khác bằng TIẾNG ANH tự nhiên, thực tế và cực kỳ ngắn gọn",
+              "alternativeQuestionVi": "Dịch nghĩa tiếng Việt của cách hỏi khác"
+            }`;
+            return await callAI(prompt);
+        }
+
+        // --- DOM Elements & Navigation ---
+        const sourceText = document.getElementById('sourceText');
+        const translateBtn = document.getElementById('translateBtn');
+        const startPracticeBtn = document.getElementById('startPracticeBtn');
+        const startAskBtn = document.getElementById('startAskBtn');
+        const inputSection = document.getElementById('inputSection');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const resultSection = document.getElementById('resultSection');
+        const practiceSection = document.getElementById('practiceSection');
+        const askSection = document.getElementById('askSection');
+
+        document.getElementById('charCount').textContent = `${sourceText.value.length} ký tự`;
+        sourceText.addEventListener('input', () => {
+            document.getElementById('charCount').textContent = `${sourceText.value.length} ký tự`;
+        });
+
+        function showLoading(msg) {
+            document.getElementById('loadingMsg').textContent = msg;
+            inputSection.classList.add('hidden');
+            resultSection.classList.add('hidden');
+            practiceSection.classList.add('hidden');
+            askSection.classList.add('hidden');
+            loadingIndicator.classList.replace('hidden', 'flex');
+        }
+
+        function hideLoading() {
+            loadingIndicator.classList.replace('flex', 'hidden');
+        }
+
+        function exitToMain() {
+            hideLoading();
+            practiceSection.classList.add('hidden');
+            askSection.classList.add('hidden');
+            resultSection.classList.add('hidden');
+            inputSection.classList.remove('hidden');
+        }
+
+        function getChunks(text, sizeParam) {
+            const paragraphs = text.split(/\n+/).filter(p => p.trim() !== '');
+            let chunks = [];
             paragraphs.forEach(p => {
                 const sents = p.match(/[^.!?]+[.!?]*/g) || [p];
                 let currentChunk = [];
-                
-                // Hàm xác định số câu mục tiêu cho chunk hiện tại
-                const getTargetLength = () => {
-                    if (chunkConfig === 'random') {
-                        return Math.floor(Math.random() * 2) + 2; // Sinh ngẫu nhiên 2 hoặc 3
-                    }
-                    return parseInt(chunkConfig);
+                const getTarget = () => {
+                    if (sizeParam === '1-2') return Math.floor(Math.random() * 2) + 1;
+                    if (sizeParam === 'random') return Math.floor(Math.random() * 2) + 2;
+                    return parseInt(sizeParam);
                 };
-
-                let targetLength = getTargetLength();
+                let target = getTarget();
 
                 sents.forEach(s => {
                     const trimmed = s.trim();
                     if (!trimmed) return;
                     currentChunk.push(trimmed);
-                    
-                    if (currentChunk.length >= targetLength) {
+                    if (currentChunk.length >= target) {
                         chunks.push(currentChunk.join(' '));
                         currentChunk = [];
-                        targetLength = getTargetLength(); // Cập nhật số câu cho mảng tiếp theo
+                        target = getTarget();
                     }
                 });
                 if (currentChunk.length > 0) chunks.push(currentChunk.join(' '));
             });
+            return chunks;
+        }
 
-            // Giao diện loading
-            translateBtn.disabled = true;
-            translateBtn.classList.add('opacity-70', 'cursor-not-allowed');
-            sourceText.disabled = true;
-            resultSection.classList.add('hidden');
+        // --- CHẾ ĐỘ 1: DỊCH ---
+        translateBtn.addEventListener('click', async () => {
+            const text = sourceText.value.trim();
+            if (!text) return showToast('Vui lòng nhập văn bản!', 'error');
+
+            const dir = document.getElementById('langDirection').value.split('-');
+            const chunks = getChunks(text, document.getElementById('chunkSize').value);
+            
+            showLoading("Đang dịch văn bản...");
+            const outputArea = document.getElementById('outputArea');
             outputArea.innerHTML = '';
-            loadingIndicator.classList.replace('hidden', 'flex');
 
             try {
                 for (let i = 0; i < chunks.length; i++) {
                     const originalP = chunks[i];
-                    const translatedP = await translateText(originalP, sourceLang, targetLang);
-
-                    const displayOriginal = sourceLang === 'en' ? wrapWordsForEnglish(originalP) : originalP;
-                    const displayTranslated = targetLang === 'en' ? wrapWordsForEnglish(translatedP) : translatedP;
+                    const translatedP = await translateText(originalP, dir[0], dir[1]);
 
                     const row = document.createElement('div');
-                    row.className = 'fade-in grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8 p-5 md:p-7 bg-white rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-all relative group';
-
+                    row.className = 'grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8 p-5 md:p-7 bg-white rounded-2xl shadow-sm border border-slate-200';
+                    
                     const col1 = document.createElement('div');
-                    col1.className = 'text-slate-800 leading-relaxed text-lg md:text-[1.15rem] font-medium tracking-wide';
-                    col1.innerHTML = displayOriginal;
+                    col1.className = 'text-slate-800 text-lg font-medium';
+                    col1.innerHTML = dir[0] === 'en' ? wrapWordsForEnglish(originalP) : originalP;
 
                     const col2 = document.createElement('div');
-                    col2.className = 'text-blue-900 leading-relaxed text-lg md:text-[1.15rem] pt-4 border-t border-slate-100 md:pt-0 md:border-t-0 md:border-l md:pl-8 md:border-slate-200';
-                    col2.innerHTML = displayTranslated;
+                    col2.className = 'text-blue-900 text-lg md:border-l md:pl-8';
+                    col2.innerHTML = dir[1] === 'en' ? wrapWordsForEnglish(translatedP) : translatedP;
 
-                    row.appendChild(col1);
-                    row.appendChild(col2);
+                    row.appendChild(col1); row.appendChild(col2);
                     outputArea.appendChild(row);
-
-                    await new Promise(r => setTimeout(r, 200));
                 }
-
-                loadingIndicator.classList.replace('flex', 'hidden');
+                hideLoading();
+                inputSection.classList.remove('hidden');
                 resultSection.classList.remove('hidden');
-                practiceSection.classList.add('hidden'); // Ẩn vùng luyện tập nếu đang mở
-                resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-            } catch (error) {
-                showToast('Có lỗi xảy ra trong quá trình xử lý!', 'error');
-                loadingIndicator.classList.replace('flex', 'hidden');
-            } finally {
-                translateBtn.disabled = false;
-                translateBtn.classList.remove('opacity-70', 'cursor-not-allowed');
-                sourceText.disabled = false;
+                resultSection.scrollIntoView({ behavior: 'smooth' });
+            } catch (e) {
+                showToast('Lỗi dịch thuật', 'error');
+                exitToMain();
             }
         });
 
-        // --- CÁC HÀM XỬ LÝ NÚT COPY ---
-        copyAllBtn.addEventListener('click', () => {
-            const rows = outputArea.querySelectorAll('.grid');
-            let finalString = '';
-            rows.forEach(row => {
-                const originalText = row.children[0].textContent;
-                const translatedText = row.children[1].textContent;
-                finalString += originalText.trim() + '\n' + translatedText.trim() + '\n\n';
-            });
-            copyTextToClipboard(finalString, 'Đã sao chép toàn bộ!');
-        });
-
-        copyEnBtn.addEventListener('click', () => {
-            const rows = outputArea.querySelectorAll('.grid');
-            const isEnVi = langDirection.value === 'en-vi';
-            let finalString = '';
-            rows.forEach(row => {
-                const text = isEnVi ? row.children[0].textContent : row.children[1].textContent;
-                finalString += text.trim() + '\n\n';
-            });
-            copyTextToClipboard(finalString, 'Đã sao chép phần Tiếng Anh!');
-        });
-
-        copyViBtn.addEventListener('click', () => {
-            const rows = outputArea.querySelectorAll('.grid');
-            const isEnVi = langDirection.value === 'en-vi';
-            let finalString = '';
-            rows.forEach(row => {
-                const text = isEnVi ? row.children[1].textContent : row.children[0].textContent;
-                finalString += text.trim() + '\n\n';
-            });
-            copyTextToClipboard(finalString, 'Đã sao chép phần Tiếng Việt!');
-        });
-
-        // --- TÍNH NĂNG 2: CHẾ ĐỘ LUYỆN TẬP ---
+        // --- CHẾ ĐỘ 2: LUYỆN DỊCH ---
         let practiceData = [];
         let currentPracticeIndex = 0;
 
-        const practiceProgress = document.getElementById('practiceProgress');
-        const practiceViText = document.getElementById('practiceViText');
-        const practiceInput = document.getElementById('practiceInput');
-        const checkPracticeBtn = document.getElementById('checkPracticeBtn');
-        const practiceFeedback = document.getElementById('practiceFeedback');
-        const feedbackTitle = document.getElementById('feedbackTitle');
-        const userAnswerDiff = document.getElementById('userAnswerDiff');
-        const correctAnswerOriginal = document.getElementById('correctAnswerOriginal');
-        const nextPracticeBtn = document.getElementById('nextPracticeBtn');
-        const exitPracticeBtn = document.getElementById('exitPracticeBtn');
-
         startPracticeBtn.addEventListener('click', async () => {
             const text = sourceText.value.trim();
-            if (!text) {
-                showToast('Vui lòng dán văn bản tiếng Anh vào trước!', 'error');
-                return;
-            }
-            if (langDirection.value !== 'en-vi') {
-                showToast('Chế độ này hoạt động tốt nhất khi dịch Tiếng Anh ➔ Tiếng Việt. Đang tự chuyển hướng...', 'info');
-                langDirection.value = 'en-vi';
-            }
+            if (!text) return showToast('Vui lòng nhập văn bản!', 'error');
 
-            translateBtn.disabled = true;
-            startPracticeBtn.disabled = true;
-            resultSection.classList.add('hidden');
-            practiceSection.classList.add('hidden');
-            loadingIndicator.classList.replace('hidden', 'flex');
+            showLoading("Đang chuẩn bị nội dung luyện dịch...");
             
-            const sentences = splitIntoSentences(text);
-            practiceData = [];
-
-            try {
-                for (let i = 0; i < sentences.length; i++) {
-                    const enSentence = sentences[i];
-                    const viSentence = await translateText(enSentence, 'en', 'vi');
-                    practiceData.push({ en: enSentence, vi: viSentence });
-                    await new Promise(r => setTimeout(r, 200)); 
-                }
-
-                if (practiceData.length > 0) {
-                    currentPracticeIndex = 0;
-                    inputSection.classList.add('hidden');
-                    loadingIndicator.classList.replace('flex', 'hidden');
-                    practiceSection.classList.remove('hidden');
-                    loadPracticeQuestion();
-                } else {
-                    showToast('Không tìm thấy câu nào hợp lệ.', 'error');
-                    loadingIndicator.classList.replace('flex', 'hidden');
-                }
-
-            } catch (error) {
-                showToast('Lỗi khi chuẩn bị bài tập. Vui lòng thử lại.', 'error');
-                loadingIndicator.classList.replace('flex', 'hidden');
-            } finally {
-                translateBtn.disabled = false;
-                startPracticeBtn.disabled = false;
+            let englishText = text;
+            if (document.getElementById('langDirection').value === 'vi-en') {
+                englishText = await translateText(text, 'vi', 'en');
             }
+
+            practiceData = getChunks(englishText, '1'); 
+            
+            if (practiceData.length === 0) {
+                showToast('Không có dữ liệu hợp lệ', 'error');
+                return exitToMain();
+            }
+
+            for(let i=0; i<practiceData.length; i++){
+                const viText = await translateText(practiceData[i], 'en', 'vi');
+                practiceData[i] = { en: practiceData[i], vi: viText };
+            }
+
+            currentPracticeIndex = 0;
+            hideLoading();
+            practiceSection.classList.remove('hidden');
+            loadPracticeQuestion();
         });
 
         function loadPracticeQuestion() {
-            const currentQA = practiceData[currentPracticeIndex];
-            practiceProgress.textContent = `Câu ${currentPracticeIndex + 1} / ${practiceData.length}`;
-            practiceViText.textContent = currentQA.vi;
+            document.getElementById('practiceProgress').textContent = `Câu ${currentPracticeIndex + 1} / ${practiceData.length}`;
+            document.getElementById('practiceViText').textContent = practiceData[currentPracticeIndex].vi;
             
-            practiceInput.value = '';
-            practiceInput.disabled = false;
-            practiceInput.focus();
+            document.getElementById('practiceInput').value = '';
+            document.getElementById('practiceInput').disabled = false;
             
-            checkPracticeBtn.classList.remove('hidden');
-            practiceFeedback.classList.add('hidden');
+            document.getElementById('checkPracticeBtn').classList.remove('hidden');
+            document.getElementById('practiceFeedback').classList.add('hidden');
         }
 
-        function cleanWord(w) {
-            return w.toLowerCase().replace(/[^\w\s]/gi, '');
-        }
+        document.getElementById('checkPracticeBtn').addEventListener('click', () => {
+            const userAns = document.getElementById('practiceInput').value.trim();
+            if (!userAns) return showToast('Vui lòng gõ câu trả lời!', 'error');
 
-        checkPracticeBtn.addEventListener('click', () => {
-            const userInputText = practiceInput.value.trim();
-            if (!userInputText) {
-                showToast('Vui lòng nhập câu trả lời của bạn.', 'error');
-                return;
-            }
-
-            const currentQA = practiceData[currentPracticeIndex];
-            const originalEn = currentQA.en;
-
-            const targetWords = originalEn.split(/\s+/);
-            const targetWordsClean = targetWords.map(cleanWord);
+            const originalEn = practiceData[currentPracticeIndex].en;
+            const isPerfect = cleanWord(originalEn) === cleanWord(userAns);
             
-            const userWords = userInputText.split(/\s+/);
+            document.getElementById('practiceInput').disabled = true;
+            document.getElementById('checkPracticeBtn').classList.add('hidden');
+            const feedback = document.getElementById('practiceFeedback');
+            feedback.classList.remove('hidden');
+            feedback.className = `flex flex-col gap-4 p-5 rounded-xl border mt-2 ${isPerfect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`;
+
+            document.getElementById('feedbackTitle').innerHTML = isPerfect
+                ? '<i class="ph-fill ph-check-circle text-green-600"></i> <span class="text-green-800">Chính xác tuyệt đối!</span>'
+                : '<i class="ph-fill ph-x-circle text-red-600"></i> <span class="text-red-800">Chưa hoàn toàn chính xác!</span>';
             
-            let isPerfect = cleanWord(originalEn) === cleanWord(userInputText);
-            let diffHtml = '';
-
-            userWords.forEach(word => {
-                const cWord = cleanWord(word);
-                if (!cWord) {
-                    diffHtml += word + ' ';
-                    return;
-                }
-                
-                if (targetWordsClean.includes(cWord)) {
-                    diffHtml += `<span class="word-correct">${word}</span> `;
-                } else {
-                    diffHtml += `<span class="word-incorrect">${word}</span> `;
-                }
-            });
-
-            practiceInput.disabled = true;
-            checkPracticeBtn.classList.add('hidden');
-            practiceFeedback.classList.remove('hidden');
-            practiceFeedback.classList.remove('bg-green-50', 'bg-red-50', 'border-green-200', 'border-red-200');
-
-            if (isPerfect) {
-                feedbackTitle.innerHTML = `<i class="ph-fill ph-check-circle text-green-500"></i> <span class="text-green-700">Chính xác tuyệt đối!</span>`;
-                practiceFeedback.classList.add('bg-green-50', 'border-green-200');
-            } else {
-                feedbackTitle.innerHTML = `<i class="ph-fill ph-x-circle text-red-500"></i> <span class="text-red-700">Chưa hoàn toàn chính xác. Hãy xem kỹ lỗi sai!</span>`;
-                practiceFeedback.classList.add('bg-red-50', 'border-red-200');
-            }
-
-            userAnswerDiff.innerHTML = diffHtml.trim();
-            correctAnswerOriginal.innerHTML = wrapWordsForEnglish(originalEn);
+            document.getElementById('userAnswerDiff').innerHTML = generateDiffHtml(userAns, originalEn);
+            document.getElementById('correctAnswerOriginal').innerHTML = wrapWordsForEnglish(originalEn);
         });
 
-        nextPracticeBtn.addEventListener('click', () => {
+        document.getElementById('nextPracticeBtn').addEventListener('click', () => {
             currentPracticeIndex++;
             if (currentPracticeIndex < practiceData.length) {
                 loadPracticeQuestion();
             } else {
                 practiceSection.innerHTML = `
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-10 text-center flex flex-col items-center gap-4">
-                        <i class="ph-fill ph-trophy text-6xl text-yellow-500"></i>
+                        <i class="ph-fill ph-confetti text-6xl text-blue-500"></i>
                         <h2 class="text-2xl font-bold text-slate-800">Hoàn thành bài luyện tập!</h2>
-                        <p class="text-slate-600 mb-4">Bạn đã luyện dịch xong ${practiceData.length} câu.</p>
-                        <button onclick="document.getElementById('exitPracticeBtn').click()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl shadow-sm transition-colors">
+                        <button onclick="exitToMain()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl transition-colors">
                             Trở về màn hình chính
                         </button>
                     </div>
@@ -621,12 +669,160 @@
             }
         });
 
-        exitPracticeBtn.addEventListener('click', () => {
-            practiceSection.classList.add('hidden');
-            inputSection.classList.remove('hidden');
+        // --- CHẾ ĐỘ 3: LUYỆN ĐẶT CÂU HỎI ---
+        let askData = [];
+        let currentAskIndex = 0;
+
+        startAskBtn.addEventListener('click', async () => {
+            const text = sourceText.value.trim();
+            if (!text) return showToast('Vui lòng nhập văn bản!', 'error');
+
+            showLoading("Đang chuẩn bị nội dung tiếng Anh...");
             
-            if(!document.getElementById('practiceViText')) {
-                location.reload(); 
+            let englishText = text;
+            if (document.getElementById('langDirection').value === 'vi-en') {
+                englishText = await translateText(text, 'vi', 'en');
+            }
+
+            askData = getChunks(englishText, '1-2');
+            
+            if (askData.length === 0) {
+                showToast('Không có dữ liệu hợp lệ', 'error');
+                return exitToMain();
+            }
+
+            currentAskIndex = 0;
+            hideLoading();
+            askSection.classList.remove('hidden');
+            loadAskQuestion();
+        });
+
+        function loadAskQuestion() {
+            document.getElementById('askProgress').textContent = `Đoạn ${currentAskIndex + 1} / ${askData.length}`;
+            document.getElementById('askContextText').textContent = askData[currentAskIndex];
+            
+            document.getElementById('askInput').value = '';
+            document.getElementById('askInput').disabled = false;
+            
+            document.getElementById('hintBox').classList.add('hidden');
+            document.getElementById('getHintBtn').disabled = false;
+            document.getElementById('getHintBtn').innerHTML = `<i class="ph-fill ph-sparkle text-purple-500"></i> Gợi ý cách đặt câu hỏi (AI)`;
+            
+            const checkBtn = document.getElementById('checkAskBtn');
+            checkBtn.classList.remove('hidden');
+            checkBtn.disabled = false;
+            checkBtn.innerHTML = `<i class="ph ph-paper-plane-right"></i> Gửi AI chấm điểm`;
+
+            document.getElementById('askFeedback').classList.add('hidden');
+        }
+
+        document.getElementById('getHintBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('getHintBtn');
+            btn.disabled = true;
+            btn.innerHTML = `<span class="ai-spinner text-purple-600"></span> Đang suy nghĩ...`;
+            
+            try {
+                const res = await aiSuggestQuestions(askData[currentAskIndex]);
+                const list = document.getElementById('hintList');
+                list.innerHTML = '';
+                
+                res.suggestions.forEach(item => {
+                    const li = document.createElement('li');
+                    li.className = 'text-sm text-slate-700 flex gap-2';
+                    li.innerHTML = `<span class="font-bold text-purple-600 w-12 shrink-0">${item.whWord}</span> <span>${item.hintVi}</span>`;
+                    list.appendChild(li);
+                });
+                
+                document.getElementById('hintBox').classList.remove('hidden');
+                btn.innerHTML = `<i class="ph-fill ph-check text-green-500"></i> Đã tải gợi ý`;
+            } catch (error) {
+                showToast('Lỗi khi tải gợi ý, vui lòng thử lại', 'error');
+                btn.disabled = false;
+                btn.innerHTML = `<i class="ph-fill ph-sparkle text-purple-500"></i> Thử lấy gợi ý lại`;
+            }
+        });
+
+        document.getElementById('checkAskBtn').addEventListener('click', async () => {
+            const userQ = document.getElementById('askInput').value.trim();
+            if (!userQ) return showToast('Vui lòng gõ câu hỏi của bạn!', 'error');
+
+            const btn = document.getElementById('checkAskBtn');
+            btn.disabled = true;
+            btn.innerHTML = `<span class="ai-spinner"></span> Đang chấm điểm...`;
+            document.getElementById('askInput').disabled = true;
+
+            try {
+                const [translatedUserQ, res] = await Promise.all([
+                    translateText(userQ, 'en', 'vi'),
+                    aiEvaluateQuestion(askData[currentAskIndex], userQ)
+                ]);
+                
+                document.getElementById('askFeedback').classList.remove('hidden');
+                document.getElementById('askFeedback').className = `flex flex-col gap-4 p-5 rounded-xl border mt-2 ${res.isGood ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`;
+                
+                const titleIcon = res.isGood ? '<i class="ph-fill ph-check-circle text-green-600"></i>' : '<i class="ph-fill ph-x-circle text-red-600"></i>';
+                const titleColor = res.isGood ? 'text-green-800' : 'text-red-800';
+                
+                document.getElementById('askResultTitle').innerHTML = `${titleIcon} <span class="${titleColor}">${res.isGood ? 'Câu hỏi rất tốt!' : 'Cần sửa đổi một chút!'}</span>`;
+                document.getElementById('askFeedbackText').textContent = res.feedbackVi;
+                
+                const diffHtml = generateDiffHtml(userQ, res.correctedQuestion);
+                document.getElementById('askUserDiff').innerHTML = diffHtml;
+                
+                document.getElementById('askCorrectedVi').textContent = res.correctedQuestionVi || translatedUserQ;
+                
+                document.getElementById('askImproved').textContent = res.alternativeQuestion;
+                document.getElementById('askImprovedVi').textContent = res.alternativeQuestionVi || "Không có bản dịch";
+
+                btn.classList.add('hidden');
+            } catch (error) {
+                showToast('Lỗi khi xử lý! Hãy thử lại', 'error');
+                const btnObj = document.getElementById('checkAskBtn');
+                btnObj.disabled = false;
+                btnObj.innerHTML = `<i class="ph-fill ph-paper-plane-right"></i> Thử gửi lại`;
+                document.getElementById('askInput').disabled = false;
+            }
+        });
+
+        document.getElementById('retryAskBtn').addEventListener('click', () => {
+            document.getElementById('askFeedback').classList.add('hidden');
+            document.getElementById('askInput').disabled = false;
+            document.getElementById('askInput').focus();
+            
+            const btn = document.getElementById('checkAskBtn');
+            btn.classList.remove('hidden');
+            btn.disabled = false;
+            btn.innerHTML = `<i class="ph ph-paper-plane-right"></i> Gửi AI chấm điểm lại`;
+        });
+
+        document.getElementById('askMoreBtn').addEventListener('click', () => {
+            document.getElementById('askFeedback').classList.add('hidden');
+            const input = document.getElementById('askInput');
+            input.value = '';
+            input.disabled = false;
+            input.focus();
+            
+            const btn = document.getElementById('checkAskBtn');
+            btn.classList.remove('hidden');
+            btn.disabled = false;
+            btn.innerHTML = `<i class="ph ph-paper-plane-right"></i> Gửi AI chấm điểm`;
+        });
+
+        document.getElementById('nextAskBtn').addEventListener('click', () => {
+            currentAskIndex++;
+            if (currentAskIndex < askData.length) {
+                loadAskQuestion();
+            } else {
+                document.getElementById('askSection').innerHTML = `
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-10 text-center flex flex-col items-center gap-4">
+                        <i class="ph-fill ph-confetti text-6xl text-purple-500"></i>
+                        <h2 class="text-2xl font-bold text-slate-800">Hoàn thành bài luyện tập!</h2>
+                        <p class="text-slate-600 mb-4">Bạn đã luyện hỏi xong toàn bộ văn bản.</p>
+                        <button onclick="exitToMain()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-xl transition-colors">
+                            Trở về màn hình chính
+                        </button>
+                    </div>
+                `;
             }
         });
 
