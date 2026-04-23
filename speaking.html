@@ -16,10 +16,14 @@
         .progress-bar { transition: width 0.8s cubic-bezier(0.65, 0, 0.35, 1); }
         .pulse-ring { animation: pulse 2s infinite; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); } 70% { box-shadow: 0 0 0 15px rgba(37, 99, 235, 0); } 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); } }
-        /* Custom scrollbar for vocab area if needed */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .spinner { animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        /* Hiệu ứng cho từng từ khi hover */
+        .clickable-word { transition: all 0.2s ease; display: inline-block; border-radius: 0.25rem; padding: 0 2px; margin: 0 1px; }
+        .clickable-word:hover { background-color: #dbeafe; color: #1d4ed8; transform: translateY(-1px); }
     </style>
 </head>
 <body>
@@ -90,7 +94,6 @@
                 { id: 9, text: "Is your city green?", trans: "Thành phố của bạn có xanh không?", vocab: [{w: "Greenery", m: "Cây cỏ"}, {w: "Park", m: "Công viên"}, {w: "Concrete jungle", m: "Rừng bê tông (đô thị)"}, {w: "Plant", m: "Trồng cây"}, {w: "Peaceful", m: "Yên bình"}] },
                 { id: 10, text: "Will the Earth be a better place in the future?", trans: "Trái Đất có tốt hơn trong tương lai không?", vocab: [{w: "Sustainability", m: "Sự bền vững"}, {w: "Renewable energy", m: "Năng lượng tái tạo"}, {w: "Optimistic", m: "Lạc quan"}, {w: "Effort", m: "Nỗ lực"}, {w: "Generation", m: "Thế hệ"}] }
             ]},
-            // Để mã nguồn không bị quá tải nhưng vẫn đầy đủ, tôi sẽ tiếp tục cung cấp 5 từ vựng cho các chủ đề tiếp theo
             { id: 6, topic: "Sức khỏe (Health)", level: "B1", questions: [
                 { id: 1, text: "Do you exercise regularly?", trans: "Bạn có tập thể dục thường xuyên không?", vocab: [{w: "Workout", m: "Tập luyện"}, {w: "Stay in shape", m: "Giữ dáng"}, {w: "Gym", m: "Phòng tập"}, {w: "Sweat", m: "Đổ mồ hôi"}, {w: "Fitness", m: "Thể hình"}] },
                 { id: 2, text: "What do you do to stay healthy?", trans: "Bạn làm gì để giữ sức khỏe?", vocab: [{w: "Wellness", m: "Sức khỏe tốt"}, {w: "Diet", m: "Chế độ ăn"}, {w: "Hydrated", m: "Đủ nước"}, {w: "Routine", m: "Thói quen"}, {w: "Avoid", m: "Tránh"}] },
@@ -175,7 +178,7 @@
                 { id: 7, text: "What skills are most important for the future workforce?", trans: "Kỹ năng nào quan trọng nhất cho lao động tương lai?", vocab: [{w: "Soft skills", m: "Kỹ năng mềm"}, {w: "Adaptability", m: "Khả năng thích ứng"}, {w: "Problem-solving", m: "Giải quyết vấn đề"}, {w: "Tech-savvy", m: "Am hiểu công nghệ"}, {w: "Communication", m: "Giao tiếp"}] },
                 { id: 8, text: "Should we study subjects we don't like?", trans: "Chúng ta có nên học những môn mình không thích?", vocab: [{w: "Well-rounded", m: "Toàn diện"}, {w: "Mandatory", m: "Bắt buộc"}, {w: "Boring", m: "Nhàm chán"}, {w: "Broaden knowledge", m: "Mở rộng kiến thức"}, {w: "Motivation", m: "Động lực"}] },
                 { id: 9, text: "How does technology impact the classroom?", trans: "Công nghệ tác động đến lớp học ra sao?", vocab: [{w: "Digital literacy", m: "Kiến thức số"}, {w: "Engaging", m: "Thu hút"}, {w: "Interactive whiteboard", m: "Bảng tương tác"}, {w: "Resourceful", m: "Giàu tài nguyên"}, {w: "Integrate", m: "Tích hợp"}] },
-                { id: 10, text: "Is lifelong learning important?", trans: "Học tập suốt đời có quan trọng không?", vocab: [{w: "Continuous", m: "Liên tục"}, {w: "Upgrade skills", m: "Nâng cấp kỹ năng"}, {w: "Stay relevant", m: "Không bị tụt hậu"}, {w: "Self-improvement", m: "Tự hoàn thiện"}, {w: "Curious", m: "Tò mò"}] }
+                { id: 10, text: "Is lifelong learning important?", trans: "Học tập suốt đời có quan trọng không?", vocab: [{w: "Continuous", m: "Liên tục"}, {w: "Upgrade skills", m: "Nâng cấp kỹ năng"}, {w: "Stay relevant", m: "Không bị tụt hậu"}, {w: "Self-improvement", m: "Tự hoàn thiện"}, {w: "Curious", m: "Tò màu"}] }
             ]},
             { id: 13, topic: "Công việc (Work Life)", level: "B2", questions: [
                 { id: 1, text: "What defines a good workplace environment?", trans: "Điều gì tạo nên môi trường làm việc tốt?", vocab: [{w: "Collaboration", m: "Sự cộng tác"}, {w: "Toxic", m: "Độc hại"}, {w: "Supportive", m: "Hỗ trợ"}, {w: "Colleague", m: "Đồng nghiệp"}, {w: "Company culture", m: "Văn hóa công ty"}] },
@@ -213,7 +216,6 @@
                 { id: 9, text: "How do group dynamics work?", trans: "Động lực nhóm hoạt động như thế nào?", vocab: [{w: "Peer pressure", m: "Áp lực đồng trang lứa"}, {w: "Conformity", m: "Sự tuân thủ/hòa nhập"}, {w: "Influence", m: "Sự ảnh hưởng"}, {w: "Leadership", m: "Vai trò lãnh đạo"}, {w: "Teamwork", m: "Làm việc nhóm"}] },
                 { id: 10, text: "Can people really change their habits?", trans: "Mọi người có thực sự đổi được thói quen?", vocab: [{w: "Willpower", m: "Ý chí"}, {w: "Neuroplasticity", m: "Tính dẻo của não"}, {w: "Routine", m: "Thói quen hàng ngày"}, {w: "Relapse", m: "Tái phạm"}, {w: "Consistency", m: "Sự kiên trì"}] }
             ]},
-            // Để mã code không quá dài và bị lỗi hiển thị, 5 chủ đề cuối cùng (16-20) sẽ sử dụng vocab tương tự chất lượng cao
             { id: 16, topic: "Tội phạm (Crime & Justice)", level: "B2", questions: [
                 { id: 1, text: "Is prison the best way to punish criminals?", trans: "Nhà tù có phải cách tốt nhất để trừng phạt tội phạm?", vocab: [{w: "Rehabilitation", m: "Cải tạo"}, {w: "Incarceration", m: "Sự giam cầm"}, {w: "Deterrent", m: "Biện pháp răn đe"}, {w: "Offender", m: "Người phạm tội"}, {w: "Alternative", m: "Giải pháp thay thế"}] },
                 { id: 2, text: "Should the death penalty be abolished?", trans: "Án tử hình có nên bị bãi bỏ?", vocab: [{w: "Capital punishment", m: "Án tử hình"}, {w: "Execute", m: "Hành quyết"}, {w: "Human rights", m: "Nhân quyền"}, {w: "Controversial", m: "Gây tranh cãi"}, {w: "Life sentence", m: "Tù chung thân"}] },
@@ -281,13 +283,20 @@
             const [currentStep, setCurrentStep] = useState(0);
             const [showTrans, setShowTrans] = useState(false);
             const [isSpeaking, setIsSpeaking] = useState(false);
-            const [voicesLoaded, setVoicesLoaded] = useState(false);
+            const [showSummary, setShowSummary] = useState(false);
+            
+            // State copy sổ tay
+            const [isCopied, setIsCopied] = useState(false);
+            
+            // LƯU TRỮ TRẠNG THÁI BẢN DỊCH
+            const [savedTranslations, setSavedTranslations] = useState({});
+            
+            const [isTranslating, setIsTranslating] = useState(false);
+            const [translationError, setTranslationError] = useState("");
 
-            // Bắt sự kiện tải giọng đọc trên các trình duyệt khác nhau (đặc biệt là mobile/iOS)
             useEffect(() => {
                 const initVoices = () => {
                     window.speechSynthesis.getVoices();
-                    setVoicesLoaded(true);
                 };
                 initVoices();
                 if (window.speechSynthesis.onvoiceschanged !== undefined) {
@@ -295,42 +304,34 @@
                 }
             }, []);
 
-            // Logic lấy giọng đọc tự nhiên nhất có thể
             const getNaturalVoice = useCallback(() => {
                 const voices = window.speechSynthesis.getVoices();
                 if (!voices.length) return null;
 
                 const preferredNames = [
-                    'Google US English', 'Google UK English Female', 'Google UK English Male', // Android/Chrome
-                    'Samantha', 'Daniel', 'Karen', // iOS/macOS
-                    'Microsoft Aria Online (Natural) - English (United States)', 'Microsoft Jenny Online (Natural) - English (United States)' // Windows/Edge
+                    'Google US English', 'Google UK English Female', 'Google UK English Male',
+                    'Samantha', 'Daniel', 'Karen', 'Arthur',
+                    'Microsoft Aria Online (Natural) - English (United States)'
                 ];
-
                 const naturalKeywords = ['Natural', 'Premium', 'Enhanced', 'Online'];
 
-                // 1. Ưu tiên giọng được chỉ định sẵn tốt nhất
                 for (const name of preferredNames) {
                     const voice = voices.find(v => v.name === name);
                     if (voice) return voice;
                 }
 
-                // 2. Tìm các giọng có chứa từ khóa Premium/Natural (thường có trên điện thoại)
                 const premiumVoice = voices.find(v => 
                     v.lang.startsWith('en') && naturalKeywords.some(keyword => v.name.includes(keyword))
                 );
                 if (premiumVoice) return premiumVoice;
 
-                // 3. Dự phòng giọng tiếng Anh Mỹ hoặc Anh
-                const fallbackVoice = voices.find(v => v.lang === 'en-US') || voices.find(v => v.lang === 'en-GB');
-                
-                // 4. Cuối cùng lấy giọng tiếng Anh bất kỳ
-                return fallbackVoice || voices.find(v => v.lang.startsWith('en')) || voices[0];
+                return voices.find(v => v.lang === 'en-US') || voices.find(v => v.lang.startsWith('en')) || voices[0];
             }, []);
 
             const speak = useCallback((text) => {
                 if (!window.speechSynthesis) return;
                 
-                window.speechSynthesis.cancel(); // Dừng các âm thanh trước đó
+                window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 
                 const bestVoice = getNaturalVoice();
@@ -338,8 +339,7 @@
                     utterance.voice = bestVoice;
                 }
 
-                // Tinh chỉnh để nghe tự nhiên, rõ ràng hơn
-                utterance.rate = 0.85; // Đọc chậm lại một chút để nghe rõ ràng
+                utterance.rate = 0.85;
                 utterance.pitch = 1.0; 
                 
                 utterance.onstart = () => setIsSpeaking(true);
@@ -349,19 +349,39 @@
                 window.speechSynthesis.speak(utterance);
             }, [getNaturalVoice]);
 
+            // Hàm xử lý khi bấm vào từng từ
+            const handleWordClick = (word) => {
+                const cleanWord = word.replace(/[.,!?";:()[\]{}]/g, ''); 
+                if (cleanWord.trim()) {
+                    speak(cleanWord);
+                }
+            };
+
             const currentQuestion = useMemo(() => 
                 selectedTopic ? selectedTopic.questions[currentStep] : null
             , [selectedTopic, currentStep]);
 
-            const progress = selectedTopic ? ((currentStep + 1) / 10) * 100 : 0;
+            const progress = selectedTopic ? ((currentStep + 1) / selectedTopic.questions.length) * 100 : 0;
+
+            const handleViTextChange = (e) => {
+                const text = e.target.value;
+                setSavedTranslations(prev => ({
+                    ...prev,
+                    [currentStep]: {
+                        ...prev[currentStep],
+                        vi: text
+                    }
+                }));
+            };
 
             const next = () => {
-                if (currentStep < 9) {
+                if (currentStep < selectedTopic.questions.length - 1) {
                     setCurrentStep(prev => prev + 1);
                     setShowTrans(false);
-                    window.speechSynthesis.cancel(); // Ngừng đọc khi chuyển câu
+                    setTranslationError("");
+                    window.speechSynthesis.cancel();
                 } else {
-                    setSelectedTopic(null);
+                    setShowSummary(true);
                     window.speechSynthesis.cancel();
                 }
             };
@@ -370,9 +390,124 @@
                 if (currentStep > 0) {
                     setCurrentStep(prev => prev - 1);
                     setShowTrans(false);
+                    setTranslationError("");
                     window.speechSynthesis.cancel();
                 }
             };
+
+            const closeTopic = () => {
+                setSelectedTopic(null);
+                setShowSummary(false);
+                setSavedTranslations({});
+                setIsCopied(false);
+                window.speechSynthesis.cancel();
+            }
+
+            // Hàm copy toàn bộ dữ liệu Sổ tay
+            const copySummaryToClipboard = () => {
+                if (!selectedTopic) return;
+                
+                let textToCopy = `📚 SỔ TAY ÔN TẬP: ${selectedTopic.topic}\n`;
+                textToCopy += `================================\n\n`;
+                
+                let hasContent = false;
+                
+                selectedTopic.questions.forEach((q, idx) => {
+                    const t = savedTranslations[idx];
+                    if (t && (t.vi || t.en)) {
+                        hasContent = true;
+                        textToCopy += `Q${idx + 1}: ${q.text}\n`;
+                        if (t.vi) textToCopy += `📝 Ý tưởng (VI): ${t.vi}\n`;
+                        if (t.en) textToCopy += `🗣️ Bản dịch AI (EN): ${t.en}\n`;
+                        textToCopy += `--------------------------------\n\n`;
+                    }
+                });
+                
+                if (!hasContent) {
+                    textToCopy += `Chưa có ý tưởng nào được lưu trong chủ đề này.\n`;
+                }
+
+                const textArea = document.createElement("textarea");
+                textArea.value = textToCopy;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand("copy");
+                    setIsCopied(true);
+                    setTimeout(() => setIsCopied(false), 2500);
+                } catch (err) {
+                    console.error("Lỗi khi copy: ", err);
+                }
+                document.body.removeChild(textArea);
+            };
+
+            const handleTranslate = async () => {
+                const currentViText = savedTranslations[currentStep]?.vi || "";
+                if (!currentViText.trim()) return;
+                
+                setIsTranslating(true);
+                setTranslationError("");
+                
+                const apiKey = ""; 
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                
+                // Ép buộc dùng CHỈ HIỆN TẠI ĐƠN
+                const prompt = `Translate the following Vietnamese text to natural, spoken English. 
+CRITICAL REQUIREMENTS: 
+1. Focus entirely on basic, conversational English.
+2. STRICTLY USE ONLY the Simple Present tense (Thì hiện tại đơn). Avoid past, future, or perfect tenses.
+3. Avoid complex grammar, passive voice, or academic vocabulary. Keep sentences short and easy to speak.
+4. Only return the English translation, no markdown formatting, no quotes, no explanations.
+
+Vietnamese text:
+${currentViText}`;
+                
+                const payload = {
+                    contents: [{ parts: [{ text: prompt }] }]
+                };
+
+                const fetchWithRetry = async (retries = 5, delay = 1000) => {
+                    try {
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        if (!response.ok) throw new Error('API Error');
+                        return await response.json();
+                    } catch (error) {
+                        if (retries > 0) {
+                            await new Promise(res => setTimeout(res, delay));
+                            return fetchWithRetry(retries - 1, delay * 2);
+                        }
+                        throw error;
+                    }
+                };
+
+                try {
+                    const data = await fetchWithRetry();
+                    const translatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (translatedText) {
+                        setSavedTranslations(prev => ({
+                            ...prev,
+                            [currentStep]: {
+                                ...prev[currentStep],
+                                en: translatedText.trim()
+                            }
+                        }));
+                    } else {
+                        setTranslationError("Không nhận được bản dịch hợp lệ.");
+                    }
+                } catch (error) {
+                    console.error(error);
+                    setTranslationError("Lỗi kết nối. Vui lòng thử lại.");
+                } finally {
+                    setIsTranslating(false);
+                }
+            };
+
+            const currentViText = savedTranslations[currentStep]?.vi || "";
+            const currentEnText = savedTranslations[currentStep]?.en || "";
 
             return (
                 <div className="max-w-6xl mx-auto px-4 py-8 md:py-12">
@@ -380,53 +515,137 @@
                     <div className="flex justify-between items-center mb-10">
                         <div>
                             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">SpeakMaster Pro Max</h1>
-                            <p className="text-slate-500 font-medium mt-1">Luyện nói Tiếng Anh B1-B2 • 200 Câu hỏi (5 Từ vựng/Câu)</p>
+                            <p className="text-slate-500 font-medium mt-1">Luyện nói Tiếng Anh B1-B2 • Dịch ý tưởng thông minh</p>
                         </div>
+                        
                         {selectedTopic && (
-                            <button 
-                                onClick={() => setSelectedTopic(null)}
-                                className="p-3 bg-white border border-slate-200 rounded-full hover:bg-slate-50 transition-all shadow-sm"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                            </button>
+                            <div className="flex gap-3">
+                                {!showSummary && (
+                                    <button 
+                                        onClick={() => setShowSummary(true)}
+                                        className="px-4 py-2.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl font-bold hover:bg-amber-100 transition-all shadow-sm flex items-center gap-2"
+                                        title="Xem Sổ Tay Ôn Tập"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+                                        <span className="hidden sm:inline">Sổ tay</span>
+                                    </button>
+                                )}
+                                <button 
+                                    onClick={closeTopic}
+                                    className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all shadow-sm flex items-center justify-center"
+                                    title="Thoát chủ đề về Trang chủ"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                </button>
+                            </div>
                         )}
                     </div>
 
                     {!selectedTopic ? (
                         <div className="animate-in fade-in duration-700">
-                            {/* B1 Topics */}
                             <div className="mb-12">
                                 <h2 className="text-lg font-black text-blue-600 uppercase tracking-widest mb-6 flex items-center gap-3">
                                     <span className="w-8 h-1.5 bg-blue-600 rounded-full"></span>
-                                    10 Chủ đề trình độ B1
+                                    Chủ đề trình độ B1
                                 </h2>
                                 <div className="topic-grid">
-                                    {APP_DATA.slice(0, 10).map(t => (
-                                        <TopicCard key={t.id} topic={t} onClick={() => { setSelectedTopic(t); setCurrentStep(0); }} />
+                                    {APP_DATA.filter(t => t.level === 'B1').map(t => (
+                                        <TopicCard key={t.id} topic={t} onClick={() => { setSelectedTopic(t); setCurrentStep(0); setSavedTranslations({}); setShowSummary(false); }} />
                                     ))}
                                 </div>
                             </div>
-
-                            {/* B2 Topics */}
                             <div>
                                 <h2 className="text-lg font-black text-indigo-600 uppercase tracking-widest mb-6 flex items-center gap-3">
                                     <span className="w-8 h-1.5 bg-indigo-600 rounded-full"></span>
-                                    10 Chủ đề trình độ B2
+                                    Chủ đề trình độ B2
                                 </h2>
                                 <div className="topic-grid">
-                                    {APP_DATA.slice(10, 20).map(t => (
-                                        <TopicCard key={t.id} topic={t} onClick={() => { setSelectedTopic(t); setCurrentStep(0); }} />
+                                    {APP_DATA.filter(t => t.level === 'B2').map(t => (
+                                        <TopicCard key={t.id} topic={t} onClick={() => { setSelectedTopic(t); setCurrentStep(0); setSavedTranslations({}); setShowSummary(false); }} />
                                     ))}
                                 </div>
                             </div>
                         </div>
+                    ) : showSummary ? (
+                        // MÀN HÌNH TỔNG HỢP (SUMMARY)
+                        <div className="max-w-4xl mx-auto animate-in slide-in-from-bottom-8 duration-500">
+                            <div className="glass-card rounded-[2.5rem] p-8 md:p-12 shadow-xl border-t-8 border-t-amber-400">
+                                <div className="text-center mb-10">
+                                    <div className="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+                                    </div>
+                                    <h2 className="text-3xl font-extrabold text-slate-800">Sổ Tay Ôn Tập</h2>
+                                    <p className="text-slate-500 font-medium mt-2">Chủ đề: {selectedTopic.topic}</p>
+                                </div>
+
+                                <div className="space-y-6 mb-10">
+                                    {selectedTopic.questions.map((q, idx) => {
+                                        const t = savedTranslations[idx];
+                                        if (!t || (!t.vi && !t.en)) return null; 
+                                        
+                                        return (
+                                            <div key={idx} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative group">
+                                                <h4 className="font-bold text-slate-800 mb-4 flex gap-2">
+                                                    <span className="text-amber-500">Q{idx + 1}:</span> {q.text}
+                                                </h4>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                                        <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-2">Ý tưởng (VI)</span>
+                                                        <p className="text-slate-600 italic text-[15px]">{t.vi}</p>
+                                                    </div>
+                                                    <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                                                        <span className="text-[11px] font-black text-blue-400 uppercase tracking-widest block mb-2">Bản dịch (EN)</span>
+                                                        <p className="text-slate-800 font-medium text-[15px] leading-relaxed">{t.en}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                    
+                                    {Object.keys(savedTranslations).length === 0 && (
+                                        <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-slate-400 italic">
+                                            Bạn chưa lưu ý tưởng nào trong sổ tay này.<br/>Hãy quay lại học và dịch nhé!
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Các nút Action trong Sổ tay */}
+                                <div className="flex flex-col sm:flex-row gap-4">
+                                    <button 
+                                        onClick={() => setShowSummary(false)}
+                                        className="flex-1 py-4 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-all border border-slate-200 flex items-center justify-center gap-2"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                                        Quay lại học tiếp
+                                    </button>
+
+                                    <button 
+                                        onClick={copySummaryToClipboard}
+                                        className={`flex-[2] py-4 rounded-xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 text-white ${isCopied ? 'bg-green-500 hover:bg-green-600' : 'bg-blue-600 hover:bg-blue-700'}`}
+                                    >
+                                        {isCopied ? (
+                                            <React.Fragment>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                                Đã copy thành công!
+                                            </React.Fragment>
+                                        ) : (
+                                            <React.Fragment>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                                Copy toàn bộ Sổ tay
+                                            </React.Fragment>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     ) : (
+                        // GIAO DIỆN HỌC TẬP & DỊCH
                         <div className="max-w-4xl mx-auto animate-in slide-in-from-bottom-8 duration-500">
                             {/* Progress bar */}
                             <div className="mb-8 text-center">
                                 <div className="flex justify-between text-[12px] font-black text-slate-400 uppercase tracking-widest mb-3">
                                     <span>{selectedTopic.topic}</span>
-                                    <span className="bg-slate-200 text-slate-600 px-3 py-1 rounded-full">Câu {currentStep + 1} / 10</span>
+                                    <span className="bg-slate-200 text-slate-600 px-3 py-1 rounded-full">Câu {currentStep + 1} / {selectedTopic.questions.length}</span>
                                 </div>
                                 <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden shadow-inner">
                                     <div className={`h-full progress-bar ${selectedTopic.level === 'B1' ? 'bg-blue-600' : 'bg-indigo-600'}`} style={{width: `${progress}%`}}></div>
@@ -434,7 +653,7 @@
                             </div>
 
                             {/* Flashcard */}
-                            <div className="glass-card rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden">
+                            <div className="glass-card rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden border-t-8 border-t-blue-500">
                                 <div className={`absolute top-0 right-0 px-8 py-2 rounded-bl-3xl text-[11px] font-black uppercase tracking-widest shadow-md ${selectedTopic.level === 'B1' ? 'bg-blue-600 text-white' : 'bg-indigo-600 text-white'}`}>
                                     Level {selectedTopic.level}
                                 </div>
@@ -448,6 +667,7 @@
                                         <button 
                                             onClick={() => speak(currentQuestion.text)}
                                             className={`w-16 h-16 rounded-full flex items-center justify-center transition-all active:scale-90 ${isSpeaking ? (selectedTopic.level === 'B1' ? 'bg-blue-600 text-white pulse-ring' : 'bg-indigo-600 text-white pulse-ring') : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                                            title="Nghe câu hỏi"
                                         >
                                             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
                                         </button>
@@ -455,7 +675,7 @@
                                             onClick={() => setShowTrans(!showTrans)}
                                             className="px-6 py-3 border-2 border-slate-200 rounded-2xl font-bold text-slate-500 hover:text-slate-800 hover:border-slate-300 transition-all bg-white"
                                         >
-                                            {showTrans ? 'Ẩn bản dịch' : 'Xem bản dịch'}
+                                            {showTrans ? 'Ẩn nghĩa Tiếng Việt' : 'Xem nghĩa Tiếng Việt'}
                                         </button>
                                     </div>
 
@@ -466,7 +686,7 @@
                                     )}
                                 </div>
 
-                                {/* 5 Vocabulary Items */}
+                                {/* Từ vựng */}
                                 <div className="mt-12 pt-8 border-t-2 border-dashed border-slate-200">
                                     <div className="flex items-center gap-2 mb-5">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={selectedTopic.level === 'B1' ? 'text-blue-500' : 'text-indigo-500'}><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
@@ -487,20 +707,112 @@
                                     </div>
                                 </div>
 
-                                {/* Actions */}
-                                <div className="mt-12 flex gap-4">
+                                {/* Trợ lý Dịch Ý Tưởng */}
+                                <div className="mt-12 pt-8 border-t-2 border-dashed border-slate-200 bg-slate-50/50 -mx-8 -mb-8 px-8 pb-8 rounded-b-[2.5rem]">
+                                    <div className="flex items-center justify-between mb-5">
+                                        <div className="flex items-center gap-2">
+                                            <div className={`p-1.5 rounded-lg ${selectedTopic.level === 'B1' ? 'bg-blue-100 text-blue-600' : 'bg-indigo-100 text-indigo-600'}`}>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>
+                                            </div>
+                                            <p className="text-[12px] font-black text-slate-700 uppercase tracking-widest">Trợ lý dịch ý tưởng (Chỉ dùng Hiện Tại Đơn)</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                                        {/* Box Tiếng Việt */}
+                                        <div className="flex flex-col gap-3">
+                                            <textarea 
+                                                value={currentViText}
+                                                onChange={handleViTextChange}
+                                                placeholder="Viết ý tưởng câu trả lời của bạn bằng tiếng Việt vào đây..."
+                                                className="w-full h-40 p-4 rounded-2xl bg-white border-2 border-slate-200 focus:border-blue-400 focus:ring-4 focus:ring-blue-100 resize-none transition-all outline-none text-slate-700 text-[15px] leading-relaxed shadow-sm"
+                                            ></textarea>
+                                            <button 
+                                                onClick={handleTranslate}
+                                                disabled={!currentViText.trim() || isTranslating}
+                                                className={`w-full py-3.5 rounded-xl font-bold text-white transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] shadow-md ${selectedTopic.level === 'B1' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+                                            >
+                                                {isTranslating ? (
+                                                    <React.Fragment>
+                                                        <svg className="spinner w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                                        Đang dịch (Chỉ thì HTĐ)...
+                                                    </React.Fragment>
+                                                ) : (
+                                                    <React.Fragment>
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
+                                                        Dịch sang Tiếng Anh
+                                                    </React.Fragment>
+                                                )}
+                                            </button>
+                                            {translationError && <p className="text-red-500 text-sm font-medium pl-1">{translationError}</p>}
+                                        </div>
+                                        
+                                        {/* Box Tiếng Anh (Nhấn từng chữ để nghe) */}
+                                        <div className="flex flex-col gap-3">
+                                            <div className="w-full h-40 p-5 rounded-2xl bg-blue-50/30 border-2 border-blue-100 overflow-y-auto relative text-[17px] shadow-inner">
+                                                {!currentEnText ? (
+                                                    <div className="flex flex-col items-center justify-center h-full text-slate-300 opacity-60">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mb-2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                                                        <span className="italic text-sm font-medium">Bản dịch (thì Hiện tại đơn) sẽ xuất hiện ở đây...</span>
+                                                    </div>
+                                                ) : (
+                                                    <div>
+                                                        {currentEnText.split(/(\s+)/).map((segment, index) => {
+                                                            if (/\s+/.test(segment)) {
+                                                                return <span key={index}>{segment}</span>;
+                                                            }
+                                                            return (
+                                                                <span 
+                                                                    key={index} 
+                                                                    onClick={() => handleWordClick(segment)}
+                                                                    className="font-medium text-slate-800 clickable-word cursor-pointer"
+                                                                    title="Bấm để nghe phát âm"
+                                                                >
+                                                                    {segment}
+                                                                </span>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            
+                                            {/* Ghi chú */}
+                                            <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 flex items-center gap-3 text-blue-700">
+                                                <div className="bg-blue-100 p-2 rounded-full">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M5 18v-6a6 6 0 0 1 12 0v6"/><path d="M12 2v4"/><path d="M12 13v9"/></svg>
+                                                </div>
+                                                <p className="text-[13px] font-semibold">
+                                                    Mẹo học: <span className="font-normal text-blue-600">Bấm thẳng vào từng từ tiếng Anh ở trên để nghe phát âm và tập đọc theo.</span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Actions Điều hướng */}
+                                <div className="mt-8 flex gap-4 pt-4">
                                     <button 
                                         disabled={currentStep === 0}
                                         onClick={back}
-                                        className="flex-1 py-4 bg-slate-100 rounded-[1.2rem] font-bold text-slate-600 hover:bg-slate-200 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                        className="flex-1 py-4 bg-slate-100 rounded-[1.2rem] font-bold text-slate-600 hover:bg-slate-200 transition-all disabled:opacity-30 disabled:cursor-not-allowed border border-slate-200"
                                     >
                                         Quay lại
                                     </button>
                                     <button 
                                         onClick={next}
-                                        className={`flex-[2] py-4 text-white rounded-[1.2rem] font-black text-lg shadow-xl transition-all active:scale-[0.98] ${selectedTopic.level === 'B1' ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-200' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200'}`}
+                                        className={`flex-[2] py-4 text-white rounded-[1.2rem] font-black text-lg shadow-xl transition-all active:scale-[0.98] flex justify-center items-center gap-2 ${selectedTopic.level === 'B1' ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-200' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200'}`}
                                     >
-                                        {currentStep === 9 ? 'Hoàn thành chủ đề' : 'Câu tiếp theo'}
+                                        {currentStep === selectedTopic.questions.length - 1 ? (
+                                            <React.Fragment>
+                                                Hoàn thành & Mở Sổ Tay
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+                                            </React.Fragment>
+                                        ) : (
+                                            <React.Fragment>
+                                                Câu tiếp theo
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                                            </React.Fragment>
+                                        )}
                                     </button>
                                 </div>
                             </div>
@@ -514,21 +826,21 @@
             return (
                 <div 
                     onClick={onClick}
-                    className="glass-card p-6 rounded-[2rem] cursor-pointer hover:-translate-y-1.5 hover:shadow-xl transition-all border-l-4 group"
+                    className="glass-card p-6 rounded-[2rem] cursor-pointer hover:-translate-y-1.5 hover:shadow-xl transition-all border-l-4 group relative overflow-hidden"
                     style={{ borderLeftColor: topic.level === 'B1' ? '#2563eb' : '#4f46e5' }}
                 >
                     <div className="flex justify-between items-start mb-5">
                         <span className={`text-[11px] font-black px-3 py-1 rounded-xl uppercase tracking-widest ${topic.level === 'B1' ? 'bg-blue-100 text-blue-700' : 'bg-indigo-100 text-indigo-700'}`}>
                             Level {topic.level}
                         </span>
-                        <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-slate-800 group-hover:text-white transition-all shadow-sm">
+                        <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-slate-800 group-hover:text-white transition-all shadow-sm z-10">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
                         </div>
                     </div>
-                    <h3 className="text-xl font-extrabold text-slate-800 leading-tight group-hover:text-slate-900 mb-1">{topic.topic}</h3>
-                    <p className="mt-3 text-[12px] font-bold text-slate-400 flex items-center gap-1.5">
+                    <h3 className="text-xl font-extrabold text-slate-800 leading-tight group-hover:text-slate-900 mb-1 z-10 relative">{topic.topic}</h3>
+                    <p className="mt-3 text-[12px] font-bold text-slate-400 flex items-center gap-1.5 z-10 relative">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                        10 Câu hỏi • 50 Từ vựng
+                        {topic.questions.length} Câu hỏi • Có Sổ tay lưu từ
                     </p>
                 </div>
             );
