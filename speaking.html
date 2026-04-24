@@ -96,7 +96,7 @@
             ]},
             { id: 5, topic: "Môi trường (Environment)", level: "B1", questions: [
                 { id: 1, text: "Is pollution a problem in your city?", trans: "Ô nhiễm có phải vấn đề ở thành phố bạn?", vocab: [{w: "Air pollution", m: "Ô nhiễm không khí"}, {w: "Exhaust fume", m: "Khí thải"}, {w: "Smog", m: "Khói bụi"}, {w: "Respiratory", m: "Thuộc hô hấp"}, {w: "Severe", m: "Nghiêm trọng"}] },
-                { id: 2, text: "What can we do to protect the environment?", trans: "Chúng ta có thể làm gì để bảo vệ môi trường?", vocab: [{w: "Eco-friendly", m: "Thân thiện môi trường"}, {w: "Reduce", m: "Giảm bớt"}, {w: "Awareness", m: "Nhận thức"}, {w: "Take action", m: "Hành động"}, {w: "Conserve", m: "Bảo tồn"}] },
+                { id: 2, text: "What can we do to protect the environment?", trans: "Chúngúng ta có thể làm gì để bảo vệ môi trường?", vocab: [{w: "Eco-friendly", m: "Thân thiện môi trường"}, {w: "Reduce", m: "Giảm bớt"}, {w: "Awareness", m: "Nhận thức"}, {w: "Take action", m: "Hành động"}, {w: "Conserve", m: "Bảo tồn"}] },
                 { id: 3, text: "Do you recycle at home?", trans: "Bạn có tái chế tại nhà không?", vocab: [{w: "Recycle bin", m: "Thùng rác tái chế"}, {w: "Sort garbage", m: "Phân loại rác"}, {w: "Reusable", m: "Tái sử dụng được"}, {w: "Plastic bags", m: "Túi nilon"}, {w: "Habit", m: "Thói quen"}] },
                 { id: 4, text: "What are the effects of climate change?", trans: "Tác động của biến đổi khí hậu là gì?", vocab: [{w: "Global warming", m: "Nóng lên toàn cầu"}, {w: "Melt", m: "Tan chảy"}, {w: "Sea level", m: "Mực nước biển"}, {w: "Extreme weather", m: "Thời tiết khắc nghiệt"}, {w: "Habitat loss", m: "Mất môi trường sống"}] },
                 { id: 5, text: "Should we use more public transport?", trans: "Chúng ta có nên dùng phương tiện công cộng nhiều hơn?", vocab: [{w: "Public transport", m: "Giao thông công cộng"}, {w: "Carbon footprint", m: "Lượng carbon thải ra"}, {w: "Traffic jam", m: "Tắc đường"}, {w: "Commute", m: "Đi lại"}, {w: "Encourage", m: "Khuyến khích"}] },
@@ -364,57 +364,78 @@
             const [isTranslating, setIsTranslating] = useState(false);
             const [translationError, setTranslationError] = useState("");
 
+            // Nạp danh sách giọng đọc từ trình duyệt
             useEffect(() => {
-                const initVoices = () => {
+                const loadVoices = () => {
                     window.speechSynthesis.getVoices();
                 };
-                initVoices();
+                loadVoices();
                 if (window.speechSynthesis.onvoiceschanged !== undefined) {
-                    window.speechSynthesis.onvoiceschanged = initVoices;
+                    window.speechSynthesis.onvoiceschanged = loadVoices;
                 }
             }, []);
 
+            // THUẬT TOÁN CHỌN GIỌNG ĐỌC CẢI TIẾN
             const getNaturalVoice = useCallback(() => {
                 const voices = window.speechSynthesis.getVoices();
-                if (!voices.length) return null;
+                if (!voices || voices.length === 0) return null;
 
-                const preferredNames = [
-                    'Google US English', 'Google UK English Female', 'Google UK English Male',
-                    'Samantha', 'Daniel', 'Karen', 'Arthur',
-                    'Microsoft Aria Online (Natural) - English (United States)'
+                // 1. Chỉ lấy giọng tiếng Anh để tránh lỗi giọng Việt ráng đọc tiếng Anh
+                const enVoices = voices.filter(v => v.lang.startsWith('en'));
+                if (enVoices.length === 0) return voices[0]; // Fallback
+
+                // 2. Ưu tiên các giọng tự nhiên/Premium trên nhiều trình duyệt
+                const preferredConditions = [
+                    v => v.name.includes('Online (Natural)'), // MS Edge
+                    v => v.name.includes('Aria'),             // MS Edge
+                    v => v.name.includes('Guy'),              // MS Edge
+                    v => v.name === 'Google US English',      // Chrome
+                    v => v.name === 'Google UK English Female',// Chrome
+                    v => v.name === 'Alex',                   // Safari/Mac
+                    v => v.name === 'Samantha',               // Safari/Mac
+                    v => v.name === 'Daniel',                 // Safari/Mac
+                    v => v.name.includes('Premium'),          // iOS/Mac
+                    v => v.name.includes('Enhanced'),         // iOS/Mac
+                    v => v.name.includes('Google')            // Trình duyệt Android
                 ];
-                const naturalKeywords = ['Natural', 'Premium', 'Enhanced', 'Online'];
 
-                for (const name of preferredNames) {
-                    const voice = voices.find(v => v.name === name);
-                    if (voice) return voice;
+                for (const condition of preferredConditions) {
+                    const foundVoice = enVoices.find(condition);
+                    if (foundVoice) return foundVoice;
                 }
 
-                const premiumVoice = voices.find(v => 
-                    v.lang.startsWith('en') && naturalKeywords.some(keyword => v.name.includes(keyword))
-                );
-                if (premiumVoice) return premiumVoice;
-
-                return voices.find(v => v.lang === 'en-US') || voices.find(v => v.lang.startsWith('en')) || voices[0];
+                // 3. Ưu tiên giọng US hoặc giọng mặc định tiếng Anh
+                return enVoices.find(v => v.lang === 'en-US') || 
+                       enVoices.find(v => v.lang === 'en-GB') || 
+                       enVoices[0];
             }, []);
 
+            // HÀM ĐỌC VĂN BẢN
             const speak = useCallback((text) => {
                 if (!window.speechSynthesis) return;
                 
+                // Ngắt giọng đọc cũ
                 window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
                 
+                const utterance = new SpeechSynthesisUtterance(text);
                 const bestVoice = getNaturalVoice();
+                
                 if (bestVoice) {
                     utterance.voice = bestVoice;
+                    utterance.lang = bestVoice.lang; // Gán mã ngôn ngữ để engine xử lý chuẩn hơn
+                } else {
+                    utterance.lang = 'en-US';
                 }
 
-                utterance.rate = 0.85;
+                utterance.rate = 0.9; // Điều chỉnh lên 0.9 để nghe tự nhiên hơn nhưng vẫn dễ theo dõi
                 utterance.pitch = 1.0; 
                 
                 utterance.onstart = () => setIsSpeaking(true);
                 utterance.onend = () => setIsSpeaking(false);
-                utterance.onerror = () => setIsSpeaking(false);
+                utterance.onerror = (e) => {
+                    console.error("Lỗi phát âm:", e);
+                    setIsSpeaking(false);
+                };
                 
                 window.speechSynthesis.speak(utterance);
             }, [getNaturalVoice]);
@@ -672,7 +693,22 @@
                                                     </div>
                                                     <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
                                                         <span className="text-[11px] font-black text-blue-400 uppercase tracking-widest block mb-2">Bản dịch (EN)</span>
-                                                        <p className="text-slate-800 font-medium text-[15px] leading-relaxed">{t.en}</p>
+                                                        <p className="text-slate-800 font-medium text-[15px] leading-relaxed">
+                                                            {/* Gắn sự kiện click để nghe từng chữ trong sổ tay */}
+                                                            {t.en.split(/(\s+)/).map((segment, index) => {
+                                                                if (/\s+/.test(segment)) return <span key={index}>{segment}</span>;
+                                                                return (
+                                                                    <span 
+                                                                        key={index} 
+                                                                        onClick={() => handleWordClick(segment)}
+                                                                        className="clickable-word cursor-pointer"
+                                                                        title="Bấm để nghe phát âm"
+                                                                    >
+                                                                        {segment}
+                                                                    </span>
+                                                                );
+                                                            })}
+                                                        </p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -859,7 +895,7 @@
                                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M5 18v-6a6 6 0 0 1 12 0v6"/><path d="M12 2v4"/><path d="M12 13v9"/></svg>
                                                 </div>
                                                 <p className="text-[13px] font-semibold">
-                                                    Mẹo học: <span className="font-normal text-blue-600">Bấm thẳng vào từng từ tiếng Anh ở trên để nghe phát âm và tập đọc theo.</span>
+                                                    Mẹo học: <span className="font-normal text-blue-600">Bấm thẳng vào từng từ tiếng Anh ở trên hoặc trong Sổ Tay để nghe phát âm và tập đọc theo.</span>
                                                 </p>
                                             </div>
                                         </div>
