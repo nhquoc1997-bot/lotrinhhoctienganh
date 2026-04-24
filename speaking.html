@@ -29,8 +29,20 @@
 <body>
     <div id="root"></div>
 
-    <script type="text/babel">
+    <script type="text/babel" data-type="module">
+        // Import các thư viện Cloud Storage bảo mật
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
         const { useState, useEffect, useMemo, useCallback } = React;
+
+        // Khởi tạo Hệ thống Lưu trữ Đám mây
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
         const APP_DATA = [
             // --- 10 CHỦ ĐỀ B1 (INTERMEDIATE) ---
@@ -288,16 +300,66 @@
             // State copy sổ tay
             const [isCopied, setIsCopied] = useState(false);
 
-            // LƯU TRỮ TRẠNG THÁI TOÀN CỤC (Lưu vào localStorage để không mất dữ liệu)
-            const [globalData, setGlobalData] = useState(() => {
-                const saved = localStorage.getItem('speakmaster_progress');
-                return saved ? JSON.parse(saved) : {};
-            });
+            // FIREBASE: Quản lý User và Trạng thái tải dữ liệu
+            const [user, setUser] = useState(null);
+            const [isLoadingData, setIsLoadingData] = useState(true);
+
+            // LƯU TRỮ TRẠNG THÁI TOÀN CỤC (Thay thế localStorage bằng Cloud Storage)
+            const [globalData, setGlobalData] = useState({});
             
-            // Lưu dữ liệu mỗi khi có thay đổi
+            // 1. Xác thực tài khoản của bạn một cách an toàn
             useEffect(() => {
-                localStorage.setItem('speakmaster_progress', JSON.stringify(globalData));
-            }, [globalData]);
+                const initAuth = async () => {
+                    try {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await signInWithCustomToken(auth, __initial_auth_token);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    } catch (error) {
+                        console.error("Lỗi đồng bộ tài khoản:", error);
+                    }
+                };
+                initAuth();
+                const unsubscribe = onAuthStateChanged(auth, setUser);
+                return () => unsubscribe();
+            }, []);
+
+            // 2. Tự động tải dữ liệu Sổ tay từ Đám mây về máy
+            useEffect(() => {
+                if (!user) return;
+                
+                const progressRef = collection(db, 'artifacts', appId, 'users', user.uid, 'topicProgress');
+                
+                const unsubscribe = onSnapshot(progressRef, (snapshot) => {
+                    const newData = {};
+                    snapshot.forEach(doc => {
+                        newData[doc.id] = doc.data().answers || {};
+                    });
+                    setGlobalData(newData);
+                    setIsLoadingData(false); // Tắt hiệu ứng loading khi đã có dữ liệu
+                }, (error) => {
+                    console.error("Lỗi tải Sổ tay từ Cloud:", error);
+                    setIsLoadingData(false);
+                });
+                
+                return () => unsubscribe();
+            }, [user]);
+
+            // 3. Hàm lưu dữ liệu ngầm lên Đám mây
+            const saveToCloud = async (topicId, step, dataObject) => {
+                if (!user) return;
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'topicProgress', String(topicId));
+                    await setDoc(docRef, {
+                        answers: {
+                            [step]: dataObject
+                        }
+                    }, { merge: true }); // Merge: true giúp không làm mất các câu đã lưu trước đó
+                } catch (error) {
+                    console.error("Lỗi lưu sổ tay:", error);
+                }
+            };
             
             const [isTranslating, setIsTranslating] = useState(false);
             const [translationError, setTranslationError] = useState("");
@@ -376,16 +438,20 @@
 
             const handleViTextChange = (e) => {
                 const text = e.target.value;
+                const currentData = currentTopicData[currentStep] || {};
+                const newData = { ...currentData, vi: text };
+
+                // Cập nhật hiển thị màn hình lập tức
                 setGlobalData(prev => ({
                     ...prev,
                     [selectedTopic.id]: {
                         ...(prev[selectedTopic.id] || {}),
-                        [currentStep]: {
-                            ...(prev[selectedTopic.id]?.[currentStep] || {}),
-                            vi: text
-                        }
+                        [currentStep]: newData
                     }
                 }));
+
+                // Đẩy dữ liệu lưu tự động lên Đám mây
+                saveToCloud(selectedTopic.id, currentStep, newData);
             };
 
             const next = () => {
@@ -472,16 +538,20 @@
                     const translatedText = data[0].map(item => item[0]).join('');
 
                     if (translatedText) {
+                        const currentData = currentTopicData[currentStep] || {};
+                        const newData = { ...currentData, en: translatedText.trim() };
+
+                        // Cập nhật giao diện
                         setGlobalData(prev => ({
                             ...prev,
                             [selectedTopic.id]: {
                                 ...(prev[selectedTopic.id] || {}),
-                                [currentStep]: {
-                                    ...(prev[selectedTopic.id]?.[currentStep] || {}),
-                                    en: translatedText.trim()
-                                }
+                                [currentStep]: newData
                             }
                         }));
+
+                        // Lưu bản dịch Tiếng Anh vĩnh viễn lên Đám mây
+                        saveToCloud(selectedTopic.id, currentStep, newData);
                     } else {
                         setTranslationError("Không nhận được bản dịch hợp lệ.");
                     }
@@ -541,28 +611,37 @@
 
                     {!selectedTopic ? (
                         <div className="animate-in fade-in duration-700">
-                            <div className="mb-12">
-                                <h2 className="text-lg font-black text-blue-600 uppercase tracking-widest mb-6 flex items-center gap-3">
-                                    <span className="w-8 h-1.5 bg-blue-600 rounded-full"></span>
-                                    Chủ đề trình độ B1
-                                </h2>
-                                <div className="topic-grid">
-                                    {APP_DATA.filter(t => t.level === 'B1').map(t => (
-                                        <TopicCard key={t.id} topic={t} onClick={() => handleOpenTopic(t)} progressData={globalData[t.id] || {}} />
-                                    ))}
+                            {isLoadingData ? (
+                                <div className="flex flex-col items-center justify-center py-24 text-slate-400">
+                                    <svg className="spinner w-12 h-12 mb-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                    <p className="font-semibold tracking-wide text-lg text-slate-600">Đang đồng bộ Sổ tay từ Cloud...</p>
                                 </div>
-                            </div>
-                            <div>
-                                <h2 className="text-lg font-black text-indigo-600 uppercase tracking-widest mb-6 flex items-center gap-3">
-                                    <span className="w-8 h-1.5 bg-indigo-600 rounded-full"></span>
-                                    Chủ đề trình độ B2
-                                </h2>
-                                <div className="topic-grid">
-                                    {APP_DATA.filter(t => t.level === 'B2').map(t => (
-                                        <TopicCard key={t.id} topic={t} onClick={() => handleOpenTopic(t)} progressData={globalData[t.id] || {}} />
-                                    ))}
-                                </div>
-                            </div>
+                            ) : (
+                                <React.Fragment>
+                                    <div className="mb-12">
+                                        <h2 className="text-lg font-black text-blue-600 uppercase tracking-widest mb-6 flex items-center gap-3">
+                                            <span className="w-8 h-1.5 bg-blue-600 rounded-full"></span>
+                                            Chủ đề trình độ B1
+                                        </h2>
+                                        <div className="topic-grid">
+                                            {APP_DATA.filter(t => t.level === 'B1').map(t => (
+                                                <TopicCard key={t.id} topic={t} onClick={() => handleOpenTopic(t)} progressData={globalData[t.id] || {}} />
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h2 className="text-lg font-black text-indigo-600 uppercase tracking-widest mb-6 flex items-center gap-3">
+                                            <span className="w-8 h-1.5 bg-indigo-600 rounded-full"></span>
+                                            Chủ đề trình độ B2
+                                        </h2>
+                                        <div className="topic-grid">
+                                            {APP_DATA.filter(t => t.level === 'B2').map(t => (
+                                                <TopicCard key={t.id} topic={t} onClick={() => handleOpenTopic(t)} progressData={globalData[t.id] || {}} />
+                                            ))}
+                                        </div>
+                                    </div>
+                                </React.Fragment>
+                            )}
                         </div>
                     ) : showSummary ? (
                         // MÀN HÌNH TỔNG HỢP (SUMMARY)
