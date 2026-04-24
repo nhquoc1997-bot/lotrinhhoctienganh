@@ -1,643 +1,588 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, collection, doc, setDoc, onSnapshot } from 'firebase/firestore';
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vocab Master & Sổ Tay</title>
+    <!-- Thư viện Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Thư viện React -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Thư viện Babel để biên dịch JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-// --- FIREBASE INITIALIZATION ---
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    <style>
+        .glass-panel { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-radius: 1.5rem; border: 1px solid rgba(255, 255, 255, 0.18); box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37); }
+        .preserve-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+        .clickable-word:hover { color: #60a5fa; text-decoration: underline; cursor: pointer; }
+        /* Tùy chỉnh thanh cuộn Sổ tay */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-[#1a202c] font-sans text-white min-h-screen" style="background-image: linear-gradient(135deg, #4a5568 0%, #2d3748 50%, #1a202c 100%)">
+    <div id="root"></div>
 
-// --- MASSIVE WORD DATABASE ---
-const wordDatabase = [
-    // Thể thao (10 từ)
-    { category: 'Thể thao', keyword: 'FOOTBALL', ipa: '/ˈfʊt.bɔːl/', taboo: ['Kick', 'Goal', 'Ball', 'Team', 'Sport'], vietnamese_keyword: 'Bóng đá', vietnamese_taboo: ['Đá', 'Bàn thắng', 'Quả bóng', 'Đội', 'Thể thao'] },
-    { category: 'Thể thao', keyword: 'BASKETBALL', ipa: '/ˈbɑː.skɪt.bɔːl/', taboo: ['Hoop', 'Dribble', 'Court', 'Jump', 'Throw'], vietnamese_keyword: 'Bóng rổ', vietnamese_taboo: ['Cái rổ', 'Nhồi bóng', 'Sân', 'Nhảy', 'Ném'] },
-    { category: 'Thể thao', keyword: 'SWIMMING', ipa: '/ˈswɪm.ɪŋ/', taboo: ['Water', 'Pool', 'Dive', 'Wet', 'Goggles'], vietnamese_keyword: 'Bơi lội', vietnamese_taboo: ['Nước', 'Hồ bơi', 'Lặn', 'Ướt', 'Kính bơi'] },
-    { category: 'Thể thao', keyword: 'YOGA', ipa: '/ˈjəʊ.ɡə/', taboo: ['Meditate', 'Mat', 'Stretch', 'India', 'Relax'], vietnamese_keyword: 'Tập Yoga', vietnamese_taboo: ['Ngồi thiền', 'Tấm thảm', 'Kéo giãn', 'Ấn Độ', 'Thư giãn'] },
-    { category: 'Thể thao', keyword: 'TENNIS', ipa: '/ˈten.ɪs/', taboo: ['Racket', 'Net', 'Court', 'Ball', 'Wimbledon'], vietnamese_keyword: 'Quần vợt', vietnamese_taboo: ['Cái vợt', 'Lưới', 'Sân', 'Quả bóng', 'Giải Wimbledon'] },
-    { category: 'Thể thao', keyword: 'MARATHON', ipa: '/ˈmær.ə.θən/', taboo: ['Run', 'Distance', 'Race', 'Finish', 'Shoes'], vietnamese_keyword: 'Chạy Marathon', vietnamese_taboo: ['Chạy', 'Khoảng cách', 'Cuộc đua', 'Đích đến', 'Giày'] },
-    { category: 'Thể thao', keyword: 'BASEBALL', ipa: '/ˈbeɪs.bɔːl/', taboo: ['Bat', 'Pitcher', 'Home run', 'Strike', 'Glove'], vietnamese_keyword: 'Bóng chày', vietnamese_taboo: ['Cái chày', 'Người ném bóng', 'Cú ăn điểm', 'Đánh trượt', 'Găng tay'] },
-    { category: 'Thể thao', keyword: 'VOLLEYBALL', ipa: '/ˈvɒl.i.bɔːl/', taboo: ['Net', 'Spike', 'Serve', 'Beach', 'Team'], vietnamese_keyword: 'Bóng chuyền', vietnamese_taboo: ['Cái lưới', 'Đập bóng', 'Giao bóng', 'Bãi biển', 'Đội'] },
-    { category: 'Thể thao', keyword: 'BADMINTON', ipa: '/ˈbæd.mɪn.tən/', taboo: ['Shuttlecock', 'Racket', 'Net', 'Court', 'Smash'], vietnamese_keyword: 'Cầu lông', vietnamese_taboo: ['Quả cầu lông', 'Cái vợt', 'Cái lưới', 'Sân', 'Đập cầu'] },
-    { category: 'Thể thao', keyword: 'GOLF', ipa: '/ɡɒlf/', taboo: ['Hole', 'Club', 'Green', 'Tee', 'Swing'], vietnamese_keyword: 'Đánh Gôn', vietnamese_taboo: ['Cái lỗ', 'Gậy', 'Bãi cỏ', 'Điểm phát bóng', 'Vung gậy'] },
+    <script type="text/babel" data-type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { getFirestore, collection, doc, setDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
-    // Nhà cửa (10 từ)
-    { category: 'Nhà cửa', keyword: 'TELEVISION', ipa: '/ˈtel.ɪ.vɪʒ.ən/', taboo: ['Watch', 'Screen', 'Show', 'Remote', 'Channel'], vietnamese_keyword: 'Tivi', vietnamese_taboo: ['Xem', 'Màn hình', 'Chương trình', 'Điều khiển', 'Kênh'] },
-    { category: 'Nhà cửa', keyword: 'REFRIGERATOR', ipa: '/rɪˈfrɪdʒ.ər.eɪ.tər/', taboo: ['Cold', 'Food', 'Ice', 'Kitchen', 'Keep'], vietnamese_keyword: 'Tủ lạnh', vietnamese_taboo: ['Lạnh', 'Thức ăn', 'Đá', 'Nhà bếp', 'Giữ/Bảo quản'] },
-    { category: 'Nhà cửa', keyword: 'BED', ipa: '/bed/', taboo: ['Sleep', 'Mattress', 'Pillow', 'Blanket', 'Night'], vietnamese_keyword: 'Cái giường', vietnamese_taboo: ['Ngủ', 'Tấm nệm', 'Cái gối', 'Cái chăn', 'Ban đêm'] },
-    { category: 'Nhà cửa', keyword: 'WASHING MACHINE', ipa: '/ˈwɒʃ.ɪŋ məˌʃiːn/', taboo: ['Clothes', 'Clean', 'Water', 'Spin', 'Dirty'], vietnamese_keyword: 'Máy giặt', vietnamese_taboo: ['Quần áo', 'Sạch', 'Nước', 'Vắt', 'Bẩn'] },
-    { category: 'Nhà cửa', keyword: 'WARDROBE', ipa: '/ˈwɔː.drəʊb/', taboo: ['Clothes', 'Hang', 'Closet', 'Wooden', 'Bedroom'], vietnamese_keyword: 'Tủ quần áo', vietnamese_taboo: ['Quần áo', 'Treo', 'Tủ chứa', 'Bằng gỗ', 'Phòng ngủ'] },
-    { category: 'Nhà cửa', keyword: 'SOFA', ipa: '/ˈsəʊ.fə/', taboo: ['Sit', 'Living room', 'Couch', 'Comfortable', 'Rest'], vietnamese_keyword: 'Ghế sô-pha', vietnamese_taboo: ['Ngồi', 'Phòng khách', 'Ghế dài', 'Thoải mái', 'Nghỉ ngơi'] },
-    { category: 'Nhà cửa', keyword: 'MICROWAVE', ipa: '/ˈmaɪ.krə.weɪv/', taboo: ['Heat', 'Food', 'Kitchen', 'Fast', 'Oven'], vietnamese_keyword: 'Lò vi sóng', vietnamese_taboo: ['Làm nóng', 'Thức ăn', 'Nhà bếp', 'Nhanh', 'Lò nướng'] },
-    { category: 'Nhà cửa', keyword: 'TOILET', ipa: '/ˈtɔɪ.lət/', taboo: ['Bathroom', 'Flush', 'Paper', 'Wash', 'Seat'], vietnamese_keyword: 'Bồn cầu', vietnamese_taboo: ['Phòng tắm', 'Xả nước', 'Giấy', 'Rửa', 'Chỗ ngồi'] },
-    { category: 'Nhà cửa', keyword: 'TABLE', ipa: '/ˈteɪ.bəl/', taboo: ['Eat', 'Desk', 'Wood', 'Legs', 'Chair'], vietnamese_keyword: 'Cái bàn', vietnamese_taboo: ['Ăn', 'Bàn làm việc', 'Gỗ', 'Cái chân', 'Cái ghế'] },
-    { category: 'Nhà cửa', keyword: 'CHAIR', ipa: '/tʃeər/', taboo: ['Sit', 'Table', 'Seat', 'Rest', 'Four legs'], vietnamese_keyword: 'Cái ghế', vietnamese_taboo: ['Ngồi', 'Cái bàn', 'Chỗ ngồi', 'Nghỉ ngơi', 'Bốn chân'] },
+        const { useState, useEffect, useMemo, useCallback } = React;
 
-    // Giao thông (10 từ)
-    { category: 'Giao thông', keyword: 'AIRPLANE', ipa: '/ˈeə.pleɪn/', taboo: ['Fly', 'Sky', 'Airport', 'Wings', 'Pilot'], vietnamese_keyword: 'Máy bay', vietnamese_taboo: ['Bay', 'Bầu trời', 'Sân bay', 'Đôi cánh', 'Phi công'] },
-    { category: 'Giao thông', keyword: 'SUBWAY', ipa: '/ˈsʌb.weɪ/', taboo: ['Underground', 'Train', 'City', 'Station', 'Tube'], vietnamese_keyword: 'Tàu điện ngầm', vietnamese_taboo: ['Dưới lòng đất', 'Tàu hỏa', 'Thành phố', 'Nhà ga', 'Ống (Tàu điện ngầm)'] },
-    { category: 'Giao thông', keyword: 'BICYCLE', ipa: '/ˈbaɪ.sɪ.kəl/', taboo: ['Ride', 'Pedal', 'Two wheels', 'Helmet', 'Chain'], vietnamese_keyword: 'Xe đạp', vietnamese_taboo: ['Đạp xe', 'Bàn đạp', 'Hai bánh', 'Mũ bảo hiểm', 'Dây xích'] },
-    { category: 'Giao thông', keyword: 'HELICOPTER', ipa: '/ˈhel.ɪˌkɒp.tər/', taboo: ['Fly', 'Blades', 'Sky', 'Hover', 'Pilot'], vietnamese_keyword: 'Trực thăng', vietnamese_taboo: ['Bay', 'Cánh quạt', 'Bầu trời', 'Bay lơ lửng', 'Phi công'] },
-    { category: 'Giao thông', keyword: 'AMBULANCE', ipa: '/ˈæm.bjə.ləns/', taboo: ['Hospital', 'Emergency', 'Siren', 'Doctor', 'Patient'], vietnamese_keyword: 'Xe cứu thương', vietnamese_taboo: ['Bệnh viện', 'Khẩn cấp', 'Còi hú', 'Bác sĩ', 'Bệnh nhân'] },
-    { category: 'Giao thông', keyword: 'MOTORCYCLE', ipa: '/ˈməʊ.təˌsaɪ.kəl/', taboo: ['Ride', 'Two wheels', 'Engine', 'Helmet', 'Fast'], vietnamese_keyword: 'Xe máy', vietnamese_taboo: ['Lái', 'Hai bánh', 'Động cơ', 'Mũ bảo hiểm', 'Nhanh'] },
-    { category: 'Giao thông', keyword: 'MOTORBOAT', ipa: '/ˈməʊ.tə.bəʊt/', taboo: ['Water', 'Sea', 'Engine', 'Fast', 'River'], vietnamese_keyword: 'Thuyền máy', vietnamese_taboo: ['Nước', 'Biển', 'Động cơ', 'Nhanh', 'Dòng sông'] },
-    { category: 'Giao thông', keyword: 'TRAIN', ipa: '/treɪn/', taboo: ['Tracks', 'Station', 'Railway', 'Tickets', 'Carriages'], vietnamese_keyword: 'Tàu hỏa', vietnamese_taboo: ['Đường ray', 'Nhà ga', 'Đường sắt', 'Vé', 'Toa tàu'] },
-    { category: 'Giao thông', keyword: 'BUS', ipa: '/bʌs/', taboo: ['Public', 'Stop', 'Passengers', 'Driver', 'Ticket'], vietnamese_keyword: 'Xe buýt', vietnamese_taboo: ['Công cộng', 'Trạm dừng', 'Hành khách', 'Tài xế', 'Vé'] },
-    { category: 'Giao thông', keyword: 'TAXI', ipa: '/ˈtæk.si/', taboo: ['Car', 'Pay', 'Driver', 'Yellow', 'Meter'], vietnamese_keyword: 'Xe Taxi', vietnamese_taboo: ['Ô tô', 'Trả tiền', 'Tài xế', 'Màu vàng', 'Đồng hồ tính tiền'] },
+        // --- FIREBASE INITIALIZATION ---
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-    // Trang phục (10 từ)
-    { category: 'Trang phục', keyword: 'SNEAKERS', ipa: '/ˈsniː.kərz/', taboo: ['Shoes', 'Run', 'Feet', 'Sport', 'Laces'], vietnamese_keyword: 'Giày thể thao', vietnamese_taboo: ['Giày', 'Chạy', 'Bàn chân', 'Thể thao', 'Dây giày'] },
-    { category: 'Trang phục', keyword: 'JACKET', ipa: '/ˈdʒæk.ɪt/', taboo: ['Coat', 'Cold', 'Wear', 'Zipper', 'Winter'], vietnamese_keyword: 'Áo khoác', vietnamese_taboo: ['Áo choàng', 'Lạnh', 'Mặc', 'Khóa kéo', 'Mùa đông'] },
-    { category: 'Trang phục', keyword: 'SUNGLASSES', ipa: '/ˈsʌnˌɡlɑː.sɪz/', taboo: ['Eyes', 'Sun', 'Wear', 'Bright', 'Protect'], vietnamese_keyword: 'Kính râm', vietnamese_taboo: ['Đôi mắt', 'Mặt trời', 'Đeo', 'Chói sáng', 'Bảo vệ'] },
-    { category: 'Trang phục', keyword: 'UNIFORM', ipa: '/ˈjuː.nɪ.fɔːm/', taboo: ['School', 'Work', 'Same', 'Clothes', 'Rule'], vietnamese_keyword: 'Đồng phục', vietnamese_taboo: ['Trường học', 'Công việc', 'Giống nhau', 'Quần áo', 'Quy định'] },
-    { category: 'Trang phục', keyword: 'T-SHIRT', ipa: '/ˈtiː.ʃɜːt/', taboo: ['Sleeves', 'Casual', 'Cotton', 'Summer', 'Wear'], vietnamese_keyword: 'Áo thun', vietnamese_taboo: ['Tay áo', 'Thoải mái', 'Vải cotton', 'Mùa hè', 'Mặc'] },
-    { category: 'Trang phục', keyword: 'TROUSERS', ipa: '/ˈtraʊ.zəz/', taboo: ['Pants', 'Legs', 'Wear', 'Belt', 'Jeans'], vietnamese_keyword: 'Quần dài', vietnamese_taboo: ['Cái quần', 'Đôi chân', 'Mặc', 'Thắt lưng', 'Quần bò'] },
-    { category: 'Trang phục', keyword: 'DRESS', ipa: '/dres/', taboo: ['Women', 'Skirt', 'Wear', 'Party', 'Beautiful'], vietnamese_keyword: 'Cái váy', vietnamese_taboo: ['Phụ nữ', 'Chân váy', 'Mặc', 'Bữa tiệc', 'Xinh đẹp'] },
-    { category: 'Trang phục', keyword: 'HAT', ipa: '/hæt/', taboo: ['Head', 'Sun', 'Cap', 'Wear', 'Hair'], vietnamese_keyword: 'Cái mũ', vietnamese_taboo: ['Cái đầu', 'Mặt trời', 'Mũ lưỡi trai', 'Đội', 'Tóc'] },
-    { category: 'Trang phục', keyword: 'SOCKS', ipa: '/sɒks/', taboo: ['Feet', 'Shoes', 'Wear', 'Warm', 'Toes'], vietnamese_keyword: 'Đôi tất', vietnamese_taboo: ['Bàn chân', 'Giày', 'Đi/Mang', 'Ấm áp', 'Ngón chân'] },
-    { category: 'Trang phục', keyword: 'SCARF', ipa: '/skɑːf/', taboo: ['Neck', 'Cold', 'Winter', 'Wool', 'Wrap'], vietnamese_keyword: 'Khăn quàng cổ', vietnamese_taboo: ['Cái cổ', 'Lạnh', 'Mùa đông', 'Len', 'Quấn'] },
-    
-    // Cơ thể (10 từ)
-    { category: 'Cơ thể', keyword: 'HEART', ipa: '/hɑːt/', taboo: ['Beat', 'Blood', 'Chest', 'Love', 'Red'], vietnamese_keyword: 'Trái tim', vietnamese_taboo: ['Nhịp đập', 'Máu', 'Ngực', 'Tình yêu', 'Màu đỏ'] },
-    { category: 'Cơ thể', keyword: 'BRAIN', ipa: '/breɪn/', taboo: ['Head', 'Think', 'Smart', 'Mind', 'Skull'], vietnamese_keyword: 'Não bộ', vietnamese_taboo: ['Cái đầu', 'Suy nghĩ', 'Thông minh', 'Tâm trí', 'Hộp sọ'] },
-    { category: 'Cơ thể', keyword: 'STOMACH', ipa: '/ˈstʌm.ək/', taboo: ['Belly', 'Food', 'Digest', 'Hungry', 'Ache'], vietnamese_keyword: 'Dạ dày', vietnamese_taboo: ['Cái bụng', 'Thức ăn', 'Tiêu hóa', 'Đói bụng', 'Đau'] },
-    { category: 'Cơ thể', keyword: 'LUNGS', ipa: '/lʌŋz/', taboo: ['Breathe', 'Air', 'Chest', 'Oxygen', 'Smoke'], vietnamese_keyword: 'Lá phổi', vietnamese_taboo: ['Thở', 'Không khí', 'Ngực', 'Oxy', 'Hút thuốc'] },
-    { category: 'Cơ thể', keyword: 'MUSCLE', ipa: '/ˈmʌs.əl/', taboo: ['Strong', 'Body', 'Lift', 'Gym', 'Workout'], vietnamese_keyword: 'Cơ bắp', vietnamese_taboo: ['Mạnh mẽ', 'Cơ thể', 'Nâng', 'Phòng tập', 'Tập luyện'] },
-    { category: 'Cơ thể', keyword: 'BLOOD', ipa: '/blʌd/', taboo: ['Red', 'Heart', 'Veins', 'Vampire', 'Cut'], vietnamese_keyword: 'Máu', vietnamese_taboo: ['Màu đỏ', 'Trái tim', 'Mạch máu', 'Ma cà rồng', 'Vết cắt'] },
-    { category: 'Cơ thể', keyword: 'BONE', ipa: '/bəʊn/', taboo: ['Skeleton', 'Hard', 'Dog', 'Break', 'Skull'], vietnamese_keyword: 'Xương', vietnamese_taboo: ['Bộ xương', 'Cứng', 'Con chó', 'Gãy', 'Hộp sọ'] },
-    { category: 'Cơ thể', keyword: 'SKIN', ipa: '/skɪn/', taboo: ['Body', 'Touch', 'Soft', 'Tan', 'Dermatologist'], vietnamese_keyword: 'Làn da', vietnamese_taboo: ['Cơ thể', 'Chạm', 'Mềm mại', 'Rám nắng', 'Bác sĩ da liễu'] },
-    { category: 'Cơ thể', keyword: 'LIVER', ipa: '/ˈlɪv.ər/', taboo: ['Organ', 'Alcohol', 'Clean', 'Body', 'Disease'], vietnamese_keyword: 'Lá gan', vietnamese_taboo: ['Cơ quan', 'Rượu', 'Làm sạch', 'Cơ thể', 'Căn bệnh'] },
-    { category: 'Cơ thể', keyword: 'KIDNEY', ipa: '/ˈkɪd.ni/', taboo: ['Organ', 'Bean', 'Urine', 'Water', 'Two'], vietnamese_keyword: 'Quả thận', vietnamese_taboo: ['Cơ quan', 'Hạt đậu', 'Nước tiểu', 'Nước', 'Hai (số lượng)'] },
+        // --- MASSIVE WORD DATABASE ---
+        const wordDatabase = [
+            // Thể thao (10 từ)
+            { category: 'Thể thao', keyword: 'FOOTBALL', ipa: '/ˈfʊt.bɔːl/', taboo: ['Kick', 'Goal', 'Ball', 'Team', 'Sport'], vietnamese_keyword: 'Bóng đá', vietnamese_taboo: ['Đá', 'Bàn thắng', 'Quả bóng', 'Đội', 'Thể thao'] },
+            { category: 'Thể thao', keyword: 'BASKETBALL', ipa: '/ˈbɑː.skɪt.bɔːl/', taboo: ['Hoop', 'Dribble', 'Court', 'Jump', 'Throw'], vietnamese_keyword: 'Bóng rổ', vietnamese_taboo: ['Cái rổ', 'Nhồi bóng', 'Sân', 'Nhảy', 'Ném'] },
+            { category: 'Thể thao', keyword: 'SWIMMING', ipa: '/ˈswɪm.ɪŋ/', taboo: ['Water', 'Pool', 'Dive', 'Wet', 'Goggles'], vietnamese_keyword: 'Bơi lội', vietnamese_taboo: ['Nước', 'Hồ bơi', 'Lặn', 'Ướt', 'Kính bơi'] },
+            { category: 'Thể thao', keyword: 'YOGA', ipa: '/ˈjəʊ.ɡə/', taboo: ['Meditate', 'Mat', 'Stretch', 'India', 'Relax'], vietnamese_keyword: 'Tập Yoga', vietnamese_taboo: ['Ngồi thiền', 'Tấm thảm', 'Kéo giãn', 'Ấn Độ', 'Thư giãn'] },
+            { category: 'Thể thao', keyword: 'TENNIS', ipa: '/ˈten.ɪs/', taboo: ['Racket', 'Net', 'Court', 'Ball', 'Wimbledon'], vietnamese_keyword: 'Quần vợt', vietnamese_taboo: ['Cái vợt', 'Lưới', 'Sân', 'Quả bóng', 'Giải Wimbledon'] },
+            { category: 'Thể thao', keyword: 'MARATHON', ipa: '/ˈmær.ə.θən/', taboo: ['Run', 'Distance', 'Race', 'Finish', 'Shoes'], vietnamese_keyword: 'Chạy Marathon', vietnamese_taboo: ['Chạy', 'Khoảng cách', 'Cuộc đua', 'Đích đến', 'Giày'] },
+            { category: 'Thể thao', keyword: 'BASEBALL', ipa: '/ˈbeɪs.bɔːl/', taboo: ['Bat', 'Pitcher', 'Home run', 'Strike', 'Glove'], vietnamese_keyword: 'Bóng chày', vietnamese_taboo: ['Cái chày', 'Người ném bóng', 'Cú ăn điểm', 'Đánh trượt', 'Găng tay'] },
+            { category: 'Thể thao', keyword: 'VOLLEYBALL', ipa: '/ˈvɒl.i.bɔːl/', taboo: ['Net', 'Spike', 'Serve', 'Beach', 'Team'], vietnamese_keyword: 'Bóng chuyền', vietnamese_taboo: ['Cái lưới', 'Đập bóng', 'Giao bóng', 'Bãi biển', 'Đội'] },
+            { category: 'Thể thao', keyword: 'BADMINTON', ipa: '/ˈbæd.mɪn.tən/', taboo: ['Shuttlecock', 'Racket', 'Net', 'Court', 'Smash'], vietnamese_keyword: 'Cầu lông', vietnamese_taboo: ['Quả cầu lông', 'Cái vợt', 'Cái lưới', 'Sân', 'Đập cầu'] },
+            { category: 'Thể thao', keyword: 'GOLF', ipa: '/ɡɒlf/', taboo: ['Hole', 'Club', 'Green', 'Tee', 'Swing'], vietnamese_keyword: 'Đánh Gôn', vietnamese_taboo: ['Cái lỗ', 'Gậy', 'Bãi cỏ', 'Điểm phát bóng', 'Vung gậy'] },
 
-    // Giáo dục (10 từ)
-    { category: 'Giáo dục', keyword: 'UNIVERSITY', ipa: '/ˌjuː.nɪˈvɜː.sə.ti/', taboo: ['College', 'Degree', 'Student', 'Campus', 'Graduate'], vietnamese_keyword: 'Đại học', vietnamese_taboo: ['Cao đẳng', 'Bằng cấp', 'Sinh viên', 'Khuôn viên', 'Tốt nghiệp'] },
-    { category: 'Giáo dục', keyword: 'LIBRARY', ipa: '/ˈlaɪ.brər.i/', taboo: ['Books', 'Read', 'Quiet', 'Borrow', 'Study'], vietnamese_keyword: 'Thư viện', vietnamese_taboo: ['Sách', 'Đọc', 'Yên lặng', 'Mượn', 'Học tập'] },
-    { category: 'Giáo dục', keyword: 'EXAM', ipa: '/ɪɡˈzæm/', taboo: ['Test', 'Study', 'Pass', 'Fail', 'Questions'], vietnamese_keyword: 'Kỳ thi', vietnamese_taboo: ['Bài kiểm tra', 'Học', 'Đỗ', 'Trượt', 'Câu hỏi'] },
-    { category: 'Giáo dục', keyword: 'SCHOLARSHIP', ipa: '/ˈskɒl.ə.ʃɪp/', taboo: ['Money', 'Study', 'Free', 'University', 'Award'], vietnamese_keyword: 'Học bổng', vietnamese_taboo: ['Tiền', 'Học', 'Miễn phí', 'Đại học', 'Phần thưởng'] },
-    { category: 'Giáo dục', keyword: 'HOMEWORK', ipa: '/ˈhəʊm.wɜːk/', taboo: ['School', 'Assignment', 'Teacher', 'House', 'Do'], vietnamese_keyword: 'Bài tập về nhà', vietnamese_taboo: ['Trường học', 'Nhiệm vụ', 'Giáo viên', 'Ngôi nhà', 'Làm'] },
-    { category: 'Giáo dục', keyword: 'DICTIONARY', ipa: '/ˈdɪk.ʃən.ər.i/', taboo: ['Words', 'Meaning', 'Translate', 'Look up', 'Book'], vietnamese_keyword: 'Từ điển', vietnamese_taboo: ['Từ vựng', 'Ý nghĩa', 'Dịch', 'Tra cứu', 'Quyển sách'] },
-    { category: 'Giáo dục', keyword: 'LECTURE', ipa: '/ˈlek.tʃər/', taboo: ['Listen', 'Professor', 'Class', 'Notes', 'Speech'], vietnamese_keyword: 'Bài giảng', vietnamese_taboo: ['Lắng nghe', 'Giáo sư', 'Lớp học', 'Ghi chú', 'Bài phát biểu'] },
-    { category: 'Giáo dục', keyword: 'PROFESSOR', ipa: '/prəˈfes.ər/', taboo: ['University', 'Teach', 'Smart', 'Student', 'Class'], vietnamese_keyword: 'Giáo sư', vietnamese_taboo: ['Đại học', 'Dạy học', 'Thông minh', 'Sinh viên', 'Lớp học'] },
-    { category: 'Giáo dục', keyword: 'LABORATORY', ipa: '/ləˈbɒr.ə.tər.i/', taboo: ['Science', 'Experiment', 'Chemicals', 'Coat', 'Research'], vietnamese_keyword: 'Phòng thí nghiệm', vietnamese_taboo: ['Khoa học', 'Thí nghiệm', 'Hóa chất', 'Áo khoác', 'Nghiên cứu'] },
-    { category: 'Giáo dục', keyword: 'DIPLOMA', ipa: '/dɪˈpləʊ.mə/', taboo: ['Graduate', 'Paper', 'Degree', 'University', 'Frame'], vietnamese_keyword: 'Bằng cấp', vietnamese_taboo: ['Tốt nghiệp', 'Tờ giấy', 'Trình độ', 'Đại học', 'Khung ảnh'] },
+            // Nhà cửa (10 từ)
+            { category: 'Nhà cửa', keyword: 'TELEVISION', ipa: '/ˈtel.ɪ.vɪʒ.ən/', taboo: ['Watch', 'Screen', 'Show', 'Remote', 'Channel'], vietnamese_keyword: 'Tivi', vietnamese_taboo: ['Xem', 'Màn hình', 'Chương trình', 'Điều khiển', 'Kênh'] },
+            { category: 'Nhà cửa', keyword: 'REFRIGERATOR', ipa: '/rɪˈfrɪdʒ.ər.eɪ.tər/', taboo: ['Cold', 'Food', 'Ice', 'Kitchen', 'Keep'], vietnamese_keyword: 'Tủ lạnh', vietnamese_taboo: ['Lạnh', 'Thức ăn', 'Đá', 'Nhà bếp', 'Giữ/Bảo quản'] },
+            { category: 'Nhà cửa', keyword: 'BED', ipa: '/bed/', taboo: ['Sleep', 'Mattress', 'Pillow', 'Blanket', 'Night'], vietnamese_keyword: 'Cái giường', vietnamese_taboo: ['Ngủ', 'Tấm nệm', 'Cái gối', 'Cái chăn', 'Ban đêm'] },
+            { category: 'Nhà cửa', keyword: 'WASHING MACHINE', ipa: '/ˈwɒʃ.ɪŋ məˌʃiːn/', taboo: ['Clothes', 'Clean', 'Water', 'Spin', 'Dirty'], vietnamese_keyword: 'Máy giặt', vietnamese_taboo: ['Quần áo', 'Sạch', 'Nước', 'Vắt', 'Bẩn'] },
+            { category: 'Nhà cửa', keyword: 'WARDROBE', ipa: '/ˈwɔː.drəʊb/', taboo: ['Clothes', 'Hang', 'Closet', 'Wooden', 'Bedroom'], vietnamese_keyword: 'Tủ quần áo', vietnamese_taboo: ['Quần áo', 'Treo', 'Tủ chứa', 'Bằng gỗ', 'Phòng ngủ'] },
+            { category: 'Nhà cửa', keyword: 'SOFA', ipa: '/ˈsəʊ.fə/', taboo: ['Sit', 'Living room', 'Couch', 'Comfortable', 'Rest'], vietnamese_keyword: 'Ghế sô-pha', vietnamese_taboo: ['Ngồi', 'Phòng khách', 'Ghế dài', 'Thoải mái', 'Nghỉ ngơi'] },
+            { category: 'Nhà cửa', keyword: 'MICROWAVE', ipa: '/ˈmaɪ.krə.weɪv/', taboo: ['Heat', 'Food', 'Kitchen', 'Fast', 'Oven'], vietnamese_keyword: 'Lò vi sóng', vietnamese_taboo: ['Làm nóng', 'Thức ăn', 'Nhà bếp', 'Nhanh', 'Lò nướng'] },
+            { category: 'Nhà cửa', keyword: 'TOILET', ipa: '/ˈtɔɪ.lət/', taboo: ['Bathroom', 'Flush', 'Paper', 'Wash', 'Seat'], vietnamese_keyword: 'Bồn cầu', vietnamese_taboo: ['Phòng tắm', 'Xả nước', 'Giấy', 'Rửa', 'Chỗ ngồi'] },
+            { category: 'Nhà cửa', keyword: 'TABLE', ipa: '/ˈteɪ.bəl/', taboo: ['Eat', 'Desk', 'Wood', 'Legs', 'Chair'], vietnamese_keyword: 'Cái bàn', vietnamese_taboo: ['Ăn', 'Bàn làm việc', 'Gỗ', 'Cái chân', 'Cái ghế'] },
+            { category: 'Nhà cửa', keyword: 'CHAIR', ipa: '/tʃeər/', taboo: ['Sit', 'Table', 'Seat', 'Rest', 'Four legs'], vietnamese_keyword: 'Cái ghế', vietnamese_taboo: ['Ngồi', 'Cái bàn', 'Chỗ ngồi', 'Nghỉ ngơi', 'Bốn chân'] },
 
-    // Giải trí (10 từ)
-    { category: 'Giải trí', keyword: 'MOVIE', ipa: '/ˈmuː.vi/', taboo: ['Film', 'Watch', 'Cinema', 'Actor', 'Popcorn'], vietnamese_keyword: 'Bộ phim', vietnamese_taboo: ['Phim ảnh', 'Xem', 'Rạp chiếu phim', 'Diễn viên', 'Bắp rang'] },
-    { category: 'Giải trí', keyword: 'CONCERT', ipa: '/ˈkɒn.sət/', taboo: ['Music', 'Live', 'Band', 'Sing', 'Ticket'], vietnamese_keyword: 'Buổi hòa nhạc', vietnamese_taboo: ['Âm nhạc', 'Trực tiếp', 'Ban nhạc', 'Hát', 'Vé'] },
-    { category: 'Giải trí', keyword: 'VIDEO GAME', ipa: '/ˈvɪd.i.əʊ ˌɡeɪm/', taboo: ['Play', 'Console', 'Screen', 'Controller', 'Computer'], vietnamese_keyword: 'Trò chơi điện tử', vietnamese_taboo: ['Chơi', 'Máy chơi game', 'Màn hình', 'Tay cầm', 'Máy tính'] },
-    { category: 'Giải trí', keyword: 'MAGICIAN', ipa: '/məˈdʒɪʃ.ən/', taboo: ['Trick', 'Hat', 'Rabbit', 'Wand', 'Illusion'], vietnamese_keyword: 'Ảo thuật gia', vietnamese_taboo: ['Mánh khóe', 'Cái mũ', 'Con thỏ', 'Đũa phép', 'Ảo ảnh'] },
-    { category: 'Giải trí', keyword: 'THEATER', ipa: '/ˈθɪə.tər/', taboo: ['Play', 'Stage', 'Actors', 'Drama', 'Curtain'], vietnamese_keyword: 'Nhà hát', vietnamese_taboo: ['Vở kịch', 'Sân khấu', 'Diễn viên', 'Kịch tính', 'Rèm cửa'] },
-    { category: 'Giải trí', keyword: 'MUSEUM', ipa: '/mjuːˈziː.əm/', taboo: ['Art', 'History', 'Dinosaur', 'Paintings', 'Old'], vietnamese_keyword: 'Bảo tàng', vietnamese_taboo: ['Nghệ thuật', 'Lịch sử', 'Khủng long', 'Bức tranh', 'Cũ/Cổ'] },
-    { category: 'Giải trí', keyword: 'FESTIVAL', ipa: '/ˈfes.tɪ.vəl/', taboo: ['Celebrate', 'Music', 'Food', 'Crowd', 'Event'], vietnamese_keyword: 'Lễ hội', vietnamese_taboo: ['Ăn mừng', 'Âm nhạc', 'Thức ăn', 'Đám đông', 'Sự kiện'] },
-    { category: 'Giải trí', keyword: 'BOARD GAME', ipa: '/ˈbɔːd ˌɡeɪm/', taboo: ['Dice', 'Cards', 'Table', 'Play', 'Monopoly'], vietnamese_keyword: 'Trò chơi cờ bàn', vietnamese_taboo: ['Xúc xắc', 'Lá bài', 'Cái bàn', 'Chơi', 'Cờ tỷ phú'] },
-    { category: 'Giải trí', keyword: 'CIRCUS', ipa: '/ˈsɜː.kəs/', taboo: ['Clown', 'Tent', 'Animals', 'Acrobat', 'Show'], vietnamese_keyword: 'Rạp xiếc', vietnamese_taboo: ['Chú hề', 'Cái lều', 'Động vật', 'Nhào lộn', 'Buổi diễn'] },
-    { category: 'Giải trí', keyword: 'ROLLER COASTER', ipa: '/ˈrəʊ.lə ˌkəʊ.stər/', taboo: ['Amusement park', 'Fast', 'Scary', 'Scream', 'Ride'], vietnamese_keyword: 'Tàu lượn siêu tốc', vietnamese_taboo: ['Công viên giải trí', 'Nhanh', 'Đáng sợ', 'La hét', 'Trò chơi'] },
+            // Giao thông (10 từ)
+            { category: 'Giao thông', keyword: 'AIRPLANE', ipa: '/ˈeə.pleɪn/', taboo: ['Fly', 'Sky', 'Airport', 'Wings', 'Pilot'], vietnamese_keyword: 'Máy bay', vietnamese_taboo: ['Bay', 'Bầu trời', 'Sân bay', 'Đôi cánh', 'Phi công'] },
+            { category: 'Giao thông', keyword: 'SUBWAY', ipa: '/ˈsʌb.weɪ/', taboo: ['Underground', 'Train', 'City', 'Station', 'Tube'], vietnamese_keyword: 'Tàu điện ngầm', vietnamese_taboo: ['Dưới lòng đất', 'Tàu hỏa', 'Thành phố', 'Nhà ga', 'Ống (Tàu điện ngầm)'] },
+            { category: 'Giao thông', keyword: 'BICYCLE', ipa: '/ˈbaɪ.sɪ.kəl/', taboo: ['Ride', 'Pedal', 'Two wheels', 'Helmet', 'Chain'], vietnamese_keyword: 'Xe đạp', vietnamese_taboo: ['Đạp xe', 'Bàn đạp', 'Hai bánh', 'Mũ bảo hiểm', 'Dây xích'] },
+            { category: 'Giao thông', keyword: 'HELICOPTER', ipa: '/ˈhel.ɪˌkɒp.tər/', taboo: ['Fly', 'Blades', 'Sky', 'Hover', 'Pilot'], vietnamese_keyword: 'Trực thăng', vietnamese_taboo: ['Bay', 'Cánh quạt', 'Bầu trời', 'Bay lơ lửng', 'Phi công'] },
+            { category: 'Giao thông', keyword: 'AMBULANCE', ipa: '/ˈæm.bjə.ləns/', taboo: ['Hospital', 'Emergency', 'Siren', 'Doctor', 'Patient'], vietnamese_keyword: 'Xe cứu thương', vietnamese_taboo: ['Bệnh viện', 'Khẩn cấp', 'Còi hú', 'Bác sĩ', 'Bệnh nhân'] },
+            { category: 'Giao thông', keyword: 'MOTORCYCLE', ipa: '/ˈməʊ.təˌsaɪ.kəl/', taboo: ['Ride', 'Two wheels', 'Engine', 'Helmet', 'Fast'], vietnamese_keyword: 'Xe máy', vietnamese_taboo: ['Lái', 'Hai bánh', 'Động cơ', 'Mũ bảo hiểm', 'Nhanh'] },
+            { category: 'Giao thông', keyword: 'MOTORBOAT', ipa: '/ˈməʊ.tə.bəʊt/', taboo: ['Water', 'Sea', 'Engine', 'Fast', 'River'], vietnamese_keyword: 'Thuyền máy', vietnamese_taboo: ['Nước', 'Biển', 'Động cơ', 'Nhanh', 'Dòng sông'] },
+            { category: 'Giao thông', keyword: 'TRAIN', ipa: '/treɪn/', taboo: ['Tracks', 'Station', 'Railway', 'Tickets', 'Carriages'], vietnamese_keyword: 'Tàu hỏa', vietnamese_taboo: ['Đường ray', 'Nhà ga', 'Đường sắt', 'Vé', 'Toa tàu'] },
+            { category: 'Giao thông', keyword: 'BUS', ipa: '/bʌs/', taboo: ['Public', 'Stop', 'Passengers', 'Driver', 'Ticket'], vietnamese_keyword: 'Xe buýt', vietnamese_taboo: ['Công cộng', 'Trạm dừng', 'Hành khách', 'Tài xế', 'Vé'] },
+            { category: 'Giao thông', keyword: 'TAXI', ipa: '/ˈtæk.si/', taboo: ['Car', 'Pay', 'Driver', 'Yellow', 'Meter'], vietnamese_keyword: 'Xe Taxi', vietnamese_taboo: ['Ô tô', 'Trả tiền', 'Tài xế', 'Màu vàng', 'Đồng hồ tính tiền'] },
 
-    // Du lịch (10 từ)
-    { category: 'Du lịch', keyword: 'PASSPORT', ipa: '/ˈpɑːs.pɔːt/', taboo: ['Travel', 'Country', 'Document', 'Airport', 'Fly'], vietnamese_keyword: 'Hộ chiếu', vietnamese_taboo: ['Du lịch', 'Quốc gia', 'Tài liệu', 'Sân bay', 'Bay'] },
-    { category: 'Du lịch', keyword: 'LUGGAGE', ipa: '/ˈlʌɡ.ɪdʒ/', taboo: ['Bags', 'Suitcase', 'Pack', 'Travel', 'Heavy'], vietnamese_keyword: 'Hành lý', vietnamese_taboo: ['Túi xách', 'Vali', 'Đóng gói', 'Du lịch', 'Nặng'] },
-    { category: 'Du lịch', keyword: 'HOTEL', ipa: '/həʊˈtel/', taboo: ['Sleep', 'Room', 'Stay', 'Bed', 'Reception'], vietnamese_keyword: 'Khách sạn', vietnamese_taboo: ['Ngủ', 'Phòng', 'Ở lại', 'Giường', 'Lễ tân'] },
-    { category: 'Du lịch', keyword: 'SOUVENIR', ipa: '/ˌsuː.vənˈɪər/', taboo: ['Gift', 'Trip', 'Remember', 'Buy', 'Shop'], vietnamese_keyword: 'Quà lưu niệm', vietnamese_taboo: ['Quà tặng', 'Chuyến đi', 'Nhớ', 'Mua', 'Cửa hàng'] },
-    { category: 'Du lịch', keyword: 'TOUR GUIDE', ipa: '/tʊər ɡaɪd/', taboo: ['Show', 'Lead', 'City', 'Explain', 'Tourist'], vietnamese_keyword: 'Hướng dẫn viên', vietnamese_taboo: ['Chỉ dẫn', 'Dẫn dắt', 'Thành phố', 'Giải thích', 'Du khách'] },
-    { category: 'Du lịch', keyword: 'TICKET', ipa: '/ˈtɪk.ɪt/', taboo: ['Pay', 'Enter', 'Flight', 'Train', 'Paper'], vietnamese_keyword: 'Vé', vietnamese_taboo: ['Trả tiền', 'Đi vào', 'Chuyến bay', 'Tàu hỏa', 'Tờ giấy'] },
-    { category: 'Du lịch', keyword: 'MAP', ipa: '/mæp/', taboo: ['Directions', 'Paper', 'Lost', 'Find', 'Location'], vietnamese_keyword: 'Bản đồ', vietnamese_taboo: ['Phương hướng', 'Tờ giấy', 'Lạc đường', 'Tìm kiếm', 'Vị trí'] },
-    { category: 'Du lịch', keyword: 'COMPASS', ipa: '/ˈkʌm.pəs/', taboo: ['North', 'Direction', 'Lost', 'Needle', 'Navigate'], vietnamese_keyword: 'La bàn', vietnamese_taboo: ['Hướng Bắc', 'Phương hướng', 'Lạc đường', 'Cây kim', 'Điều hướng'] },
-    { category: 'Du lịch', keyword: 'RESORT', ipa: '/rɪˈzɔːt/', taboo: ['Vacation', 'Beach', 'Luxury', 'Relax', 'Pool'], vietnamese_keyword: 'Khu nghỉ dưỡng', vietnamese_taboo: ['Kỳ nghỉ', 'Bãi biển', 'Xa xỉ', 'Thư giãn', 'Hồ bơi'] },
-    { category: 'Du lịch', keyword: 'ITINERARY', ipa: '/aɪˈtɪn.ər.ər.i/', taboo: ['Plan', 'Schedule', 'Trip', 'Places', 'List'], vietnamese_keyword: 'Lịch trình', vietnamese_taboo: ['Kế hoạch', 'Thời gian biểu', 'Chuyến đi', 'Địa điểm', 'Danh sách'] },
+            // Trang phục (10 từ)
+            { category: 'Trang phục', keyword: 'SNEAKERS', ipa: '/ˈsniː.kərz/', taboo: ['Shoes', 'Run', 'Feet', 'Sport', 'Laces'], vietnamese_keyword: 'Giày thể thao', vietnamese_taboo: ['Giày', 'Chạy', 'Bàn chân', 'Thể thao', 'Dây giày'] },
+            { category: 'Trang phục', keyword: 'JACKET', ipa: '/ˈdʒæk.ɪt/', taboo: ['Coat', 'Cold', 'Wear', 'Zipper', 'Winter'], vietnamese_keyword: 'Áo khoác', vietnamese_taboo: ['Áo choàng', 'Lạnh', 'Mặc', 'Khóa kéo', 'Mùa đông'] },
+            { category: 'Trang phục', keyword: 'SUNGLASSES', ipa: '/ˈsʌnˌɡlɑː.sɪz/', taboo: ['Eyes', 'Sun', 'Wear', 'Bright', 'Protect'], vietnamese_keyword: 'Kính râm', vietnamese_taboo: ['Đôi mắt', 'Mặt trời', 'Đeo', 'Chói sáng', 'Bảo vệ'] },
+            { category: 'Trang phục', keyword: 'UNIFORM', ipa: '/ˈjuː.nɪ.fɔːm/', taboo: ['School', 'Work', 'Same', 'Clothes', 'Rule'], vietnamese_keyword: 'Đồng phục', vietnamese_taboo: ['Trường học', 'Công việc', 'Giống nhau', 'Quần áo', 'Quy định'] },
+            { category: 'Trang phục', keyword: 'T-SHIRT', ipa: '/ˈtiː.ʃɜːt/', taboo: ['Sleeves', 'Casual', 'Cotton', 'Summer', 'Wear'], vietnamese_keyword: 'Áo thun', vietnamese_taboo: ['Tay áo', 'Thoải mái', 'Vải cotton', 'Mùa hè', 'Mặc'] },
+            { category: 'Trang phục', keyword: 'TROUSERS', ipa: '/ˈtraʊ.zəz/', taboo: ['Pants', 'Legs', 'Wear', 'Belt', 'Jeans'], vietnamese_keyword: 'Quần dài', vietnamese_taboo: ['Cái quần', 'Đôi chân', 'Mặc', 'Thắt lưng', 'Quần bò'] },
+            { category: 'Trang phục', keyword: 'DRESS', ipa: '/dres/', taboo: ['Women', 'Skirt', 'Wear', 'Party', 'Beautiful'], vietnamese_keyword: 'Cái váy', vietnamese_taboo: ['Phụ nữ', 'Chân váy', 'Mặc', 'Bữa tiệc', 'Xinh đẹp'] },
+            { category: 'Trang phục', keyword: 'HAT', ipa: '/hæt/', taboo: ['Head', 'Sun', 'Cap', 'Wear', 'Hair'], vietnamese_keyword: 'Cái mũ', vietnamese_taboo: ['Cái đầu', 'Mặt trời', 'Mũ lưỡi trai', 'Đội', 'Tóc'] },
+            { category: 'Trang phục', keyword: 'SOCKS', ipa: '/sɒks/', taboo: ['Feet', 'Shoes', 'Wear', 'Warm', 'Toes'], vietnamese_keyword: 'Đôi tất', vietnamese_taboo: ['Bàn chân', 'Giày', 'Đi/Mang', 'Ấm áp', 'Ngón chân'] },
+            { category: 'Trang phục', keyword: 'SCARF', ipa: '/skɑːf/', taboo: ['Neck', 'Cold', 'Winter', 'Wool', 'Wrap'], vietnamese_keyword: 'Khăn quàng cổ', vietnamese_taboo: ['Cái cổ', 'Lạnh', 'Mùa đông', 'Len', 'Quấn'] },
+            
+            // Cơ thể (10 từ)
+            { category: 'Cơ thể', keyword: 'HEART', ipa: '/hɑːt/', taboo: ['Beat', 'Blood', 'Chest', 'Love', 'Red'], vietnamese_keyword: 'Trái tim', vietnamese_taboo: ['Nhịp đập', 'Máu', 'Ngực', 'Tình yêu', 'Màu đỏ'] },
+            { category: 'Cơ thể', keyword: 'BRAIN', ipa: '/breɪn/', taboo: ['Head', 'Think', 'Smart', 'Mind', 'Skull'], vietnamese_keyword: 'Não bộ', vietnamese_taboo: ['Cái đầu', 'Suy nghĩ', 'Thông minh', 'Tâm trí', 'Hộp sọ'] },
+            { category: 'Cơ thể', keyword: 'STOMACH', ipa: '/ˈstʌm.ək/', taboo: ['Belly', 'Food', 'Digest', 'Hungry', 'Ache'], vietnamese_keyword: 'Dạ dày', vietnamese_taboo: ['Cái bụng', 'Thức ăn', 'Tiêu hóa', 'Đói bụng', 'Đau'] },
+            { category: 'Cơ thể', keyword: 'LUNGS', ipa: '/lʌŋz/', taboo: ['Breathe', 'Air', 'Chest', 'Oxygen', 'Smoke'], vietnamese_keyword: 'Lá phổi', vietnamese_taboo: ['Thở', 'Không khí', 'Ngực', 'Oxy', 'Hút thuốc'] },
+            { category: 'Cơ thể', keyword: 'MUSCLE', ipa: '/ˈmʌs.əl/', taboo: ['Strong', 'Body', 'Lift', 'Gym', 'Workout'], vietnamese_keyword: 'Cơ bắp', vietnamese_taboo: ['Mạnh mẽ', 'Cơ thể', 'Nâng', 'Phòng tập', 'Tập luyện'] },
+            { category: 'Cơ thể', keyword: 'BLOOD', ipa: '/blʌd/', taboo: ['Red', 'Heart', 'Veins', 'Vampire', 'Cut'], vietnamese_keyword: 'Máu', vietnamese_taboo: ['Màu đỏ', 'Trái tim', 'Mạch máu', 'Ma cà rồng', 'Vết cắt'] },
+            { category: 'Cơ thể', keyword: 'BONE', ipa: '/bəʊn/', taboo: ['Skeleton', 'Hard', 'Dog', 'Break', 'Skull'], vietnamese_keyword: 'Xương', vietnamese_taboo: ['Bộ xương', 'Cứng', 'Con chó', 'Gãy', 'Hộp sọ'] },
+            { category: 'Cơ thể', keyword: 'SKIN', ipa: '/skɪn/', taboo: ['Body', 'Touch', 'Soft', 'Tan', 'Dermatologist'], vietnamese_keyword: 'Làn da', vietnamese_taboo: ['Cơ thể', 'Chạm', 'Mềm mại', 'Rám nắng', 'Bác sĩ da liễu'] },
+            { category: 'Cơ thể', keyword: 'LIVER', ipa: '/ˈlɪv.ər/', taboo: ['Organ', 'Alcohol', 'Clean', 'Body', 'Disease'], vietnamese_keyword: 'Lá gan', vietnamese_taboo: ['Cơ quan', 'Rượu', 'Làm sạch', 'Cơ thể', 'Căn bệnh'] },
+            { category: 'Cơ thể', keyword: 'KIDNEY', ipa: '/ˈkɪd.ni/', taboo: ['Organ', 'Bean', 'Urine', 'Water', 'Two'], vietnamese_keyword: 'Quả thận', vietnamese_taboo: ['Cơ quan', 'Hạt đậu', 'Nước tiểu', 'Nước', 'Hai (số lượng)'] },
 
-    // Thực phẩm (10 từ)
-    { category: 'Thực phẩm', keyword: 'PIZZA', ipa: '/ˈpiːt.sə/', taboo: ['Italy', 'Cheese', 'Round', 'Slice', 'Eat'], vietnamese_keyword: 'Bánh Pizza', vietnamese_taboo: ['Nước Ý', 'Phô mai', 'Hình tròn', 'Lát cắt', 'Ăn'] },
-    { category: 'Thực phẩm', keyword: 'HAMBURGER', ipa: '/ˈhæmˌbɜː.ɡər/', taboo: ['Meat', 'Bread', 'Fast food', 'Cheese', 'Bite'], vietnamese_keyword: 'Bánh kẹp', vietnamese_taboo: ['Thịt', 'Bánh mì', 'Thức ăn nhanh', 'Phô mai', 'Cắn'] },
-    { category: 'Thực phẩm', keyword: 'COFFEE', ipa: '/ˈkɒf.i/', taboo: ['Drink', 'Morning', 'Caffeine', 'Cup', 'Wake up'], vietnamese_keyword: 'Cà phê', vietnamese_taboo: ['Uống', 'Buổi sáng', 'Caffeine', 'Cái cốc', 'Thức dậy'] },
-    { category: 'Thực phẩm', keyword: 'CHOCOLATE', ipa: '/ˈtʃɒk.lət/', taboo: ['Sweet', 'Cocoa', 'Dark', 'Candy', 'Melt'], vietnamese_keyword: 'Sô-cô-la', vietnamese_taboo: ['Ngọt', 'Ca cao', 'Đen', 'Kẹo', 'Tan chảy'] },
-    { category: 'Thực phẩm', keyword: 'SALAD', ipa: '/ˈsæl.əd/', taboo: ['Vegetables', 'Healthy', 'Green', 'Tomato', 'Diet'], vietnamese_keyword: 'Món rau trộn', vietnamese_taboo: ['Rau củ', 'Khỏe mạnh', 'Màu xanh', 'Cà chua', 'Ăn kiêng'] },
-    { category: 'Thực phẩm', keyword: 'BREAD', ipa: '/bred/', taboo: ['Bake', 'Butter', 'Sandwich', 'Wheat', 'Toast'], vietnamese_keyword: 'Bánh mì', vietnamese_taboo: ['Nướng', 'Bơ', 'Bánh kẹp', 'Lúa mì', 'Bánh mì nướng'] },
-    { category: 'Thực phẩm', keyword: 'NOODLES', ipa: '/ˈnuː.dəlz/', taboo: ['Soup', 'Pasta', 'Long', 'Chopsticks', 'Asian'], vietnamese_keyword: 'Sợi mì', vietnamese_taboo: ['Súp/Canh', 'Mì Ý', 'Dài', 'Đôi đũa', 'Châu Á'] },
-    { category: 'Thực phẩm', keyword: 'STEAK', ipa: '/steɪk/', taboo: ['Meat', 'Cow', 'Grill', 'Beef', 'Rare'], vietnamese_keyword: 'Bít tết', vietnamese_taboo: ['Thịt', 'Con bò', 'Nướng', 'Thịt bò', 'Tái/Chưa chín'] },
-    { category: 'Thực phẩm', keyword: 'ICE CREAM', ipa: '/ˌaɪs ˈkriːm/', taboo: ['Cold', 'Sweet', 'Cone', 'Melt', 'Summer'], vietnamese_keyword: 'Kem', vietnamese_taboo: ['Lạnh', 'Ngọt', 'Ốc quế', 'Tan chảy', 'Mùa hè'] },
-    { category: 'Thực phẩm', keyword: 'CHEESE', ipa: '/tʃiːz/', taboo: ['Mouse', 'Yellow', 'Milk', 'Pizza', 'Melt'], vietnamese_keyword: 'Phô mai', vietnamese_taboo: ['Con chuột', 'Màu vàng', 'Sữa', 'Bánh Pizza', 'Tan chảy'] },
+            // Giáo dục (10 từ)
+            { category: 'Giáo dục', keyword: 'UNIVERSITY', ipa: '/ˌjuː.nɪˈvɜː.sə.ti/', taboo: ['College', 'Degree', 'Student', 'Campus', 'Graduate'], vietnamese_keyword: 'Đại học', vietnamese_taboo: ['Cao đẳng', 'Bằng cấp', 'Sinh viên', 'Khuôn viên', 'Tốt nghiệp'] },
+            { category: 'Giáo dục', keyword: 'LIBRARY', ipa: '/ˈlaɪ.brər.i/', taboo: ['Books', 'Read', 'Quiet', 'Borrow', 'Study'], vietnamese_keyword: 'Thư viện', vietnamese_taboo: ['Sách', 'Đọc', 'Yên lặng', 'Mượn', 'Học tập'] },
+            { category: 'Giáo dục', keyword: 'EXAM', ipa: '/ɪɡˈzæm/', taboo: ['Test', 'Study', 'Pass', 'Fail', 'Questions'], vietnamese_keyword: 'Kỳ thi', vietnamese_taboo: ['Bài kiểm tra', 'Học', 'Đỗ', 'Trượt', 'Câu hỏi'] },
+            { category: 'Giáo dục', keyword: 'SCHOLARSHIP', ipa: '/ˈskɒl.ə.ʃɪp/', taboo: ['Money', 'Study', 'Free', 'University', 'Award'], vietnamese_keyword: 'Học bổng', vietnamese_taboo: ['Tiền', 'Học', 'Miễn phí', 'Đại học', 'Phần thưởng'] },
+            { category: 'Giáo dục', keyword: 'HOMEWORK', ipa: '/ˈhəʊm.wɜːk/', taboo: ['School', 'Assignment', 'Teacher', 'House', 'Do'], vietnamese_keyword: 'Bài tập về nhà', vietnamese_taboo: ['Trường học', 'Nhiệm vụ', 'Giáo viên', 'Ngôi nhà', 'Làm'] },
+            { category: 'Giáo dục', keyword: 'DICTIONARY', ipa: '/ˈdɪk.ʃən.ər.i/', taboo: ['Words', 'Meaning', 'Translate', 'Look up', 'Book'], vietnamese_keyword: 'Từ điển', vietnamese_taboo: ['Từ vựng', 'Ý nghĩa', 'Dịch', 'Tra cứu', 'Quyển sách'] },
+            { category: 'Giáo dục', keyword: 'LECTURE', ipa: '/ˈlek.tʃər/', taboo: ['Listen', 'Professor', 'Class', 'Notes', 'Speech'], vietnamese_keyword: 'Bài giảng', vietnamese_taboo: ['Lắng nghe', 'Giáo sư', 'Lớp học', 'Ghi chú', 'Bài phát biểu'] },
+            { category: 'Giáo dục', keyword: 'PROFESSOR', ipa: '/prəˈfes.ər/', taboo: ['University', 'Teach', 'Smart', 'Student', 'Class'], vietnamese_keyword: 'Giáo sư', vietnamese_taboo: ['Đại học', 'Dạy học', 'Thông minh', 'Sinh viên', 'Lớp học'] },
+            { category: 'Giáo dục', keyword: 'LABORATORY', ipa: '/ləˈbɒr.ə.tər.i/', taboo: ['Science', 'Experiment', 'Chemicals', 'Coat', 'Research'], vietnamese_keyword: 'Phòng thí nghiệm', vietnamese_taboo: ['Khoa học', 'Thí nghiệm', 'Hóa chất', 'Áo khoác', 'Nghiên cứu'] },
+            { category: 'Giáo dục', keyword: 'DIPLOMA', ipa: '/dɪˈpləʊ.mə/', taboo: ['Graduate', 'Paper', 'Degree', 'University', 'Frame'], vietnamese_keyword: 'Bằng cấp', vietnamese_taboo: ['Tốt nghiệp', 'Tờ giấy', 'Trình độ', 'Đại học', 'Khung ảnh'] },
 
-    // Nghề nghiệp (10 từ)
-    { category: 'Nghề nghiệp', keyword: 'PROGRAMMER', ipa: '/ˈprəʊ.ɡræm.ər/', taboo: ['Code', 'Computer', 'Software', 'Language', 'Tech'], vietnamese_keyword: 'Lập trình viên', vietnamese_taboo: ['Mã code', 'Máy tính', 'Phần mềm', 'Ngôn ngữ', 'Công nghệ'] },
-    { category: 'Nghề nghiệp', keyword: 'DOCTOR', ipa: '/ˈdɒk.tər/', taboo: ['Hospital', 'Sick', 'Medicine', 'Patient', 'Heal'], vietnamese_keyword: 'Bác sĩ', vietnamese_taboo: ['Bệnh viện', 'Ốm đau', 'Thuốc men', 'Bệnh nhân', 'Chữa lành'] },
-    { category: 'Nghề nghiệp', keyword: 'ENGINEER', ipa: '/ˌen.dʒɪˈnɪər/', taboo: ['Build', 'Design', 'Bridge', 'Math', 'Machine'], vietnamese_keyword: 'Kỹ sư', vietnamese_taboo: ['Xây dựng', 'Thiết kế', 'Cây cầu', 'Toán học', 'Máy móc'] },
-    { category: 'Nghề nghiệp', keyword: 'CHEF', ipa: '/ʃef/', taboo: ['Cook', 'Kitchen', 'Food', 'Restaurant', 'Hat'], vietnamese_keyword: 'Đầu bếp', vietnamese_taboo: ['Nấu ăn', 'Nhà bếp', 'Thức ăn', 'Nhà hàng', 'Cái mũ'] },
-    { category: 'Nghề nghiệp', keyword: 'DETECTIVE', ipa: '/dɪˈtek.tɪv/', taboo: ['Police', 'Investigate', 'Crime', 'Clue', 'Mystery'], vietnamese_keyword: 'Thám tử', vietnamese_taboo: ['Cảnh sát', 'Điều tra', 'Tội phạm', 'Manh mối', 'Bí ẩn'] },
-    { category: 'Nghề nghiệp', keyword: 'TEACHER', ipa: '/ˈtiː.tʃər/', taboo: ['School', 'Student', 'Classroom', 'Learn', 'Board'], vietnamese_keyword: 'Giáo viên', vietnamese_taboo: ['Trường học', 'Học sinh', 'Lớp học', 'Học', 'Cái bảng'] },
-    { category: 'Nghề nghiệp', keyword: 'POLICE', ipa: '/pəˈliːs/', taboo: ['Arrest', 'Crime', 'Gun', 'Officer', 'Siren'], vietnamese_keyword: 'Cảnh sát', vietnamese_taboo: ['Bắt giữ', 'Tội phạm', 'Khẩu súng', 'Sĩ quan', 'Còi hú'] },
-    { category: 'Nghề nghiệp', keyword: 'PILOT', ipa: '/ˈpaɪ.lət/', taboo: ['Fly', 'Airplane', 'Sky', 'Cockpit', 'Captain'], vietnamese_keyword: 'Phi công', vietnamese_taboo: ['Bay', 'Máy bay', 'Bầu trời', 'Buồng lái', 'Cơ trưởng'] },
-    { category: 'Nghề nghiệp', keyword: 'FARMER', ipa: '/ˈfɑː.mər/', taboo: ['Agriculture', 'Tractor', 'Crops', 'Animals', 'Field'], vietnamese_keyword: 'Nông dân', vietnamese_taboo: ['Nông nghiệp', 'Máy kéo', 'Cây trồng', 'Động vật', 'Cánh đồng'] },
-    { category: 'Nghề nghiệp', keyword: 'ARTIST', ipa: '/ˈɑː.tɪst/', taboo: ['Paint', 'Draw', 'Colors', 'Brush', 'Museum'], vietnamese_keyword: 'Họa sĩ/Nghệ sĩ', vietnamese_taboo: ['Sơn/Tô', 'Vẽ', 'Màu sắc', 'Cọ vẽ', 'Bảo tàng'] },
+            // Giải trí (10 từ)
+            { category: 'Giải trí', keyword: 'MOVIE', ipa: '/ˈmuː.vi/', taboo: ['Film', 'Watch', 'Cinema', 'Actor', 'Popcorn'], vietnamese_keyword: 'Bộ phim', vietnamese_taboo: ['Phim ảnh', 'Xem', 'Rạp chiếu phim', 'Diễn viên', 'Bắp rang'] },
+            { category: 'Giải trí', keyword: 'CONCERT', ipa: '/ˈkɒn.sət/', taboo: ['Music', 'Live', 'Band', 'Sing', 'Ticket'], vietnamese_keyword: 'Buổi hòa nhạc', vietnamese_taboo: ['Âm nhạc', 'Trực tiếp', 'Ban nhạc', 'Hát', 'Vé'] },
+            { category: 'Giải trí', keyword: 'VIDEO GAME', ipa: '/ˈvɪd.i.əʊ ˌɡeɪm/', taboo: ['Play', 'Console', 'Screen', 'Controller', 'Computer'], vietnamese_keyword: 'Trò chơi điện tử', vietnamese_taboo: ['Chơi', 'Máy chơi game', 'Màn hình', 'Tay cầm', 'Máy tính'] },
+            { category: 'Giải trí', keyword: 'MAGICIAN', ipa: '/məˈdʒɪʃ.ən/', taboo: ['Trick', 'Hat', 'Rabbit', 'Wand', 'Illusion'], vietnamese_keyword: 'Ảo thuật gia', vietnamese_taboo: ['Mánh khóe', 'Cái mũ', 'Con thỏ', 'Đũa phép', 'Ảo ảnh'] },
+            { category: 'Giải trí', keyword: 'THEATER', ipa: '/ˈθɪə.tər/', taboo: ['Play', 'Stage', 'Actors', 'Drama', 'Curtain'], vietnamese_keyword: 'Nhà hát', vietnamese_taboo: ['Vở kịch', 'Sân khấu', 'Diễn viên', 'Kịch tính', 'Rèm cửa'] },
+            { category: 'Giải trí', keyword: 'MUSEUM', ipa: '/mjuːˈziː.əm/', taboo: ['Art', 'History', 'Dinosaur', 'Paintings', 'Old'], vietnamese_keyword: 'Bảo tàng', vietnamese_taboo: ['Nghệ thuật', 'Lịch sử', 'Khủng long', 'Bức tranh', 'Cũ/Cổ'] },
+            { category: 'Giải trí', keyword: 'FESTIVAL', ipa: '/ˈfes.tɪ.vəl/', taboo: ['Celebrate', 'Music', 'Food', 'Crowd', 'Event'], vietnamese_keyword: 'Lễ hội', vietnamese_taboo: ['Ăn mừng', 'Âm nhạc', 'Thức ăn', 'Đám đông', 'Sự kiện'] },
+            { category: 'Giải trí', keyword: 'BOARD GAME', ipa: '/ˈbɔːd ˌɡeɪm/', taboo: ['Dice', 'Cards', 'Table', 'Play', 'Monopoly'], vietnamese_keyword: 'Trò chơi cờ bàn', vietnamese_taboo: ['Xúc xắc', 'Lá bài', 'Cái bàn', 'Chơi', 'Cờ tỷ phú'] },
+            { category: 'Giải trí', keyword: 'CIRCUS', ipa: '/ˈsɜː.kəs/', taboo: ['Clown', 'Tent', 'Animals', 'Acrobat', 'Show'], vietnamese_keyword: 'Rạp xiếc', vietnamese_taboo: ['Chú hề', 'Cái lều', 'Động vật', 'Nhào lộn', 'Buổi diễn'] },
+            { category: 'Giải trí', keyword: 'ROLLER COASTER', ipa: '/ˈrəʊ.lə ˌkəʊ.stər/', taboo: ['Amusement park', 'Fast', 'Scary', 'Scream', 'Ride'], vietnamese_keyword: 'Tàu lượn siêu tốc', vietnamese_taboo: ['Công viên giải trí', 'Nhanh', 'Đáng sợ', 'La hét', 'Trò chơi'] },
 
-    // Công nghệ (10 từ)
-    { category: 'Công nghệ', keyword: 'INTERNET', ipa: '/ˈɪn.tə.net/', taboo: ['Web', 'Online', 'Wifi', 'Google', 'Connection'], vietnamese_keyword: 'Internet', vietnamese_taboo: ['Trang Web', 'Trực tuyến', 'Mạng Wifi', 'Google', 'Kết nối'] },
-    { category: 'Công nghệ', keyword: 'ARTIFICIAL INTELLIGENCE', ipa: '/ˌɑː.tɪˈfɪʃ.əl ɪnˈtel.ɪ.dʒəns/', taboo: ['Robot', 'Smart', 'Future', 'Computer', 'Brain'], vietnamese_keyword: 'Trí tuệ nhân tạo', vietnamese_taboo: ['Người máy', 'Thông minh', 'Tương lai', 'Máy tính', 'Bộ não'] },
-    { category: 'Công nghệ', keyword: 'SMARTPHONE', ipa: '/ˈsmɑːt.fəʊn/', taboo: ['Call', 'App', 'Screen', 'Mobile', 'Apple'], vietnamese_keyword: 'Điện thoại thông minh', vietnamese_taboo: ['Gọi điện', 'Ứng dụng', 'Màn hình', 'Di động', 'Quả táo'] },
-    { category: 'Công nghệ', keyword: 'VIRTUAL REALITY', ipa: '/ˌvɜː.tʃu.əl riˈæl.ə.ti/', taboo: ['Headset', 'Game', 'Fake', 'World', '3D'], vietnamese_keyword: 'Thực tế ảo', vietnamese_taboo: ['Kính VR', 'Trò chơi', 'Giả', 'Thế giới', '3D'] },
-    { category: 'Công nghệ', keyword: 'SATELLITE', ipa: '/ˈsæt.əl.aɪt/', taboo: ['Space', 'Orbit', 'Signal', 'Earth', 'GPS'], vietnamese_keyword: 'Vệ tinh', vietnamese_taboo: ['Không gian', 'Quỹ đạo', 'Tín hiệu', 'Trái Đất', 'Định vị GPS'] },
-    { category: 'Công nghệ', keyword: 'LAPTOP', ipa: '/ˈlæp.tɒp/', taboo: ['Computer', 'Portable', 'Keyboard', 'Screen', 'Work'], vietnamese_keyword: 'Máy tính xách tay', vietnamese_taboo: ['Máy tính', 'Gọn nhẹ', 'Bàn phím', 'Màn hình', 'Công việc'] },
-    { category: 'Công nghệ', keyword: 'DRONE', ipa: '/drəʊn/', taboo: ['Fly', 'Camera', 'Control', 'Sky', 'Robot'], vietnamese_keyword: 'Flycam/Drone', vietnamese_taboo: ['Bay', 'Máy ảnh', 'Điều khiển', 'Bầu trời', 'Người máy'] },
-    { category: 'Công nghệ', keyword: 'MICROPHONE', ipa: '/ˈmaɪ.krə.fəʊn/', taboo: ['Sing', 'Voice', 'Speak', 'Loud', 'Record'], vietnamese_keyword: 'Mi-crô', vietnamese_taboo: ['Hát', 'Giọng nói', 'Nói', 'To tiếng', 'Ghi âm'] },
-    { category: 'Công nghệ', keyword: 'KEYBOARD', ipa: '/ˈkiː.bɔːd/', taboo: ['Type', 'Letters', 'Computer', 'Mouse', 'Press'], vietnamese_keyword: 'Bàn phím', vietnamese_taboo: ['Gõ', 'Chữ cái', 'Máy tính', 'Chuột', 'Nhấn'] },
-    { category: 'Công nghệ', keyword: 'BATTERY', ipa: '/ˈbæt.ər.i/', taboo: ['Power', 'Charge', 'Energy', 'Phone', 'Dead'], vietnamese_keyword: 'Cục pin', vietnamese_taboo: ['Năng lượng', 'Sạc', 'Sức mạnh', 'Điện thoại', 'Hết pin'] },
+            // Du lịch (10 từ)
+            { category: 'Du lịch', keyword: 'PASSPORT', ipa: '/ˈpɑːs.pɔːt/', taboo: ['Travel', 'Country', 'Document', 'Airport', 'Fly'], vietnamese_keyword: 'Hộ chiếu', vietnamese_taboo: ['Du lịch', 'Quốc gia', 'Tài liệu', 'Sân bay', 'Bay'] },
+            { category: 'Du lịch', keyword: 'LUGGAGE', ipa: '/ˈlʌɡ.ɪdʒ/', taboo: ['Bags', 'Suitcase', 'Pack', 'Travel', 'Heavy'], vietnamese_keyword: 'Hành lý', vietnamese_taboo: ['Túi xách', 'Vali', 'Đóng gói', 'Du lịch', 'Nặng'] },
+            { category: 'Du lịch', keyword: 'HOTEL', ipa: '/həʊˈtel/', taboo: ['Sleep', 'Room', 'Stay', 'Bed', 'Reception'], vietnamese_keyword: 'Khách sạn', vietnamese_taboo: ['Ngủ', 'Phòng', 'Ở lại', 'Giường', 'Lễ tân'] },
+            { category: 'Du lịch', keyword: 'SOUVENIR', ipa: '/ˌsuː.vənˈɪər/', taboo: ['Gift', 'Trip', 'Remember', 'Buy', 'Shop'], vietnamese_keyword: 'Quà lưu niệm', vietnamese_taboo: ['Quà tặng', 'Chuyến đi', 'Nhớ', 'Mua', 'Cửa hàng'] },
+            { category: 'Du lịch', keyword: 'TOUR GUIDE', ipa: '/tʊər ɡaɪd/', taboo: ['Show', 'Lead', 'City', 'Explain', 'Tourist'], vietnamese_keyword: 'Hướng dẫn viên', vietnamese_taboo: ['Chỉ dẫn', 'Dẫn dắt', 'Thành phố', 'Giải thích', 'Du khách'] },
+            { category: 'Du lịch', keyword: 'TICKET', ipa: '/ˈtɪk.ɪt/', taboo: ['Pay', 'Enter', 'Flight', 'Train', 'Paper'], vietnamese_keyword: 'Vé', vietnamese_taboo: ['Trả tiền', 'Đi vào', 'Chuyến bay', 'Tàu hỏa', 'Tờ giấy'] },
+            { category: 'Du lịch', keyword: 'MAP', ipa: '/mæp/', taboo: ['Directions', 'Paper', 'Lost', 'Find', 'Location'], vietnamese_keyword: 'Bản đồ', vietnamese_taboo: ['Phương hướng', 'Tờ giấy', 'Lạc đường', 'Tìm kiếm', 'Vị trí'] },
+            { category: 'Du lịch', keyword: 'COMPASS', ipa: '/ˈkʌm.pəs/', taboo: ['North', 'Direction', 'Lost', 'Needle', 'Navigate'], vietnamese_keyword: 'La bàn', vietnamese_taboo: ['Hướng Bắc', 'Phương hướng', 'Lạc đường', 'Cây kim', 'Điều hướng'] },
+            { category: 'Du lịch', keyword: 'RESORT', ipa: '/rɪˈzɔːt/', taboo: ['Vacation', 'Beach', 'Luxury', 'Relax', 'Pool'], vietnamese_keyword: 'Khu nghỉ dưỡng', vietnamese_taboo: ['Kỳ nghỉ', 'Bãi biển', 'Xa xỉ', 'Thư giãn', 'Hồ bơi'] },
+            { category: 'Du lịch', keyword: 'ITINERARY', ipa: '/aɪˈtɪn.ər.ər.i/', taboo: ['Plan', 'Schedule', 'Trip', 'Places', 'List'], vietnamese_keyword: 'Lịch trình', vietnamese_taboo: ['Kế hoạch', 'Thời gian biểu', 'Chuyến đi', 'Địa điểm', 'Danh sách'] },
 
-    // Môi trường (10 từ)
-    { category: 'Môi trường', keyword: 'CLIMATE', ipa: '/ˈklaɪ.mət/', taboo: ['Weather', 'Global', 'Change', 'Warm', 'Earth'], vietnamese_keyword: 'Khí hậu', vietnamese_taboo: ['Thời tiết', 'Toàn cầu', 'Thay đổi', 'Ấm áp', 'Trái Đất'] },
-    { category: 'Môi trường', keyword: 'RECYCLE', ipa: '/ˌriːˈsaɪ.kəl/', taboo: ['Plastic', 'Paper', 'Reuse', 'Trash', 'Green'], vietnamese_keyword: 'Tái chế', vietnamese_taboo: ['Nhựa', 'Giấy', 'Tái sử dụng', 'Rác', 'Màu xanh'] },
-    { category: 'Môi trường', keyword: 'POLLUTION', ipa: '/pəˈluː.ʃən/', taboo: ['Air', 'Dirty', 'Smog', 'Factory', 'Water'], vietnamese_keyword: 'Sự ô nhiễm', vietnamese_taboo: ['Không khí', 'Bẩn', 'Khói bụi', 'Nhà máy', 'Nước'] },
-    { category: 'Môi trường', keyword: 'DEFORESTATION', ipa: '/diːˌfɒr.ɪˈsteɪ.ʃən/', taboo: ['Trees', 'Cut', 'Forest', 'Wood', 'Destroy'], vietnamese_keyword: 'Nạn phá rừng', vietnamese_taboo: ['Cây cối', 'Cưa/Cắt', 'Rừng', 'Gỗ', 'Phá hủy'] },
-    { category: 'Môi trường', keyword: 'OZONE', ipa: '/ˈəʊ.zəʊn/', taboo: ['Layer', 'Sun', 'Protect', 'Hole', 'Atmosphere'], vietnamese_keyword: 'Khí Ô-zôn', vietnamese_taboo: ['Lớp', 'Mặt trời', 'Bảo vệ', 'Cái lỗ', 'Khí quyển'] },
-    { category: 'Môi trường', keyword: 'ECOLOGY', ipa: '/ɪˈkɒl.ə.dʒi/', taboo: ['Nature', 'Environment', 'System', 'Animals', 'Biology'], vietnamese_keyword: 'Sinh thái học', vietnamese_taboo: ['Thiên nhiên', 'Môi trường', 'Hệ thống', 'Động vật', 'Sinh học'] },
-    { category: 'Môi trường', keyword: 'RENEWABLE', ipa: '/rɪˈnjuː.ə.bəl/', taboo: ['Energy', 'Wind', 'Solar', 'Sustainable', 'Source'], vietnamese_keyword: 'Có thể tái tạo', vietnamese_taboo: ['Năng lượng', 'Gió', 'Năng lượng mặt trời', 'Bền vững', 'Nguồn'] },
-    { category: 'Môi trường', keyword: 'GREENHOUSE', ipa: '/ˈɡriːn.haʊs/', taboo: ['Glass', 'Plants', 'Effect', 'Warm', 'Gas'], vietnamese_keyword: 'Nhà kính', vietnamese_taboo: ['Kính', 'Thực vật', 'Hiệu ứng', 'Ấm áp', 'Khí ga'] },
-    { category: 'Môi trường', keyword: 'CONSERVATION', ipa: '/ˌkɒn.səˈveɪ.ʃən/', taboo: ['Protect', 'Nature', 'Save', 'Wildlife', 'Effort'], vietnamese_keyword: 'Sự bảo tồn', vietnamese_taboo: ['Bảo vệ', 'Thiên nhiên', 'Cứu', 'Động vật hoang dã', 'Nỗ lực'] },
-    { category: 'Môi trường', keyword: 'WINDMILL', ipa: '/ˈwɪnd.mɪl/', taboo: ['Blades', 'Energy', 'Farm', 'Power', 'Spin'], vietnamese_keyword: 'Cối xay gió', vietnamese_taboo: ['Cánh quạt', 'Năng lượng', 'Nông trại', 'Sức mạnh', 'Quay'] },
+            // Thực phẩm (10 từ)
+            { category: 'Thực phẩm', keyword: 'PIZZA', ipa: '/ˈpiːt.sə/', taboo: ['Italy', 'Cheese', 'Round', 'Slice', 'Eat'], vietnamese_keyword: 'Bánh Pizza', vietnamese_taboo: ['Nước Ý', 'Phô mai', 'Hình tròn', 'Lát cắt', 'Ăn'] },
+            { category: 'Thực phẩm', keyword: 'HAMBURGER', ipa: '/ˈhæmˌbɜː.ɡər/', taboo: ['Meat', 'Bread', 'Fast food', 'Cheese', 'Bite'], vietnamese_keyword: 'Bánh kẹp', vietnamese_taboo: ['Thịt', 'Bánh mì', 'Thức ăn nhanh', 'Phô mai', 'Cắn'] },
+            { category: 'Thực phẩm', keyword: 'COFFEE', ipa: '/ˈkɒf.i/', taboo: ['Drink', 'Morning', 'Caffeine', 'Cup', 'Wake up'], vietnamese_keyword: 'Cà phê', vietnamese_taboo: ['Uống', 'Buổi sáng', 'Caffeine', 'Cái cốc', 'Thức dậy'] },
+            { category: 'Thực phẩm', keyword: 'CHOCOLATE', ipa: '/ˈtʃɒk.lət/', taboo: ['Sweet', 'Cocoa', 'Dark', 'Candy', 'Melt'], vietnamese_keyword: 'Sô-cô-la', vietnamese_taboo: ['Ngọt', 'Ca cao', 'Đen', 'Kẹo', 'Tan chảy'] },
+            { category: 'Thực phẩm', keyword: 'SALAD', ipa: '/ˈsæl.əd/', taboo: ['Vegetables', 'Healthy', 'Green', 'Tomato', 'Diet'], vietnamese_keyword: 'Món rau trộn', vietnamese_taboo: ['Rau củ', 'Khỏe mạnh', 'Màu xanh', 'Cà chua', 'Ăn kiêng'] },
+            { category: 'Thực phẩm', keyword: 'BREAD', ipa: '/bred/', taboo: ['Bake', 'Butter', 'Sandwich', 'Wheat', 'Toast'], vietnamese_keyword: 'Bánh mì', vietnamese_taboo: ['Nướng', 'Bơ', 'Bánh kẹp', 'Lúa mì', 'Bánh mì nướng'] },
+            { category: 'Thực phẩm', keyword: 'NOODLES', ipa: '/ˈnuː.dəlz/', taboo: ['Soup', 'Pasta', 'Long', 'Chopsticks', 'Asian'], vietnamese_keyword: 'Sợi mì', vietnamese_taboo: ['Súp/Canh', 'Mì Ý', 'Dài', 'Đôi đũa', 'Châu Á'] },
+            { category: 'Thực phẩm', keyword: 'STEAK', ipa: '/steɪk/', taboo: ['Meat', 'Cow', 'Grill', 'Beef', 'Rare'], vietnamese_keyword: 'Bít tết', vietnamese_taboo: ['Thịt', 'Con bò', 'Nướng', 'Thịt bò', 'Tái/Chưa chín'] },
+            { category: 'Thực phẩm', keyword: 'ICE CREAM', ipa: '/ˌaɪs ˈkriːm/', taboo: ['Cold', 'Sweet', 'Cone', 'Melt', 'Summer'], vietnamese_keyword: 'Kem', vietnamese_taboo: ['Lạnh', 'Ngọt', 'Ốc quế', 'Tan chảy', 'Mùa hè'] },
+            { category: 'Thực phẩm', keyword: 'CHEESE', ipa: '/tʃiːz/', taboo: ['Mouse', 'Yellow', 'Milk', 'Pizza', 'Melt'], vietnamese_keyword: 'Phô mai', vietnamese_taboo: ['Con chuột', 'Màu vàng', 'Sữa', 'Bánh Pizza', 'Tan chảy'] },
 
-    // Cảm xúc (10 từ)
-    { category: 'Cảm xúc', keyword: 'HAPPINESS', ipa: '/ˈhæp.i.nəs/', taboo: ['Smile', 'Joy', 'Glad', 'Laugh', 'Good'], vietnamese_keyword: 'Sự hạnh phúc', vietnamese_taboo: ['Cười', 'Niềm vui', 'Vui vẻ', 'Cười lớn', 'Tốt'] },
-    { category: 'Cảm xúc', keyword: 'ANXIETY', ipa: '/æŋˈzaɪ.ə.ti/', taboo: ['Worry', 'Nervous', 'Stress', 'Fear', 'Panic'], vietnamese_keyword: 'Sự lo âu', vietnamese_taboo: ['Lo lắng', 'Bồn chồn', 'Căng thẳng', 'Sợ hãi', 'Hoảng loạn'] },
-    { category: 'Cảm xúc', keyword: 'ANGER', ipa: '/ˈæŋ.ɡər/', taboo: ['Mad', 'Red', 'Shout', 'Furious', 'Temper'], vietnamese_keyword: 'Sự tức giận', vietnamese_taboo: ['Điên tiết', 'Đỏ mặt', 'La hét', 'Thịnh nộ', 'Tính khí'] },
-    { category: 'Cảm xúc', keyword: 'JEALOUSY', ipa: '/ˈdʒel.ə.si/', taboo: ['Envy', 'Want', 'Green', 'Others', 'Covet'], vietnamese_keyword: 'Sự ghen tị', vietnamese_taboo: ['Đố kỵ', 'Muốn', 'Màu xanh', 'Người khác', 'Thèm muốn'] },
-    { category: 'Cảm xúc', keyword: 'SADNESS', ipa: '/ˈsæd.nəs/', taboo: ['Cry', 'Tears', 'Unhappy', 'Depressed', 'Blue'], vietnamese_keyword: 'Sự buồn bã', vietnamese_taboo: ['Khóc', 'Nước mắt', 'Không vui', 'Trầm cảm', 'Màu xanh/Buồn'] },
-    { category: 'Cảm xúc', keyword: 'SURPRISE', ipa: '/səˈpraɪz/', taboo: ['Shock', 'Unexpected', 'Wow', 'Jump', 'Party'], vietnamese_keyword: 'Sự ngạc nhiên', vietnamese_taboo: ['Sốc', 'Bất ngờ', 'Wow', 'Nhảy lên', 'Bữa tiệc'] },
-    { category: 'Cảm xúc', keyword: 'FEAR', ipa: '/fɪər/', taboo: ['Scared', 'Afraid', 'Monster', 'Dark', 'Horror'], vietnamese_keyword: 'Sự sợ hãi', vietnamese_taboo: ['Sợ hãi', 'E ngại', 'Quái vật', 'Bóng tối', 'Kinh dị'] },
-    { category: 'Cảm xúc', keyword: 'DISGUST', ipa: '/dɪsˈɡʌst/', taboo: ['Ew', 'Gross', 'Sick', 'Smell', 'Yuck'], vietnamese_keyword: 'Sự kinh tởm', vietnamese_taboo: ['Ew (Kinh quá)', 'Gớm ghiếc', 'Ốm', 'Mùi', 'Yuck (Tởm)'] },
-    { category: 'Cảm xúc', keyword: 'LOVE', ipa: '/lʌv/', taboo: ['Heart', 'Romance', 'Kiss', 'Valentine', 'Care'], vietnamese_keyword: 'Tình yêu', vietnamese_taboo: ['Trái tim', 'Lãng mạn', 'Nụ hôn', 'Lễ tình nhân', 'Quan tâm'] },
-    { category: 'Cảm xúc', keyword: 'HOPE', ipa: '/həʊp/', taboo: ['Wish', 'Future', 'Positive', 'Dream', 'Believe'], vietnamese_keyword: 'Niềm hy vọng', vietnamese_taboo: ['Ước', 'Tương lai', 'Tích cực', 'Giấc mơ', 'Tin tưởng'] },
+            // Nghề nghiệp (10 từ)
+            { category: 'Nghề nghiệp', keyword: 'PROGRAMMER', ipa: '/ˈprəʊ.ɡræm.ər/', taboo: ['Code', 'Computer', 'Software', 'Language', 'Tech'], vietnamese_keyword: 'Lập trình viên', vietnamese_taboo: ['Mã code', 'Máy tính', 'Phần mềm', 'Ngôn ngữ', 'Công nghệ'] },
+            { category: 'Nghề nghiệp', keyword: 'DOCTOR', ipa: '/ˈdɒk.tər/', taboo: ['Hospital', 'Sick', 'Medicine', 'Patient', 'Heal'], vietnamese_keyword: 'Bác sĩ', vietnamese_taboo: ['Bệnh viện', 'Ốm đau', 'Thuốc men', 'Bệnh nhân', 'Chữa lành'] },
+            { category: 'Nghề nghiệp', keyword: 'ENGINEER', ipa: '/ˌen.dʒɪˈnɪər/', taboo: ['Build', 'Design', 'Bridge', 'Math', 'Machine'], vietnamese_keyword: 'Kỹ sư', vietnamese_taboo: ['Xây dựng', 'Thiết kế', 'Cây cầu', 'Toán học', 'Máy móc'] },
+            { category: 'Nghề nghiệp', keyword: 'CHEF', ipa: '/ʃef/', taboo: ['Cook', 'Kitchen', 'Food', 'Restaurant', 'Hat'], vietnamese_keyword: 'Đầu bếp', vietnamese_taboo: ['Nấu ăn', 'Nhà bếp', 'Thức ăn', 'Nhà hàng', 'Cái mũ'] },
+            { category: 'Nghề nghiệp', keyword: 'DETECTIVE', ipa: '/dɪˈtek.tɪv/', taboo: ['Police', 'Investigate', 'Crime', 'Clue', 'Mystery'], vietnamese_keyword: 'Thám tử', vietnamese_taboo: ['Cảnh sát', 'Điều tra', 'Tội phạm', 'Manh mối', 'Bí ẩn'] },
+            { category: 'Nghề nghiệp', keyword: 'TEACHER', ipa: '/ˈtiː.tʃər/', taboo: ['School', 'Student', 'Classroom', 'Learn', 'Board'], vietnamese_keyword: 'Giáo viên', vietnamese_taboo: ['Trường học', 'Học sinh', 'Lớp học', 'Học', 'Cái bảng'] },
+            { category: 'Nghề nghiệp', keyword: 'POLICE', ipa: '/pəˈliːs/', taboo: ['Arrest', 'Crime', 'Gun', 'Officer', 'Siren'], vietnamese_keyword: 'Cảnh sát', vietnamese_taboo: ['Bắt giữ', 'Tội phạm', 'Khẩu súng', 'Sĩ quan', 'Còi hú'] },
+            { category: 'Nghề nghiệp', keyword: 'PILOT', ipa: '/ˈpaɪ.lət/', taboo: ['Fly', 'Airplane', 'Sky', 'Cockpit', 'Captain'], vietnamese_keyword: 'Phi công', vietnamese_taboo: ['Bay', 'Máy bay', 'Bầu trời', 'Buồng lái', 'Cơ trưởng'] },
+            { category: 'Nghề nghiệp', keyword: 'FARMER', ipa: '/ˈfɑː.mər/', taboo: ['Agriculture', 'Tractor', 'Crops', 'Animals', 'Field'], vietnamese_keyword: 'Nông dân', vietnamese_taboo: ['Nông nghiệp', 'Máy kéo', 'Cây trồng', 'Động vật', 'Cánh đồng'] },
+            { category: 'Nghề nghiệp', keyword: 'ARTIST', ipa: '/ˈɑː.tɪst/', taboo: ['Paint', 'Draw', 'Colors', 'Brush', 'Museum'], vietnamese_keyword: 'Họa sĩ/Nghệ sĩ', vietnamese_taboo: ['Sơn/Tô', 'Vẽ', 'Màu sắc', 'Cọ vẽ', 'Bảo tàng'] },
 
-    // Khái niệm (10 từ)
-    { category: 'Khái niệm', keyword: 'SUCCESS', ipa: '/səkˈses/', taboo: ['Goal', 'Win', 'Achieve', 'Rich', 'Money'], vietnamese_keyword: 'Thành công', vietnamese_taboo: ['Mục tiêu', 'Chiến thắng', 'Đạt được', 'Giàu có', 'Tiền bạc'] },
-    { category: 'Khái niệm', keyword: 'FREEDOM', ipa: '/ˈfriː.dəm/', taboo: ['Liberty', 'Rights', 'Prison', 'Independent', 'Choice'], vietnamese_keyword: 'Sự tự do', vietnamese_taboo: ['Quyền tự do', 'Quyền lợi', 'Nhà tù', 'Độc lập', 'Lựa chọn'] },
-    { category: 'Khái niệm', keyword: 'JUSTICE', ipa: '/ˈdʒʌs.tɪs/', taboo: ['Fair', 'Law', 'Judge', 'Court', 'Right'], vietnamese_keyword: 'Công lý', vietnamese_taboo: ['Công bằng', 'Luật pháp', 'Thẩm phán', 'Tòa án', 'Đúng đắn'] },
-    { category: 'Khái niệm', keyword: 'TRUTH', ipa: '/truːθ/', taboo: ['Lie', 'Fact', 'Honest', 'Real', 'False'], vietnamese_keyword: 'Sự thật', vietnamese_taboo: ['Nói dối', 'Thực tế', 'Trung thực', 'Có thật', 'Sai trái'] },
-    { category: 'Khái niệm', keyword: 'PEACE', ipa: '/piːs/', taboo: ['War', 'Quiet', 'Calm', 'Dove', 'World'], vietnamese_keyword: 'Hòa bình', vietnamese_taboo: ['Chiến tranh', 'Yên lặng', 'Bình tĩnh', 'Chim bồ câu', 'Thế giới'] },
-    { category: 'Khái niệm', keyword: 'EQUALITY', ipa: '/ɪˈkwɒl.ə.ti/', taboo: ['Same', 'Rights', 'Fair', 'Gender', 'Race'], vietnamese_keyword: 'Sự bình đẳng', vietnamese_taboo: ['Giống nhau', 'Quyền lợi', 'Công bằng', 'Giới tính', 'Chủng tộc'] },
-    { category: 'Khái niệm', keyword: 'WISDOM', ipa: '/ˈwɪz.dəm/', taboo: ['Smart', 'Old', 'Knowledge', 'Owl', 'Experience'], vietnamese_keyword: 'Sự thông thái', vietnamese_taboo: ['Thông minh', 'Già/Cũ', 'Kiến thức', 'Con cú', 'Kinh nghiệm'] },
-    { category: 'Khái niệm', keyword: 'COURAGE', ipa: '/ˈkʌr.ɪdʒ/', taboo: ['Brave', 'Fear', 'Hero', 'Danger', 'Fight'], vietnamese_keyword: 'Lòng can đảm', vietnamese_taboo: ['Dũng cảm', 'Sợ hãi', 'Anh hùng', 'Nguy hiểm', 'Chiến đấu'] },
-    { category: 'Khái niệm', keyword: 'TIME', ipa: '/taɪm/', taboo: ['Clock', 'Hour', 'Minute', 'Late', 'Watch'], vietnamese_keyword: 'Thời gian', vietnamese_taboo: ['Đồng hồ', 'Giờ', 'Phút', 'Muộn', 'Đồng hồ đeo tay'] },
-    { category: 'Khái niệm', keyword: 'SPACE', ipa: '/speɪs/', taboo: ['Stars', 'Empty', 'Room', 'Astronaut', 'Universe'], vietnamese_keyword: 'Không gian', vietnamese_taboo: ['Ngôi sao', 'Trống rỗng', 'Căn phòng', 'Phi hành gia', 'Vũ trụ'] },
-    
-    // Động vật (10 từ)
-    { category: 'Động vật', keyword: 'ELEPHANT', ipa: '/ˈel.ɪ.fənt/', taboo: ['Trunk', 'Big', 'Africa', 'Tusks', 'Grey'], vietnamese_keyword: 'Con voi', vietnamese_taboo: ['Cái vòi', 'To lớn', 'Châu Phi', 'Ngà voi', 'Màu xám'] },
-    { category: 'Động vật', keyword: 'PENGUIN', ipa: '/ˈpeŋ.ɡwɪn/', taboo: ['Bird', 'Ice', 'Antarctica', 'Waddle', 'Black'], vietnamese_keyword: 'Chim cánh cụt', vietnamese_taboo: ['Con chim', 'Băng giá', 'Nam cực', 'Lạch bạch', 'Màu đen'] },
-    { category: 'Động vật', keyword: 'DOLPHIN', ipa: '/ˈdɒl.fɪn/', taboo: ['Sea', 'Smart', 'Swim', 'Water', 'Ocean'], vietnamese_keyword: 'Cá heo', vietnamese_taboo: ['Biển', 'Thông minh', 'Bơi lội', 'Nước', 'Đại dương'] },
-    { category: 'Động vật', keyword: 'KANGAROO', ipa: '/ˌkæŋ.ɡərˈuː/', taboo: ['Jump', 'Australia', 'Pouch', 'Animal', 'Hop'], vietnamese_keyword: 'Chuột túi', vietnamese_taboo: ['Nhảy', 'Nước Úc', 'Cái túi', 'Động vật', 'Nhảy lò cò'] },
-    { category: 'Động vật', keyword: 'TIGER', ipa: '/ˈtaɪ.ɡər/', taboo: ['Stripes', 'Cat', 'Roar', 'Jungle', 'Orange'], vietnamese_keyword: 'Con hổ', vietnamese_taboo: ['Vằn', 'Con mèo', 'Gầm', 'Rừng nhiệt đới', 'Màu cam'] },
-    { category: 'Động vật', keyword: 'LION', ipa: '/ˈlaɪ.ən/', taboo: ['King', 'Roar', 'Mane', 'Africa', 'Cat'], vietnamese_keyword: 'Sư tử', vietnamese_taboo: ['Vua', 'Gầm', 'Bờm', 'Châu Phi', 'Con mèo'] },
-    { category: 'Động vật', keyword: 'MONKEY', ipa: '/ˈmʌŋ.ki/', taboo: ['Banana', 'Tree', 'Climb', 'Ape', 'Swing'], vietnamese_keyword: 'Con khỉ', vietnamese_taboo: ['Quả chuối', 'Cái cây', 'Leo trèo', 'Vượn', 'Đu đưa'] },
-    { category: 'Động vật', keyword: 'GIRAFFE', ipa: '/dʒɪˈrɑːf/', taboo: ['Neck', 'Tall', 'Leaves', 'Spots', 'Africa'], vietnamese_keyword: 'Hươu cao cổ', vietnamese_taboo: ['Cái cổ', 'Cao', 'Lá cây', 'Đốm', 'Châu Phi'] },
-    { category: 'Động vật', keyword: 'PANDA', ipa: '/ˈpæn.də/', taboo: ['Bear', 'Bamboo', 'Black', 'White', 'China'], vietnamese_keyword: 'Gấu trúc', vietnamese_taboo: ['Con gấu', 'Cây tre', 'Màu đen', 'Màu trắng', 'Trung Quốc'] },
-    { category: 'Động vật', keyword: 'EAGLE', ipa: '/ˈiː.ɡəl/', taboo: ['Bird', 'Fly', 'Bald', 'America', 'Wings'], vietnamese_keyword: 'Đại bàng', vietnamese_taboo: ['Con chim', 'Bay', 'Hói (đầu)', 'Nước Mỹ', 'Đôi cánh'] },
-    
-    // Sức khỏe (10 từ)
-    { category: 'Sức khỏe', keyword: 'HOSPITAL', ipa: '/ˈhɒs.pɪ.təl/', taboo: ['Doctor', 'Nurse', 'Sick', 'Bed', 'Emergency'], vietnamese_keyword: 'Bệnh viện', vietnamese_taboo: ['Bác sĩ', 'Y tá', 'Ốm đau', 'Giường', 'Cấp cứu'] },
-    { category: 'Sức khỏe', keyword: 'VACCINE', ipa: '/ˈvæk.siːn/', taboo: ['Injection', 'Prevent', 'Disease', 'Virus', 'Arm'], vietnamese_keyword: 'Vắc-xin', vietnamese_taboo: ['Tiêm', 'Phòng ngừa', 'Dịch bệnh', 'Vi-rút', 'Cánh tay'] },
-    { category: 'Sức khỏe', keyword: 'SYMPTOM', ipa: '/ˈsɪmp.təm/', taboo: ['Sign', 'Illness', 'Cough', 'Fever', 'Show'], vietnamese_keyword: 'Triệu chứng', vietnamese_taboo: ['Dấu hiệu', 'Bệnh tật', 'Ho', 'Sốt', 'Biểu hiện'] },
-    { category: 'Sức khỏe', keyword: 'MEDICINE', ipa: '/ˈmed.ɪ.sən/', taboo: ['Pill', 'Sick', 'Doctor', 'Pharmacy', 'Cure'], vietnamese_keyword: 'Thuốc', vietnamese_taboo: ['Viên thuốc', 'Ốm đau', 'Bác sĩ', 'Hiệu thuốc', 'Chữa bệnh'] },
-    { category: 'Sức khỏe', keyword: 'SURGERY', ipa: '/ˈsɜː.dʒər.i/', taboo: ['Operation', 'Doctor', 'Cut', 'Hospital', 'Scalpel'], vietnamese_keyword: 'Phẫu thuật', vietnamese_taboo: ['Ca mổ', 'Bác sĩ', 'Cắt', 'Bệnh viện', 'Dao mổ'] },
-    { category: 'Sức khỏe', keyword: 'INFECTION', ipa: '/ɪnˈfek.ʃən/', taboo: ['Bacteria', 'Virus', 'Disease', 'Sick', 'Antibiotic'], vietnamese_keyword: 'Sự nhiễm trùng', vietnamese_taboo: ['Vi khuẩn', 'Vi-rút', 'Bệnh tật', 'Ốm đau', 'Thuốc kháng sinh'] },
-    { category: 'Sức khỏe', keyword: 'THERAPY', ipa: '/ˈθer.ə.pi/', taboo: ['Talk', 'Mental', 'Physical', 'Treatment', 'Psychologist'], vietnamese_keyword: 'Trị liệu', vietnamese_taboo: ['Nói chuyện', 'Tinh thần', 'Thể chất', 'Điều trị', 'Nhà tâm lý học'] },
-    { category: 'Sức khỏe', keyword: 'VITAMIN', ipa: '/ˈvɪt.ə.mɪn/', taboo: ['Pill', 'Fruit', 'Healthy', 'Sun', 'Supplement'], vietnamese_keyword: 'Vi-ta-min', vietnamese_taboo: ['Viên thuốc', 'Trái cây', 'Khỏe mạnh', 'Mặt trời', 'Thực phẩm bổ sung'] },
-    { category: 'Sức khỏe', keyword: 'NUTRITION', ipa: '/njuːˈtrɪʃ.ən/', taboo: ['Food', 'Diet', 'Healthy', 'Calories', 'Eat'], vietnamese_keyword: 'Dinh dưỡng', vietnamese_taboo: ['Thức ăn', 'Ăn kiêng', 'Khỏe mạnh', 'Calo', 'Ăn'] },
-    { category: 'Sức khỏe', keyword: 'IMMUNITY', ipa: '/ɪˈmjuː.nə.ti/', taboo: ['System', 'Protect', 'Disease', 'Strong', 'Vaccine'], vietnamese_keyword: 'Sự miễn dịch', vietnamese_taboo: ['Hệ thống', 'Bảo vệ', 'Bệnh tật', 'Mạnh mẽ', 'Vắc-xin'] },
+            // Công nghệ (10 từ)
+            { category: 'Công nghệ', keyword: 'INTERNET', ipa: '/ˈɪn.tə.net/', taboo: ['Web', 'Online', 'Wifi', 'Google', 'Connection'], vietnamese_keyword: 'Internet', vietnamese_taboo: ['Trang Web', 'Trực tuyến', 'Mạng Wifi', 'Google', 'Kết nối'] },
+            { category: 'Công nghệ', keyword: 'ARTIFICIAL INTELLIGENCE', ipa: '/ˌɑː.tɪˈfɪʃ.əl ɪnˈtel.ɪ.dʒəns/', taboo: ['Robot', 'Smart', 'Future', 'Computer', 'Brain'], vietnamese_keyword: 'Trí tuệ nhân tạo', vietnamese_taboo: ['Người máy', 'Thông minh', 'Tương lai', 'Máy tính', 'Bộ não'] },
+            { category: 'Công nghệ', keyword: 'SMARTPHONE', ipa: '/ˈsmɑːt.fəʊn/', taboo: ['Call', 'App', 'Screen', 'Mobile', 'Apple'], vietnamese_keyword: 'Điện thoại thông minh', vietnamese_taboo: ['Gọi điện', 'Ứng dụng', 'Màn hình', 'Di động', 'Quả táo'] },
+            { category: 'Công nghệ', keyword: 'VIRTUAL REALITY', ipa: '/ˌvɜː.tʃu.əl riˈæl.ə.ti/', taboo: ['Headset', 'Game', 'Fake', 'World', '3D'], vietnamese_keyword: 'Thực tế ảo', vietnamese_taboo: ['Kính VR', 'Trò chơi', 'Giả', 'Thế giới', '3D'] },
+            { category: 'Công nghệ', keyword: 'SATELLITE', ipa: '/ˈsæt.əl.aɪt/', taboo: ['Space', 'Orbit', 'Signal', 'Earth', 'GPS'], vietnamese_keyword: 'Vệ tinh', vietnamese_taboo: ['Không gian', 'Quỹ đạo', 'Tín hiệu', 'Trái Đất', 'Định vị GPS'] },
+            { category: 'Công nghệ', keyword: 'LAPTOP', ipa: '/ˈlæp.tɒp/', taboo: ['Computer', 'Portable', 'Keyboard', 'Screen', 'Work'], vietnamese_keyword: 'Máy tính xách tay', vietnamese_taboo: ['Máy tính', 'Gọn nhẹ', 'Bàn phím', 'Màn hình', 'Công việc'] },
+            { category: 'Công nghệ', keyword: 'DRONE', ipa: '/drəʊn/', taboo: ['Fly', 'Camera', 'Control', 'Sky', 'Robot'], vietnamese_keyword: 'Flycam/Drone', vietnamese_taboo: ['Bay', 'Máy ảnh', 'Điều khiển', 'Bầu trời', 'Người máy'] },
+            { category: 'Công nghệ', keyword: 'MICROPHONE', ipa: '/ˈmaɪ.krə.fəʊn/', taboo: ['Sing', 'Voice', 'Speak', 'Loud', 'Record'], vietnamese_keyword: 'Mi-crô', vietnamese_taboo: ['Hát', 'Giọng nói', 'Nói', 'To tiếng', 'Ghi âm'] },
+            { category: 'Công nghệ', keyword: 'KEYBOARD', ipa: '/ˈkiː.bɔːd/', taboo: ['Type', 'Letters', 'Computer', 'Mouse', 'Press'], vietnamese_keyword: 'Bàn phím', vietnamese_taboo: ['Gõ', 'Chữ cái', 'Máy tính', 'Chuột', 'Nhấn'] },
+            { category: 'Công nghệ', keyword: 'BATTERY', ipa: '/ˈbæt.ər.i/', taboo: ['Power', 'Charge', 'Energy', 'Phone', 'Dead'], vietnamese_keyword: 'Cục pin', vietnamese_taboo: ['Năng lượng', 'Sạc', 'Sức mạnh', 'Điện thoại', 'Hết pin'] },
 
-    // Vũ trụ (10 từ)
-    { category: 'Vũ trụ', keyword: 'GALAXY', ipa: '/ˈɡæl.ək.si/', taboo: ['Stars', 'Space', 'Milky Way', 'Universe', 'Planets'], vietnamese_keyword: 'Ngân hà', vietnamese_taboo: ['Các vì sao', 'Không gian', 'Dải Ngân Hà', 'Vũ trụ', 'Hành tinh'] },
-    { category: 'Vũ trụ', keyword: 'ASTRONAUT', ipa: '/ˈæs.trə.nɔːt/', taboo: ['Space', 'Moon', 'Rocket', 'Suit', 'NASA'], vietnamese_keyword: 'Phi hành gia', vietnamese_taboo: ['Không gian', 'Mặt trăng', 'Tên lửa', 'Bộ đồ', 'NASA'] },
-    { category: 'Vũ trụ', keyword: 'BLACK HOLE', ipa: '/ˌblæk ˈhəʊl/', taboo: ['Gravity', 'Dark', 'Space', 'Suck', 'Light'], vietnamese_keyword: 'Hố đen', vietnamese_taboo: ['Lực hấp dẫn', 'Tối tăm', 'Không gian', 'Hút', 'Ánh sáng'] },
-    { category: 'Vũ trụ', keyword: 'PLANET', ipa: '/ˈplæn.ɪt/', taboo: ['Earth', 'Mars', 'Orbit', 'Sun', 'Round'], vietnamese_keyword: 'Hành tinh', vietnamese_taboo: ['Trái Đất', 'Sao Hỏa', 'Quỹ đạo', 'Mặt trời', 'Hình tròn'] },
-    { category: 'Vũ trụ', keyword: 'COMET', ipa: '/ˈkɒm.ɪt/', taboo: ['Tail', 'Ice', 'Sky', 'Space', 'Star'], vietnamese_keyword: 'Sao chổi', vietnamese_taboo: ['Cái đuôi', 'Băng giá', 'Bầu trời', 'Không gian', 'Ngôi sao'] },
-    { category: 'Vũ trụ', keyword: 'METEOR', ipa: '/ˈmiː.ti.ɔːr/', taboo: ['Shooting', 'Star', 'Rock', 'Sky', 'Shower'], vietnamese_keyword: 'Sao băng/Thiên thạch', vietnamese_taboo: ['Bắn', 'Ngôi sao', 'Đá', 'Bầu trời', 'Cơn mưa'] },
-    { category: 'Vũ trụ', keyword: 'NEBULA', ipa: '/ˈneb.jə.lə/', taboo: ['Cloud', 'Dust', 'Gas', 'Stars', 'Space'], vietnamese_keyword: 'Tinh vân', vietnamese_taboo: ['Đám mây', 'Bụi', 'Khí ga', 'Các vì sao', 'Không gian'] },
-    { category: 'Vũ trụ', keyword: 'TELESCOPE', ipa: '/ˈtel.ɪ.skəʊp/', taboo: ['Look', 'Stars', 'Lens', 'Far', 'Astronomer'], vietnamese_keyword: 'Kính viễn vọng', vietnamese_taboo: ['Nhìn', 'Ngôi sao', 'Thấu kính', 'Xa xôi', 'Nhà thiên văn học'] },
-    { category: 'Vũ trụ', keyword: 'ORBIT', ipa: '/ˈɔː.bɪt/', taboo: ['Circle', 'Planet', 'Satellite', 'Around', 'Path'], vietnamese_keyword: 'Quỹ đạo', vietnamese_taboo: ['Vòng tròn', 'Hành tinh', 'Vệ tinh', 'Xung quanh', 'Đường đi'] },
-    { category: 'Vũ trụ', keyword: 'GRAVITY', ipa: '/ˈɡræv.ə.ti/', taboo: ['Fall', 'Earth', 'Float', 'Force', 'Apple'], vietnamese_keyword: 'Trọng lực', vietnamese_taboo: ['Rơi', 'Trái Đất', 'Trôi nổi', 'Lực', 'Quả táo'] },
+            // Môi trường (10 từ)
+            { category: 'Môi trường', keyword: 'CLIMATE', ipa: '/ˈklaɪ.mət/', taboo: ['Weather', 'Global', 'Change', 'Warm', 'Earth'], vietnamese_keyword: 'Khí hậu', vietnamese_taboo: ['Thời tiết', 'Toàn cầu', 'Thay đổi', 'Ấm áp', 'Trái Đất'] },
+            { category: 'Môi trường', keyword: 'RECYCLE', ipa: '/ˌriːˈsaɪ.kəl/', taboo: ['Plastic', 'Paper', 'Reuse', 'Trash', 'Green'], vietnamese_keyword: 'Tái chế', vietnamese_taboo: ['Nhựa', 'Giấy', 'Tái sử dụng', 'Rác', 'Màu xanh'] },
+            { category: 'Môi trường', keyword: 'POLLUTION', ipa: '/pəˈluː.ʃən/', taboo: ['Air', 'Dirty', 'Smog', 'Factory', 'Water'], vietnamese_keyword: 'Sự ô nhiễm', vietnamese_taboo: ['Không khí', 'Bẩn', 'Khói bụi', 'Nhà máy', 'Nước'] },
+            { category: 'Môi trường', keyword: 'DEFORESTATION', ipa: '/diːˌfɒr.ɪˈsteɪ.ʃən/', taboo: ['Trees', 'Cut', 'Forest', 'Wood', 'Destroy'], vietnamese_keyword: 'Nạn phá rừng', vietnamese_taboo: ['Cây cối', 'Cưa/Cắt', 'Rừng', 'Gỗ', 'Phá hủy'] },
+            { category: 'Môi trường', keyword: 'OZONE', ipa: '/ˈəʊ.zəʊn/', taboo: ['Layer', 'Sun', 'Protect', 'Hole', 'Atmosphere'], vietnamese_keyword: 'Khí Ô-zôn', vietnamese_taboo: ['Lớp', 'Mặt trời', 'Bảo vệ', 'Cái lỗ', 'Khí quyển'] },
+            { category: 'Môi trường', keyword: 'ECOLOGY', ipa: '/ɪˈkɒl.ə.dʒi/', taboo: ['Nature', 'Environment', 'System', 'Animals', 'Biology'], vietnamese_keyword: 'Sinh thái học', vietnamese_taboo: ['Thiên nhiên', 'Môi trường', 'Hệ thống', 'Động vật', 'Sinh học'] },
+            { category: 'Môi trường', keyword: 'RENEWABLE', ipa: '/rɪˈnjuː.ə.bəl/', taboo: ['Energy', 'Wind', 'Solar', 'Sustainable', 'Source'], vietnamese_keyword: 'Có thể tái tạo', vietnamese_taboo: ['Năng lượng', 'Gió', 'Năng lượng mặt trời', 'Bền vững', 'Nguồn'] },
+            { category: 'Môi trường', keyword: 'GREENHOUSE', ipa: '/ˈɡriːn.haʊs/', taboo: ['Glass', 'Plants', 'Effect', 'Warm', 'Gas'], vietnamese_keyword: 'Nhà kính', vietnamese_taboo: ['Kính', 'Thực vật', 'Hiệu ứng', 'Ấm áp', 'Khí ga'] },
+            { category: 'Môi trường', keyword: 'CONSERVATION', ipa: '/ˌkɒn.səˈveɪ.ʃən/', taboo: ['Protect', 'Nature', 'Save', 'Wildlife', 'Effort'], vietnamese_keyword: 'Sự bảo tồn', vietnamese_taboo: ['Bảo vệ', 'Thiên nhiên', 'Cứu', 'Động vật hoang dã', 'Nỗ lực'] },
+            { category: 'Môi trường', keyword: 'WINDMILL', ipa: '/ˈwɪnd.mɪl/', taboo: ['Blades', 'Energy', 'Farm', 'Power', 'Spin'], vietnamese_keyword: 'Cối xay gió', vietnamese_taboo: ['Cánh quạt', 'Năng lượng', 'Nông trại', 'Sức mạnh', 'Quay'] },
 
-    // Thời tiết (10 từ)
-    { category: 'Thời tiết', keyword: 'TORNADO', ipa: '/tɔːˈneɪ.dəʊ/', taboo: ['Wind', 'Spin', 'Storm', 'Destroy', 'Twister'], vietnamese_keyword: 'Lốc xoáy', vietnamese_taboo: ['Gió', 'Xoay tròn', 'Cơn bão', 'Phá hủy', 'Vòi rồng'] },
-    { category: 'Thời tiết', keyword: 'RAINBOW', ipa: '/ˈreɪn.bəʊ/', taboo: ['Colors', 'Sky', 'Rain', 'Sun', 'Arc'], vietnamese_keyword: 'Cầu vồng', vietnamese_taboo: ['Màu sắc', 'Bầu trời', 'Mưa', 'Mặt trời', 'Hình cung'] },
-    { category: 'Thời tiết', keyword: 'DROUGHT', ipa: '/draʊt/', taboo: ['Dry', 'Water', 'Rain', 'Land', 'Hot'], vietnamese_keyword: 'Hạn hán', vietnamese_taboo: ['Khô', 'Nước', 'Mưa', 'Đất đai', 'Nóng'] },
-    { category: 'Thời tiết', keyword: 'HURRICANE', ipa: '/ˈhʌr.ɪ.kən/', taboo: ['Storm', 'Ocean', 'Wind', 'Rain', 'Eye'], vietnamese_keyword: 'Bão nhiệt đới', vietnamese_taboo: ['Cơn bão', 'Đại dương', 'Gió', 'Mưa', 'Mắt bão'] },
-    { category: 'Thời tiết', keyword: 'BLIZZARD', ipa: '/ˈblɪz.əd/', taboo: ['Snow', 'Cold', 'Winter', 'Wind', 'White'], vietnamese_keyword: 'Bão tuyết', vietnamese_taboo: ['Tuyết', 'Lạnh', 'Mùa đông', 'Gió', 'Màu trắng'] },
-    { category: 'Thời tiết', keyword: 'THUNDERSTORM', ipa: '/ˈθʌn.də.stɔːm/', taboo: ['Lightning', 'Loud', 'Rain', 'Sky', 'Scary'], vietnamese_keyword: 'Bão sấm sét', vietnamese_taboo: ['Tia chớp', 'To tiếng', 'Mưa', 'Bầu trời', 'Đáng sợ'] },
-    { category: 'Thời tiết', keyword: 'LIGHTNING', ipa: '/ˈlaɪt.nɪŋ/', taboo: ['Flash', 'Sky', 'Thunder', 'Electricity', 'Strike'], vietnamese_keyword: 'Tia chớp', vietnamese_taboo: ['Lóe sáng', 'Bầu trời', 'Sấm', 'Điện', 'Đánh'] },
-    { category: 'Thời tiết', keyword: 'HUMIDITY', ipa: '/hjuːˈmɪd.ə.ti/', taboo: ['Air', 'Moisture', 'Sticky', 'Hot', 'Water'], vietnamese_keyword: 'Độ ẩm', vietnamese_taboo: ['Không khí', 'Hơi ẩm', 'Dính nhớp', 'Nóng', 'Nước'] },
-    { category: 'Thời tiết', keyword: 'FOG', ipa: '/fɒɡ/', taboo: ['Cloud', 'Ground', 'See', 'Drive', 'Grey'], vietnamese_keyword: 'Sương mù', vietnamese_taboo: ['Đám mây', 'Mặt đất', 'Nhìn', 'Lái xe', 'Màu xám'] },
-    { category: 'Thời tiết', keyword: 'HAIL', ipa: '/heɪl/', taboo: ['Ice', 'Fall', 'Sky', 'Storm', 'Damage'], vietnamese_keyword: 'Mưa đá', vietnamese_taboo: ['Đá/Băng', 'Rơi', 'Bầu trời', 'Cơn bão', 'Thiệt hại'] },
+            // Cảm xúc (10 từ)
+            { category: 'Cảm xúc', keyword: 'HAPPINESS', ipa: '/ˈhæp.i.nəs/', taboo: ['Smile', 'Joy', 'Glad', 'Laugh', 'Good'], vietnamese_keyword: 'Sự hạnh phúc', vietnamese_taboo: ['Cười', 'Niềm vui', 'Vui vẻ', 'Cười lớn', 'Tốt'] },
+            { category: 'Cảm xúc', keyword: 'ANXIETY', ipa: '/æŋˈzaɪ.ə.ti/', taboo: ['Worry', 'Nervous', 'Stress', 'Fear', 'Panic'], vietnamese_keyword: 'Sự loâu', vietnamese_taboo: ['Lo lắng', 'Bồn chồn', 'Căng thẳng', 'Sợ hãi', 'Hoảng loạn'] },
+            { category: 'Cảm xúc', keyword: 'ANGER', ipa: '/ˈæŋ.ɡər/', taboo: ['Mad', 'Red', 'Shout', 'Furious', 'Temper'], vietnamese_keyword: 'Sự tức giận', vietnamese_taboo: ['Điên tiết', 'Đỏ mặt', 'La hét', 'Thịnh nộ', 'Tính khí'] },
+            { category: 'Cảm xúc', keyword: 'JEALOUSY', ipa: '/ˈdʒel.ə.si/', taboo: ['Envy', 'Want', 'Green', 'Others', 'Covet'], vietnamese_keyword: 'Sự ghen tị', vietnamese_taboo: ['Đố kỵ', 'Muốn', 'Màu xanh', 'Người khác', 'Thèm muốn'] },
+            { category: 'Cảm xúc', keyword: 'SADNESS', ipa: '/ˈsæd.nəs/', taboo: ['Cry', 'Tears', 'Unhappy', 'Depressed', 'Blue'], vietnamese_keyword: 'Sự buồn bã', vietnamese_taboo: ['Khóc', 'Nước mắt', 'Không vui', 'Trầm cảm', 'Màu xanh/Buồn'] },
+            { category: 'Cảm xúc', keyword: 'SURPRISE', ipa: '/səˈpraɪz/', taboo: ['Shock', 'Unexpected', 'Wow', 'Jump', 'Party'], vietnamese_keyword: 'Sự ngạc nhiên', vietnamese_taboo: ['Sốc', 'Bất ngờ', 'Wow', 'Nhảy lên', 'Bữa tiệc'] },
+            { category: 'Cảm xúc', keyword: 'FEAR', ipa: '/fɪər/', taboo: ['Scared', 'Afraid', 'Monster', 'Dark', 'Horror'], vietnamese_keyword: 'Sự sợ hãi', vietnamese_taboo: ['Sợ hãi', 'E ngại', 'Quái vật', 'Bóng tối', 'Kinh dị'] },
+            { category: 'Cảm xúc', keyword: 'DISGUST', ipa: '/dɪsˈɡʌst/', taboo: ['Ew', 'Gross', 'Sick', 'Smell', 'Yuck'], vietnamese_keyword: 'Sự kinh tởm', vietnamese_taboo: ['Ew (Kinh quá)', 'Gớm ghiếc', 'Ốm', 'Mùi', 'Yuck (Tởm)'] },
+            { category: 'Cảm xúc', keyword: 'LOVE', ipa: '/lʌv/', taboo: ['Heart', 'Romance', 'Kiss', 'Valentine', 'Care'], vietnamese_keyword: 'Tình yêu', vietnamese_taboo: ['Trái tim', 'Lãng mạn', 'Nụ hôn', 'Lễ tình nhân', 'Quan tâm'] },
+            { category: 'Cảm xúc', keyword: 'HOPE', ipa: '/həʊp/', taboo: ['Wish', 'Future', 'Positive', 'Dream', 'Believe'], vietnamese_keyword: 'Niềm hy vọng', vietnamese_taboo: ['Ước', 'Tương lai', 'Tích cực', 'Giấc mơ', 'Tin tưởng'] },
 
-    // Kinh doanh (10 từ)
-    { category: 'Kinh doanh', keyword: 'INVESTMENT', ipa: '/ɪnˈvest.mənt/', taboo: ['Money', 'Return', 'Risk', 'Stock', 'Bank'], vietnamese_keyword: 'Sự đầu tư', vietnamese_taboo: ['Tiền bạc', 'Lợi nhuận', 'Rủi ro', 'Cổ phiếu', 'Ngân hàng'] },
-    { category: 'Kinh doanh', keyword: 'PROFIT', ipa: '/ˈprɒf.ɪt/', taboo: ['Money', 'Gain', 'Loss', 'Business', 'Revenue'], vietnamese_keyword: 'Lợi nhuận', vietnamese_taboo: ['Tiền bạc', 'Đạt được', 'Thua lỗ', 'Doanh nghiệp', 'Doanh thu'] },
-    { category: 'Kinh doanh', keyword: 'BANKRUPTCY', ipa: '/ˈbæŋ.krəpt.si/', taboo: ['Fail', 'Money', 'Close', 'Debt', 'Business'], vietnamese_keyword: 'Phá sản', vietnamese_taboo: ['Thất bại', 'Tiền bạc', 'Đóng cửa', 'Nợ nần', 'Doanh nghiệp'] },
-    { category: 'Kinh doanh', keyword: 'STARTUP', ipa: '/ˈstɑːt.ʌp/', taboo: ['New', 'Company', 'Founder', 'Idea', 'Tech'], vietnamese_keyword: 'Khởi nghiệp', vietnamese_taboo: ['Mới', 'Công ty', 'Người sáng lập', 'Ý tưởng', 'Công nghệ'] },
-    { category: 'Kinh doanh', keyword: 'MARKETING', ipa: '/ˈmɑː.kɪ.tɪŋ/', taboo: ['Sell', 'Advertise', 'Product', 'Customer', 'Brand'], vietnamese_keyword: 'Tiếp thị', vietnamese_taboo: ['Bán', 'Quảng cáo', 'Sản phẩm', 'Khách hàng', 'Thương hiệu'] },
-    { category: 'Kinh doanh', keyword: 'STRATEGY', ipa: '/ˈstræt.ə.dʒi/', taboo: ['Plan', 'Goal', 'Business', 'Win', 'Future'], vietnamese_keyword: 'Chiến lược', vietnamese_taboo: ['Kế hoạch', 'Mục tiêu', 'Doanh nghiệp', 'Chiến thắng', 'Tương lai'] },
-    { category: 'Kinh doanh', keyword: 'CONTRACT', ipa: '/ˈkɒn.trækt/', taboo: ['Sign', 'Paper', 'Agreement', 'Lawyer', 'Deal'], vietnamese_keyword: 'Hợp đồng', vietnamese_taboo: ['Ký', 'Tờ giấy', 'Thỏa thuận', 'Luật sư', 'Giao dịch'] },
-    { category: 'Kinh doanh', keyword: 'STOCK', ipa: '/stɒk/', taboo: ['Market', 'Share', 'Company', 'Trade', 'Price'], vietnamese_keyword: 'Cổ phiếu', vietnamese_taboo: ['Thị trường', 'Cổ phần', 'Công ty', 'Giao dịch', 'Giá cả'] },
-    { category: 'Kinh doanh', keyword: 'NEGOTIATION', ipa: '/nəˌɡəʊ.ʃiˈeɪ.ʃən/', taboo: ['Talk', 'Deal', 'Price', 'Agree', 'Meeting'], vietnamese_keyword: 'Sự đàm phán', vietnamese_taboo: ['Nói chuyện', 'Giao dịch', 'Giá cả', 'Đồng ý', 'Cuộc họp'] },
-    { category: 'Kinh doanh', keyword: 'INFLATION', ipa: '/ɪnˈfleɪ.ʃən/', taboo: ['Price', 'Money', 'Rise', 'Economy', 'Value'], vietnamese_keyword: 'Lạm phát', vietnamese_taboo: ['Giá cả', 'Tiền bạc', 'Tăng lên', 'Nền kinh tế', 'Giá trị'] }
-];
+            // Khái niệm (10 từ)
+            { category: 'Khái niệm', keyword: 'SUCCESS', ipa: '/səkˈses/', taboo: ['Goal', 'Win', 'Achieve', 'Rich', 'Money'], vietnamese_keyword: 'Thành công', vietnamese_taboo: ['Mục tiêu', 'Chiến thắng', 'Đạt được', 'Giàu có', 'Tiền bạc'] },
+            { category: 'Khái niệm', keyword: 'FREEDOM', ipa: '/ˈfriː.dəm/', taboo: ['Liberty', 'Rights', 'Prison', 'Independent', 'Choice'], vietnamese_keyword: 'Sự tự do', vietnamese_taboo: ['Quyền tự do', 'Quyền lợi', 'Nhà tù', 'Độc lập', 'Lựa chọn'] },
+            { category: 'Khái niệm', keyword: 'JUSTICE', ipa: '/ˈdʒʌs.tɪs/', taboo: ['Fair', 'Law', 'Judge', 'Court', 'Right'], vietnamese_keyword: 'Công lý', vietnamese_taboo: ['Công bằng', 'Luật pháp', 'Thẩm phán', 'Tòa án', 'Đúng đắn'] },
+            { category: 'Khái niệm', keyword: 'TRUTH', ipa: '/truːθ/', taboo: ['Lie', 'Fact', 'Honest', 'Real', 'False'], vietnamese_keyword: 'Sự thật', vietnamese_taboo: ['Nói dối', 'Thực tế', 'Trung thực', 'Có thật', 'Sai trái'] },
+            { category: 'Khái niệm', keyword: 'PEACE', ipa: '/piːs/', taboo: ['War', 'Quiet', 'Calm', 'Dove', 'World'], vietnamese_keyword: 'Hòa bình', vietnamese_taboo: ['Chiến tranh', 'Yên lặng', 'Bình tĩnh', 'Chim bồ câu', 'Thế giới'] },
+            { category: 'Khái niệm', keyword: 'EQUALITY', ipa: '/ɪˈkwɒl.ə.ti/', taboo: ['Same', 'Rights', 'Fair', 'Gender', 'Race'], vietnamese_keyword: 'Sự bình đẳng', vietnamese_taboo: ['Giống nhau', 'Quyền lợi', 'Công bằng', 'Giới tính', 'Chủng tộc'] },
+            { category: 'Khái niệm', keyword: 'WISDOM', ipa: '/ˈwɪz.dəm/', taboo: ['Smart', 'Old', 'Knowledge', 'Owl', 'Experience'], vietnamese_keyword: 'Sự thông thái', vietnamese_taboo: ['Thông minh', 'Già/Cũ', 'Kiến thức', 'Con cú', 'Kinh nghiệm'] },
+            { category: 'Khái niệm', keyword: 'COURAGE', ipa: '/ˈkʌr.ɪdʒ/', taboo: ['Brave', 'Fear', 'Hero', 'Danger', 'Fight'], vietnamese_keyword: 'Lòng can đảm', vietnamese_taboo: ['Dũng cảm', 'Sợ hãi', 'Anh hùng', 'Nguy hiểm', 'Chiến đấu'] },
+            { category: 'Khái niệm', keyword: 'TIME', ipa: '/taɪm/', taboo: ['Clock', 'Hour', 'Minute', 'Late', 'Watch'], vietnamese_keyword: 'Thời gian', vietnamese_taboo: ['Đồng hồ', 'Giờ', 'Phút', 'Muộn', 'Đồng hồ đeo tay'] },
+            { category: 'Khái niệm', keyword: 'SPACE', ipa: '/speɪs/', taboo: ['Stars', 'Empty', 'Room', 'Astronaut', 'Universe'], vietnamese_keyword: 'Không gian', vietnamese_taboo: ['Ngôi sao', 'Trống rỗng', 'Căn phòng', 'Phi hành gia', 'Vũ trụ'] },
+            
+            // Động vật (10 từ)
+            { category: 'Động vật', keyword: 'ELEPHANT', ipa: '/ˈel.ɪ.fənt/', taboo: ['Trunk', 'Big', 'Africa', 'Tusks', 'Grey'], vietnamese_keyword: 'Con voi', vietnamese_taboo: ['Cái vòi', 'To lớn', 'Châu Phi', 'Ngà voi', 'Màu xám'] },
+            { category: 'Động vật', keyword: 'PENGUIN', ipa: '/ˈpeŋ.ɡwɪn/', taboo: ['Bird', 'Ice', 'Antarctica', 'Waddle', 'Black'], vietnamese_keyword: 'Chim cánh cụt', vietnamese_taboo: ['Con chim', 'Băng giá', 'Nam cực', 'Lạch bạch', 'Màu đen'] },
+            { category: 'Động vật', keyword: 'DOLPHIN', ipa: '/ˈdɒl.fɪn/', taboo: ['Sea', 'Smart', 'Swim', 'Water', 'Ocean'], vietnamese_keyword: 'Cá heo', vietnamese_taboo: ['Biển', 'Thông minh', 'Bơi lội', 'Nước', 'Đại dương'] },
+            { category: 'Động vật', keyword: 'KANGAROO', ipa: '/ˌkæŋ.ɡərˈuː/', taboo: ['Jump', 'Australia', 'Pouch', 'Animal', 'Hop'], vietnamese_keyword: 'Chuột túi', vietnamese_taboo: ['Nhảy', 'Nước Úc', 'Cái túi', 'Động vật', 'Nhảy lò cò'] },
+            { category: 'Động vật', keyword: 'TIGER', ipa: '/ˈtaɪ.ɡər/', taboo: ['Stripes', 'Cat', 'Roar', 'Jungle', 'Orange'], vietnamese_keyword: 'Con hổ', vietnamese_taboo: ['Vằn', 'Con mèo', 'Gầm', 'Rừng nhiệt đới', 'Màu cam'] },
+            { category: 'Động vật', keyword: 'LION', ipa: '/ˈlaɪ.ən/', taboo: ['King', 'Roar', 'Mane', 'Africa', 'Cat'], vietnamese_keyword: 'Sư tử', vietnamese_taboo: ['Vua', 'Gầm', 'Bờm', 'Châu Phi', 'Con mèo'] },
+            { category: 'Động vật', keyword: 'MONKEY', ipa: '/ˈmʌŋ.ki/', taboo: ['Banana', 'Tree', 'Climb', 'Ape', 'Swing'], vietnamese_keyword: 'Con khỉ', vietnamese_taboo: ['Quả chuối', 'Cái cây', 'Leo trèo', 'Vượn', 'Đu đưa'] },
+            { category: 'Động vật', keyword: 'GIRAFFE', ipa: '/dʒɪˈrɑːf/', taboo: ['Neck', 'Tall', 'Leaves', 'Spots', 'Africa'], vietnamese_keyword: 'Hươu cao cổ', vietnamese_taboo: ['Cái cổ', 'Cao', 'Lá cây', 'Đốm', 'Châu Phi'] },
+            { category: 'Động vật', keyword: 'PANDA', ipa: '/ˈpæn.də/', taboo: ['Bear', 'Bamboo', 'Black', 'White', 'China'], vietnamese_keyword: 'Gấu trúc', vietnamese_taboo: ['Con gấu', 'Cây tre', 'Màu đen', 'Màu trắng', 'Trung Quốc'] },
+            { category: 'Động vật', keyword: 'EAGLE', ipa: '/ˈiː.ɡəl/', taboo: ['Bird', 'Fly', 'Bald', 'America', 'Wings'], vietnamese_keyword: 'Đại bàng', vietnamese_taboo: ['Con chim', 'Bay', 'Hói (đầu)', 'Nước Mỹ', 'Đôi cánh'] },
+            
+            // Sức khỏe (10 từ)
+            { category: 'Sức khỏe', keyword: 'HOSPITAL', ipa: '/ˈhɒs.pɪ.təl/', taboo: ['Doctor', 'Nurse', 'Sick', 'Bed', 'Emergency'], vietnamese_keyword: 'Bệnh viện', vietnamese_taboo: ['Bác sĩ', 'Y tá', 'Ốm đau', 'Giường', 'Cấp cứu'] },
+            { category: 'Sức khỏe', keyword: 'VACCINE', ipa: '/ˈvæk.siːn/', taboo: ['Injection', 'Prevent', 'Disease', 'Virus', 'Arm'], vietnamese_keyword: 'Vắc-xin', vietnamese_taboo: ['Tiêm', 'Phòng ngừa', 'Dịch bệnh', 'Vi-rút', 'Cánh tay'] },
+            { category: 'Sức khỏe', keyword: 'SYMPTOM', ipa: '/ˈsɪmp.təm/', taboo: ['Sign', 'Illness', 'Cough', 'Fever', 'Show'], vietnamese_keyword: 'Triệu chứng', vietnamese_taboo: ['Dấu hiệu', 'Bệnh tật', 'Ho', 'Sốt', 'Biểu hiện'] },
+            { category: 'Sức khỏe', keyword: 'MEDICINE', ipa: '/ˈmed.ɪ.sən/', taboo: ['Pill', 'Sick', 'Doctor', 'Pharmacy', 'Cure'], vietnamese_keyword: 'Thuốc', vietnamese_taboo: ['Viên thuốc', 'Ốm đau', 'Bác sĩ', 'Hiệu thuốc', 'Chữa bệnh'] },
+            { category: 'Sức khỏe', keyword: 'SURGERY', ipa: '/ˈsɜː.dʒər.i/', taboo: ['Operation', 'Doctor', 'Cut', 'Hospital', 'Scalpel'], vietnamese_keyword: 'Phẫu thuật', vietnamese_taboo: ['Ca mổ', 'Bác sĩ', 'Cắt', 'Bệnh viện', 'Dao mổ'] },
+            { category: 'Sức khỏe', keyword: 'INFECTION', ipa: '/ɪnˈfek.ʃən/', taboo: ['Bacteria', 'Virus', 'Disease', 'Sick', 'Antibiotic'], vietnamese_keyword: 'Sự nhiễm trùng', vietnamese_taboo: ['Vi khuẩn', 'Vi-rút', 'Bệnh tật', 'Ốm đau', 'Thuốc kháng sinh'] },
+            { category: 'Sức khỏe', keyword: 'THERAPY', ipa: '/ˈθer.ə.pi/', taboo: ['Talk', 'Mental', 'Physical', 'Treatment', 'Psychologist'], vietnamese_keyword: 'Trị liệu', vietnamese_taboo: ['Nói chuyện', 'Tinh thần', 'Thể chất', 'Điều trị', 'Nhà tâm lý học'] },
+            { category: 'Sức khỏe', keyword: 'VITAMIN', ipa: '/ˈvɪt.ə.mɪn/', taboo: ['Pill', 'Fruit', 'Healthy', 'Sun', 'Supplement'], vietnamese_keyword: 'Vi-ta-min', vietnamese_taboo: ['Viên thuốc', 'Trái cây', 'Khỏe mạnh', 'Mặt trời', 'Thực phẩm bổ sung'] },
+            { category: 'Sức khỏe', keyword: 'NUTRITION', ipa: '/njuːˈtrɪʃ.ən/', taboo: ['Food', 'Diet', 'Healthy', 'Calories', 'Eat'], vietnamese_keyword: 'Dinh dưỡng', vietnamese_taboo: ['Thức ăn', 'Ăn kiêng', 'Khỏe mạnh', 'Calo', 'Ăn'] },
+            { category: 'Sức khỏe', keyword: 'IMMUNITY', ipa: '/ɪˈmjuː.nə.ti/', taboo: ['System', 'Protect', 'Disease', 'Strong', 'Vaccine'], vietnamese_keyword: 'Sự miễn dịch', vietnamese_taboo: ['Hệ thống', 'Bảo vệ', 'Bệnh tật', 'Mạnh mẽ', 'Vắc-xin'] },
 
-export default function App() {
-    // --- FIREBASE STATE ---
-    const [user, setUser] = useState(null);
-    const [notebook, setNotebook] = useState({});
+            // Vũ trụ (10 từ)
+            { category: 'Vũ trụ', keyword: 'GALAXY', ipa: '/ˈɡæl.ək.si/', taboo: ['Stars', 'Space', 'Milky Way', 'Universe', 'Planets'], vietnamese_keyword: 'Ngân hà', vietnamese_taboo: ['Các vì sao', 'Không gian', 'Dải Ngân Hà', 'Vũ trụ', 'Hành tinh'] },
+            { category: 'Vũ trụ', keyword: 'ASTRONAUT', ipa: '/ˈæs.trə.nɔːt/', taboo: ['Space', 'Moon', 'Rocket', 'Suit', 'NASA'], vietnamese_keyword: 'Phi hành gia', vietnamese_taboo: ['Không gian', 'Mặt trăng', 'Tên lửa', 'Bộ đồ', 'NASA'] },
+            { category: 'Vũ trụ', keyword: 'BLACK HOLE', ipa: '/ˌblæk ˈhəʊl/', taboo: ['Gravity', 'Dark', 'Space', 'Suck', 'Light'], vietnamese_keyword: 'Hố đen', vietnamese_taboo: ['Lực hấp dẫn', 'Tối tăm', 'Không gian', 'Hút', 'Ánh sáng'] },
+            { category: 'Vũ trụ', keyword: 'PLANET', ipa: '/ˈplæn.ɪt/', taboo: ['Earth', 'Mars', 'Orbit', 'Sun', 'Round'], vietnamese_keyword: 'Hành tinh', vietnamese_taboo: ['Trái Đất', 'Sao Hỏa', 'Quỹ đạo', 'Mặt trời', 'Hình tròn'] },
+            { category: 'Vũ trụ', keyword: 'COMET', ipa: '/ˈkɒm.ɪt/', taboo: ['Tail', 'Ice', 'Sky', 'Space', 'Star'], vietnamese_keyword: 'Sao chổi', vietnamese_taboo: ['Cái đuôi', 'Băng giá', 'Bầu trời', 'Không gian', 'Ngôi sao'] },
+            { category: 'Vũ trụ', keyword: 'METEOR', ipa: '/ˈmiː.ti.ɔːr/', taboo: ['Shooting', 'Star', 'Rock', 'Sky', 'Shower'], vietnamese_keyword: 'Sao băng/Thiên thạch', vietnamese_taboo: ['Bắn', 'Ngôi sao', 'Đá', 'Bầu trời', 'Cơn mưa'] },
+            { category: 'Vũ trụ', keyword: 'NEBULA', ipa: '/ˈneb.jə.lə/', taboo: ['Cloud', 'Dust', 'Gas', 'Stars', 'Space'], vietnamese_keyword: 'Tinh vân', vietnamese_taboo: ['Đám mây', 'Bụi', 'Khí ga', 'Các vì sao', 'Không gian'] },
+            { category: 'Vũ trụ', keyword: 'TELESCOPE', ipa: '/ˈtel.ɪ.skəʊp/', taboo: ['Look', 'Stars', 'Lens', 'Far', 'Astronomer'], vietnamese_keyword: 'Kính viễn vọng', vietnamese_taboo: ['Nhìn', 'Ngôi sao', 'Thấu kính', 'Xa xôi', 'Nhà thiên văn học'] },
+            { category: 'Vũ trụ', keyword: 'ORBIT', ipa: '/ˈɔː.bɪt/', taboo: ['Circle', 'Planet', 'Satellite', 'Around', 'Path'], vietnamese_keyword: 'Quỹ đạo', vietnamese_taboo: ['Vòng tròn', 'Hành tinh', 'Vệ tinh', 'Xung quanh', 'Đường đi'] },
+            { category: 'Vũ trụ', keyword: 'GRAVITY', ipa: '/ˈɡræv.ə.ti/', taboo: ['Fall', 'Earth', 'Float', 'Force', 'Apple'], vietnamese_keyword: 'Trọng lực', vietnamese_taboo: ['Rơi', 'Trái Đất', 'Trôi nổi', 'Lực', 'Quả táo'] },
 
-    // --- APP NAVIGATION STATE ---
-    // screens: 'home', 'translate', 'notebook'
-    const [screen, setScreen] = useState('home');
+            // Thời tiết (10 từ)
+            { category: 'Thời tiết', keyword: 'TORNADO', ipa: '/tɔːˈneɪ.dəʊ/', taboo: ['Wind', 'Spin', 'Storm', 'Destroy', 'Twister'], vietnamese_keyword: 'Lốc xoáy', vietnamese_taboo: ['Gió', 'Xoay tròn', 'Cơn bão', 'Phá hủy', 'Vòi rồng'] },
+            { category: 'Thời tiết', keyword: 'RAINBOW', ipa: '/ˈreɪn.bəʊ/', taboo: ['Colors', 'Sky', 'Rain', 'Sun', 'Arc'], vietnamese_keyword: 'Cầu vồng', vietnamese_taboo: ['Màu sắc', 'Bầu trời', 'Mưa', 'Mặt trời', 'Hình cung'] },
+            { category: 'Thời tiết', keyword: 'DROUGHT', ipa: '/draʊt/', taboo: ['Dry', 'Water', 'Rain', 'Land', 'Hot'], vietnamese_keyword: 'Hạn hán', vietnamese_taboo: ['Khô', 'Nước', 'Mưa', 'Đất đai', 'Nóng'] },
+            { category: 'Thời tiết', keyword: 'HURRICANE', ipa: '/ˈhʌr.ɪ.kən/', taboo: ['Storm', 'Ocean', 'Wind', 'Rain', 'Eye'], vietnamese_keyword: 'Bão nhiệt đới', vietnamese_taboo: ['Cơn bão', 'Đại dương', 'Gió', 'Mưa', 'Mắt bão'] },
+            { category: 'Thời tiết', keyword: 'BLIZZARD', ipa: '/ˈblɪz.əd/', taboo: ['Snow', 'Cold', 'Winter', 'Wind', 'White'], vietnamese_keyword: 'Bão tuyết', vietnamese_taboo: ['Tuyết', 'Lạnh', 'Mùa đông', 'Gió', 'Màu trắng'] },
+            { category: 'Thời tiết', keyword: 'THUNDERSTORM', ipa: '/ˈθʌn.də.stɔːm/', taboo: ['Lightning', 'Loud', 'Rain', 'Sky', 'Scary'], vietnamese_keyword: 'Bão sấm sét', vietnamese_taboo: ['Tia chớp', 'To tiếng', 'Mưa', 'Bầu trời', 'Đáng sợ'] },
+            { category: 'Thời tiết', keyword: 'LIGHTNING', ipa: '/ˈlaɪt.nɪŋ/', taboo: ['Flash', 'Sky', 'Thunder', 'Electricity', 'Strike'], vietnamese_keyword: 'Tia chớp', vietnamese_taboo: ['Lóe sáng', 'Bầu trời', 'Sấm', 'Điện', 'Đánh'] },
+            { category: 'Thời tiết', keyword: 'HUMIDITY', ipa: '/hjuːˈmɪd.ə.ti/', taboo: ['Air', 'Moisture', 'Sticky', 'Hot', 'Water'], vietnamese_keyword: 'Độ ẩm', vietnamese_taboo: ['Không khí', 'Hơi ẩm', 'Dính nhớp', 'Nóng', 'Nước'] },
+            { category: 'Thời tiết', keyword: 'FOG', ipa: '/fɒɡ/', taboo: ['Cloud', 'Ground', 'See', 'Drive', 'Grey'], vietnamese_keyword: 'Sương mù', vietnamese_taboo: ['Đám mây', 'Mặt đất', 'Nhìn', 'Lái xe', 'Màu xám'] },
+            { category: 'Thời tiết', keyword: 'HAIL', ipa: '/heɪl/', taboo: ['Ice', 'Fall', 'Sky', 'Storm', 'Damage'], vietnamese_keyword: 'Mưa đá', vietnamese_taboo: ['Đá/Băng', 'Rơi', 'Bầu trời', 'Cơn bão', 'Thiệt hại'] },
 
-    // --- HOME & TRANSLATE STATE ---
-    const [theme, setTheme] = useState('all');
-    const [shuffledPack, setShuffledPack] = useState([...wordDatabase]);
-    const [homeIndex, setHomeIndex] = useState(0);
-    const [isFlipped, setIsFlipped] = useState(false);
-    const [selectedWord, setSelectedWord] = useState(null);
-    const [viText, setViText] = useState('');
-    const [enText, setEnText] = useState('');
-    const [isTranslating, setIsTranslating] = useState(false);
-
-    // --- UTILS ---
-    const shuffle = (array) => {
-        let res = [...array];
-        for (let i = res.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [res[i], res[j]] = [res[j], res[i]];
-        }
-        return res;
-    };
-
-    // Khởi tạo giọng đọc (Đặc biệt quan trọng cho Mobile iOS/Android)
-    useEffect(() => {
-        const initVoices = () => window.speechSynthesis.getVoices();
-        initVoices();
-        if (window.speechSynthesis.onvoiceschanged !== undefined) {
-            window.speechSynthesis.onvoiceschanged = initVoices;
-        }
-    }, []);
-
-    // Lấy giọng đọc tự nhiên nhất
-    const getNaturalVoice = useCallback(() => {
-        if (!window.speechSynthesis) return null;
-        const voices = window.speechSynthesis.getVoices();
-        if (!voices.length) return null;
-
-        // Các giọng đọc Premium tự nhiên trên iOS, Android, Windows, Mac
-        const preferredNames = [
-            'Google US English', 'Google UK English Female', 
-            'Samantha', 'Daniel', 'Karen', 'Moira', 'Tessa', // iOS / Mac
-            'Microsoft Aria Online (Natural) - English (United States)', // Windows Edge
-            'Microsoft Guy Online (Natural) - English (United States)',
-            'en-US-Network' // Android Premium
+            // Kinh doanh (10 từ)
+            { category: 'Kinh doanh', keyword: 'INVESTMENT', ipa: '/ɪnˈvest.mənt/', taboo: ['Money', 'Return', 'Risk', 'Stock', 'Bank'], vietnamese_keyword: 'Sự đầu tư', vietnamese_taboo: ['Tiền bạc', 'Lợi nhuận', 'Rủi ro', 'Cổ phiếu', 'Ngân hàng'] },
+            { category: 'Kinh doanh', keyword: 'PROFIT', ipa: '/ˈprɒf.ɪt/', taboo: ['Money', 'Gain', 'Loss', 'Business', 'Revenue'], vietnamese_keyword: 'Lợi nhuận', vietnamese_taboo: ['Tiền bạc', 'Đạt được', 'Thua lỗ', 'Doanh nghiệp', 'Doanh thu'] },
+            { category: 'Kinh doanh', keyword: 'BANKRUPTCY', ipa: '/ˈbæŋ.krəpt.si/', taboo: ['Fail', 'Money', 'Close', 'Debt', 'Business'], vietnamese_keyword: 'Phá sản', vietnamese_taboo: ['Thất bại', 'Tiền bạc', 'Đóng cửa', 'Nợ nần', 'Doanh nghiệp'] },
+            { category: 'Kinh doanh', keyword: 'STARTUP', ipa: '/ˈstɑːt.ʌp/', taboo: ['New', 'Company', 'Founder', 'Idea', 'Tech'], vietnamese_keyword: 'Khởi nghiệp', vietnamese_taboo: ['Mới', 'Công ty', 'Người sáng lập', 'Ý tưởng', 'Công nghệ'] },
+            { category: 'Kinh doanh', keyword: 'MARKETING', ipa: '/ˈmɑː.kɪ.tɪŋ/', taboo: ['Sell', 'Advertise', 'Product', 'Customer', 'Brand'], vietnamese_keyword: 'Tiếp thị', vietnamese_taboo: ['Bán', 'Quảng cáo', 'Sản phẩm', 'Khách hàng', 'Thương hiệu'] },
+            { category: 'Kinh doanh', keyword: 'STRATEGY', ipa: '/ˈstræt.ə.dʒi/', taboo: ['Plan', 'Goal', 'Business', 'Win', 'Future'], vietnamese_keyword: 'Chiến lược', vietnamese_taboo: ['Kế hoạch', 'Mục tiêu', 'Doanh nghiệp', 'Chiến thắng', 'Tương lai'] },
+            { category: 'Kinh doanh', keyword: 'CONTRACT', ipa: '/ˈkɒn.trækt/', taboo: ['Sign', 'Paper', 'Agreement', 'Lawyer', 'Deal'], vietnamese_keyword: 'Hợp đồng', vietnamese_taboo: ['Ký', 'Tờ giấy', 'Thỏa thuận', 'Luật sư', 'Giao dịch'] },
+            { category: 'Kinh doanh', keyword: 'STOCK', ipa: '/stɒk/', taboo: ['Market', 'Share', 'Company', 'Trade', 'Price'], vietnamese_keyword: 'Cổ phiếu', vietnamese_taboo: ['Thị trường', 'Cổ phần', 'Công ty', 'Giao dịch', 'Giá cả'] },
+            { category: 'Kinh doanh', keyword: 'NEGOTIATION', ipa: '/nəˌɡəʊ.ʃiˈeɪ.ʃən/', taboo: ['Talk', 'Deal', 'Price', 'Agree', 'Meeting'], vietnamese_keyword: 'Sự đàm phán', vietnamese_taboo: ['Nói chuyện', 'Giao dịch', 'Giá cả', 'Đồng ý', 'Cuộc họp'] },
+            { category: 'Kinh doanh', keyword: 'INFLATION', ipa: '/ɪnˈfleɪ.ʃən/', taboo: ['Price', 'Money', 'Rise', 'Economy', 'Value'], vietnamese_keyword: 'Lạm phát', vietnamese_taboo: ['Giá cả', 'Tiền bạc', 'Tăng lên', 'Nền kinh tế', 'Giá trị'] }
         ];
 
-        // 1. Tìm giọng theo tên chỉ định
-        for (const name of preferredNames) {
-            const voice = voices.find(v => v.name === name);
-            if (voice) return voice;
-        }
+        function App() {
+            // --- FIREBASE STATE ---
+            const [user, setUser] = useState(null);
+            const [notebook, setNotebook] = useState({});
 
-        // 2. Tìm giọng có chứa từ khóa chất lượng cao
-        const premiumVoice = voices.find(v => 
-            v.lang.startsWith('en') && 
-            (v.name.includes('Natural') || v.name.includes('Online') || v.name.includes('Premium'))
-        );
-        if (premiumVoice) return premiumVoice;
+            // --- APP NAVIGATION STATE ---
+            // screens: 'home', 'translate', 'notebook'
+            const [screen, setScreen] = useState('home');
 
-        // 3. Fallback: Giọng tiếng Anh bất kỳ
-        return voices.find(v => v.lang === 'en-US') || voices.find(v => v.lang.startsWith('en')) || voices[0];
-    }, []);
+            // --- HOME & TRANSLATE STATE ---
+            const [theme, setTheme] = useState('all');
+            const [shuffledPack, setShuffledPack] = useState([...wordDatabase]);
+            const [homeIndex, setHomeIndex] = useState(0);
+            const [isFlipped, setIsFlipped] = useState(false);
+            const [selectedWord, setSelectedWord] = useState(null);
+            const [viText, setViText] = useState('');
+            const [enText, setEnText] = useState('');
+            const [isTranslating, setIsTranslating] = useState(false);
 
-    const speak = useCallback((text) => {
-        if (!window.speechSynthesis) return;
-        window.speechSynthesis.cancel(); // Dừng giọng cũ nếu đang đọc
-
-        const utterance = new SpeechSynthesisUtterance(text);
-        const bestVoice = getNaturalVoice();
-        
-        if (bestVoice) {
-            utterance.voice = bestVoice;
-        }
-        
-        // Điều chỉnh tốc độ đọc tự nhiên hơn (0.85 - 0.95 là lý tưởng)
-        utterance.rate = 0.9;
-        utterance.pitch = 1.0;
-
-        window.speechSynthesis.speak(utterance);
-    }, [getNaturalVoice]);
-
-    // --- FIREBASE EFFECT ---
-    useEffect(() => {
-        const initAuth = async () => {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
+            // --- UTILS ---
+            const shuffle = (array) => {
+                let res = [...array];
+                for (let i = res.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [res[i], res[j]] = [res[j], res[i]];
                 }
-            } catch (error) {
-                console.error("Lỗi xác thực:", error);
-            }
-        };
-        initAuth();
-        const unsubscribe = onAuthStateChanged(auth, setUser);
-        return () => unsubscribe();
-    }, []);
+                return res;
+            };
 
-    useEffect(() => {
-        if (!user) return;
-        const notebookRef = collection(db, 'artifacts', appId, 'users', user.uid, 'notebook');
-        const unsubscribe = onSnapshot(notebookRef, (snapshot) => {
-            const data = {};
-            snapshot.forEach(doc => {
-                data[doc.id] = doc.data();
-            });
-            setNotebook(data);
-        }, (error) => console.error("Lỗi tải Sổ tay:", error));
-        
-        return () => unsubscribe();
-    }, [user]);
+            useEffect(() => {
+                const initVoices = () => window.speechSynthesis.getVoices();
+                initVoices();
+                if (window.speechSynthesis.onvoiceschanged !== undefined) {
+                    window.speechSynthesis.onvoiceschanged = initVoices;
+                }
+            }, []);
 
-    // --- THEME HANDLER ---
-    useEffect(() => {
-        const filtered = theme === 'all' ? wordDatabase : wordDatabase.filter(w => w.category === theme);
-        setShuffledPack(shuffle(filtered));
-        setHomeIndex(0);
-        setIsFlipped(false);
-    }, [theme]);
+            const getNaturalVoice = useCallback(() => {
+                if (!window.speechSynthesis) return null;
+                const voices = window.speechSynthesis.getVoices();
+                if (!voices.length) return null;
 
-    // --- TRANSLATE HANDLER ---
-    const handleTranslate = async () => {
-        if (!viText.trim()) return;
-        setIsTranslating(true);
-        try {
-            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=vi&tl=en&dt=t&q=${encodeURIComponent(viText)}`;
-            const response = await fetch(url);
-            const data = await response.json();
-            const translatedText = data[0].map(item => item[0]).join('');
-            setEnText(translatedText);
+                const preferredNames = [
+                    'Google US English', 'Google UK English Female', 
+                    'Samantha', 'Daniel', 'Karen', 'Moira', 'Tessa',
+                    'Microsoft Aria Online (Natural) - English (United States)',
+                    'Microsoft Guy Online (Natural) - English (United States)',
+                    'en-US-Network'
+                ];
 
-            // Save to Cloud Notebook
-            if (user && selectedWord) {
-                const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'notebook', selectedWord.keyword);
-                await setDoc(docRef, {
-                    keyword: selectedWord.keyword,
-                    category: selectedWord.category,
-                    vi: viText,
-                    en: translatedText,
-                    timestamp: Date.now()
-                }, { merge: true });
-            }
-        } catch (error) {
-            console.error(error);
-            alert("Lỗi dịch thuật. Vui lòng kiểm tra lại kết nối mạng!");
-        } finally {
-            setIsTranslating(false);
-        }
-    };
+                for (const name of preferredNames) {
+                    const voice = voices.find(v => v.name === name);
+                    if (voice) return voice;
+                }
 
-    const openTranslate = (word) => {
-        setSelectedWord(word);
-        if (notebook[word.keyword]) {
-            setViText(notebook[word.keyword].vi || '');
-            setEnText(notebook[word.keyword].en || '');
-        } else {
-            setViText('');
-            setEnText('');
-        }
-        setScreen('translate');
-    };
+                const premiumVoice = voices.find(v => 
+                    v.lang.startsWith('en') && 
+                    (v.name.includes('Natural') || v.name.includes('Online') || v.name.includes('Premium'))
+                );
+                if (premiumVoice) return premiumVoice;
 
-    // --- RENDER HELPERS ---
-    const currentHomeWord = shuffledPack[homeIndex];
-    const themes = [...new Set(wordDatabase.map(w => w.category))];
+                return voices.find(v => v.lang === 'en-US') || voices.find(v => v.lang.startsWith('en')) || voices[0];
+            }, []);
 
-    return (
-        <div className="min-h-screen bg-[#1a202c] font-sans text-white" style={{ backgroundImage: 'linear-gradient(135deg, #4a5568 0%, #2d3748 50%, #1a202c 100%)' }}>
-            <style>{`
-                .glass-panel { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-radius: 1.5rem; border: 1px solid rgba(255, 255, 255, 0.18); box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37); }
-                .preserve-3d { transform-style: preserve-3d; }
-                .backface-hidden { backface-visibility: hidden; }
-                .rotate-y-180 { transform: rotateY(180deg); }
-                .clickable-word:hover { color: #60a5fa; text-decoration: underline; cursor: pointer; }
-                /* Tùy chỉnh thanh cuộn Sổ tay */
-                .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-                .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
-                .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
-            `}</style>
+            const speak = useCallback((text) => {
+                if (!window.speechSynthesis) return;
+                window.speechSynthesis.cancel();
 
-            <div className="max-w-md mx-auto w-full p-4 min-h-screen flex flex-col justify-center">
+                const utterance = new SpeechSynthesisUtterance(text);
+                const bestVoice = getNaturalVoice();
+                
+                if (bestVoice) {
+                    utterance.voice = bestVoice;
+                }
+                
+                utterance.rate = 0.9;
+                utterance.pitch = 1.0;
 
-                {/* ================= HOME SCREEN ================= */}
-                {screen === 'home' && currentHomeWord && (
-                    <div className="glass-panel p-5 flex flex-col animate-in fade-in duration-500">
-                        <div className="flex justify-between items-center mb-6">
-                            <div>
-                                <h1 className="text-2xl font-black text-blue-300 uppercase tracking-wide">Vocab Master</h1>
-                                <p className="text-xs text-slate-300 mt-1 font-medium">Học từ vựng & Dịch ý tưởng</p>
-                            </div>
-                            <button onClick={() => setScreen('notebook')} className="bg-white/10 hover:bg-white/20 p-2.5 rounded-xl flex items-center gap-2 transition-all border border-white/10">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-amber-300"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
-                            </button>
-                        </div>
-                        
-                        <select value={theme} onChange={(e) => setTheme(e.target.value)} className="w-full bg-slate-800/80 border border-slate-600 text-white py-3.5 px-4 rounded-xl text-lg font-bold shadow-inner outline-none mb-6">
-                            <option value="all">🌟 Tất cả chủ đề ({wordDatabase.length} từ)</option>
-                            {themes.map(t => <option key={t} value={t}>📚 {t}</option>)}
-                        </select>
+                window.speechSynthesis.speak(utterance);
+            }, [getNaturalVoice]);
 
-                        {/* Flipper Card */}
-                        <div className="perspective-1000 h-96 w-full cursor-pointer relative mb-6" onClick={() => setIsFlipped(!isFlipped)}>
-                            <div className={`w-full h-full transition-transform duration-500 preserve-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
-                                {/* Front Face */}
-                                <div className="absolute w-full h-full backface-hidden bg-white text-slate-900 rounded-[2rem] p-6 flex flex-col items-center shadow-xl border-t-8 border-blue-500">
-                                    <div className="w-full h-28 mb-4 rounded-xl bg-slate-50 flex items-center justify-center overflow-hidden">
-                                        <img src={`https://tse2.mm.bing.net/th?q=${encodeURIComponent(currentHomeWord.keyword + " simple cartoon vector illustration")}&w=300&h=300&c=7&rs=1&p=0`} className="h-full object-contain mix-blend-multiply opacity-90" alt="Illustration" />
-                                    </div>
-                                    <div className="flex gap-3 items-center mb-1 w-full justify-center">
-                                        <h2 className="text-[28px] font-black text-slate-800 truncate uppercase tracking-tight">{currentHomeWord.keyword}</h2>
-                                        <button onClick={(e) => { e.stopPropagation(); speak(currentHomeWord.keyword); }} className="p-2.5 bg-blue-100 hover:bg-blue-200 rounded-full text-blue-600 transition-colors shadow-sm active:scale-95">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
-                                        </button>
-                                    </div>
-                                    <p className="text-slate-400 font-mono font-medium mb-3">{currentHomeWord.ipa}</p>
-                                    
-                                    <div className="w-full bg-slate-100 rounded-xl p-3 mt-auto">
-                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest text-center mb-2">Từ khóa liên quan</p>
-                                        <div className="flex flex-wrap justify-center gap-1.5">
-                                            {currentHomeWord.taboo.map((w, i) => (
-                                                <span key={i} className="text-sm font-bold text-slate-600 bg-white px-2.5 py-1 rounded-md shadow-sm border border-slate-200">{w}</span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <p className="mt-4 text-xs text-blue-400 font-semibold animate-pulse">Chạm vào thẻ để xem nghĩa Tiếng Việt</p>
+            // --- FIREBASE EFFECT ---
+            useEffect(() => {
+                const initAuth = async () => {
+                    try {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await signInWithCustomToken(auth, __initial_auth_token);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    } catch (error) {
+                        console.error("Lỗi xác thực:", error);
+                    }
+                };
+                initAuth();
+                const unsubscribe = onAuthStateChanged(auth, setUser);
+                return () => unsubscribe();
+            }, []);
+
+            useEffect(() => {
+                if (!user) return;
+                const notebookRef = collection(db, 'artifacts', appId, 'users', user.uid, 'notebook');
+                const unsubscribe = onSnapshot(notebookRef, (snapshot) => {
+                    const data = {};
+                    snapshot.forEach(doc => {
+                        data[doc.id] = doc.data();
+                    });
+                    setNotebook(data);
+                }, (error) => console.error("Lỗi tải Sổ tay:", error));
+                
+                return () => unsubscribe();
+            }, [user]);
+
+            // --- THEME HANDLER ---
+            useEffect(() => {
+                const filtered = theme === 'all' ? wordDatabase : wordDatabase.filter(w => w.category === theme);
+                setShuffledPack(shuffle(filtered));
+                setHomeIndex(0);
+                setIsFlipped(false);
+            }, [theme]);
+
+            // --- TRANSLATE HANDLER ---
+            const handleTranslate = async () => {
+                if (!viText.trim()) return;
+                setIsTranslating(true);
+                try {
+                    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=vi&tl=en&dt=t&q=${encodeURIComponent(viText)}`;
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    const translatedText = data[0].map(item => item[0]).join('');
+                    setEnText(translatedText);
+
+                    if (user && selectedWord) {
+                        const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'notebook', selectedWord.keyword);
+                        await setDoc(docRef, {
+                            keyword: selectedWord.keyword,
+                            category: selectedWord.category,
+                            vi: viText,
+                            en: translatedText,
+                            timestamp: Date.now()
+                        }, { merge: true });
+                    }
+                } catch (error) {
+                    console.error(error);
+                    alert("Lỗi dịch thuật. Vui lòng kiểm tra lại kết nối mạng!");
+                } finally {
+                    setIsTranslating(false);
+                }
+            };
+
+            const openTranslate = (word) => {
+                setSelectedWord(word);
+                if (notebook[word.keyword]) {
+                    setViText(notebook[word.keyword].vi || '');
+                    setEnText(notebook[word.keyword].en || '');
+                } else {
+                    setViText('');
+                    setEnText('');
+                }
+                setScreen('translate');
+            };
+
+            const currentHomeWord = shuffledPack[homeIndex];
+            const themes = [...new Set(wordDatabase.map(w => w.category))];
+
+            return (
+                <div className="max-w-md mx-auto w-full p-4 min-h-screen flex flex-col justify-center">
+
+                    {/* ================= HOME SCREEN ================= */}
+                    {screen === 'home' && currentHomeWord && (
+                        <div className="glass-panel p-5 flex flex-col animate-in fade-in duration-500">
+                            <div className="flex justify-between items-center mb-6">
+                                <div>
+                                    <h1 className="text-2xl font-black text-blue-300 uppercase tracking-wide">Vocab Master</h1>
+                                    <p className="text-xs text-slate-300 mt-1 font-medium">Học từ vựng & Dịch ý tưởng</p>
                                 </div>
-
-                                {/* Back Face */}
-                                <div className="absolute w-full h-full backface-hidden bg-slate-800 text-white rounded-[2rem] p-6 flex flex-col items-center justify-center shadow-xl rotate-y-180 border-t-8 border-indigo-500">
-                                    <h2 className="text-4xl font-black text-indigo-300 uppercase mb-8 text-center leading-tight">{currentHomeWord.vietnamese_keyword}</h2>
-                                    
-                                    <div className="w-full bg-slate-700/50 rounded-xl p-4">
-                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest text-center mb-3">Nghĩa của từ khóa liên quan</p>
-                                        <div className="flex flex-wrap justify-center gap-2">
-                                            {currentHomeWord.vietnamese_taboo.map((w, i) => (
-                                                <span key={i} className="text-base font-bold text-white bg-slate-600 px-3 py-1.5 rounded-lg">{w}</span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex gap-4 mb-4">
-                            <button onClick={() => { setHomeIndex((homeIndex - 1 + shuffledPack.length) % shuffledPack.length); setIsFlipped(false); }} className="flex-1 bg-white/10 hover:bg-white/20 py-3.5 rounded-xl font-bold transition-all border border-white/5 flex items-center justify-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-                                TRƯỚC
-                            </button>
-                            <button onClick={() => { setHomeIndex((homeIndex + 1) % shuffledPack.length); setIsFlipped(false); }} className="flex-1 bg-white/10 hover:bg-white/20 py-3.5 rounded-xl font-bold transition-all border border-white/5 flex items-center justify-center gap-2">
-                                TIẾP
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-                            </button>
-                        </div>
-                        
-                        <button onClick={() => openTranslate(currentHomeWord)} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 py-4 rounded-xl font-black uppercase text-lg shadow-lg flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>
-                            Dịch & Lưu Sổ Tay
-                        </button>
-                    </div>
-                )}
-
-                {/* ================= TRANSLATE SCREEN ================= */}
-                {screen === 'translate' && selectedWord && (
-                    <div className="glass-panel p-6 flex flex-col h-[90vh] animate-in fade-in slide-in-from-bottom-4 duration-300">
-                        <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
-                            <button onClick={() => setScreen('home')} className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition-all">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-                            </button>
-                            <h2 className="text-xl font-black uppercase tracking-wider">Trợ Lý Dịch</h2>
-                            <button onClick={() => setScreen('notebook')} className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition-all text-amber-400">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
-                            </button>
-                        </div>
-
-                        <div className="bg-gradient-to-r from-blue-900/50 to-indigo-900/50 border border-blue-500/30 p-5 rounded-[1.5rem] mb-6 text-center shadow-inner">
-                            <p className="text-[11px] text-blue-300 font-bold uppercase tracking-widest mb-1">Từ vựng mục tiêu</p>
-                            <h3 className="text-2xl font-black text-white">
-                                {selectedWord.keyword}
-                            </h3>
-                            <p className="text-sm font-medium text-indigo-300 mt-1">({selectedWord.vietnamese_keyword})</p>
-                        </div>
-
-                        <div className="flex flex-col gap-5 flex-grow">
-                            <div className="bg-white rounded-2xl p-4 shadow-sm relative">
-                                <span className="absolute -top-2.5 left-4 bg-blue-500 text-white text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md shadow-sm">Ý tưởng Tiếng Việt</span>
-                                <textarea 
-                                    value={viText}
-                                    onChange={(e) => setViText(e.target.value)}
-                                    placeholder="Viết một câu tiếng Việt có chứa từ này..."
-                                    className="w-full h-28 bg-transparent outline-none text-slate-800 resize-none font-medium text-base pt-2 placeholder:text-slate-400"
-                                />
-                            </div>
-
-                            <button 
-                                onClick={handleTranslate} 
-                                disabled={!viText.trim() || isTranslating}
-                                className="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-xl font-black text-[15px] uppercase tracking-wide transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20 active:scale-[0.98]"
-                            >
-                                {isTranslating ? (
-                                    <>
-                                        <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                        ĐANG DỊCH...
-                                    </>
-                                ) : (
-                                    <>
-                                        DỊCH & LƯU VÀO SỔ TAY
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
-                                    </>
-                                )}
-                            </button>
-
-                            <div className="bg-slate-800/80 rounded-2xl p-5 border-2 border-slate-700 flex-grow overflow-y-auto relative custom-scrollbar">
-                                <span className="absolute -top-2.5 left-4 bg-slate-600 text-white text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md">Bản dịch Tiếng Anh</span>
-                                {!enText ? (
-                                    <div className="flex flex-col items-center justify-center h-full text-slate-500">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mb-2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                                        <p className="italic text-sm">Bản dịch sẽ xuất hiện ở đây</p>
-                                    </div>
-                                ) : (
-                                    <div className="pt-2">
-                                        <p className="text-[17px] font-medium leading-relaxed text-blue-50">
-                                            {enText.split(/(\s+)/).map((segment, idx) => {
-                                                if (/\s+/.test(segment)) return <span key={idx}>{segment}</span>;
-                                                return (
-                                                    <span 
-                                                        key={idx} 
-                                                        onClick={() => speak(segment.replace(/[.,!?]/g, ''))} 
-                                                        className="clickable-word hover:text-blue-300 transition-colors"
-                                                    >
-                                                        {segment}
-                                                    </span>
-                                                );
-                                            })}
-                                        </p>
-                                    </div>
-                                )}
+                                <button onClick={() => setScreen('notebook')} className="bg-white/10 hover:bg-white/20 p-2.5 rounded-xl flex items-center gap-2 transition-all border border-white/10">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-amber-300"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+                                </button>
                             </div>
                             
-                            <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-3 flex items-center gap-3 text-blue-200">
-                                <div className="bg-blue-800/80 p-2 rounded-full text-blue-300">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M5 18v-6a6 6 0 0 1 12 0v6"/><path d="M12 2v4"/><path d="M12 13v9"/></svg>
-                                </div>
-                                <p className="text-[12px] font-medium leading-snug">
-                                    <strong className="text-blue-100 block mb-0.5">Mẹo luyện nói:</strong> Chạm vào từng từ tiếng Anh ở trên để nghe phát âm.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                            <select value={theme} onChange={(e) => setTheme(e.target.value)} className="w-full bg-slate-800/80 border border-slate-600 text-white py-3.5 px-4 rounded-xl text-lg font-bold shadow-inner outline-none mb-6">
+                                <option value="all">🌟 Tất cả chủ đề ({wordDatabase.length} từ)</option>
+                                {themes.map(t => <option key={t} value={t}>📚 {t}</option>)}
+                            </select>
 
-                {/* ================= NOTEBOOK SCREEN ================= */}
-                {screen === 'notebook' && (
-                    <div className="glass-panel p-6 flex flex-col h-[90vh] animate-in fade-in slide-in-from-bottom-4 duration-300">
-                        <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
-                            <h2 className="text-2xl font-black uppercase flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-amber-400"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
-                                Sổ Tay
-                            </h2>
-                            <button onClick={() => setScreen('home')} className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition-all">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                            <div className="perspective-1000 h-96 w-full cursor-pointer relative mb-6" onClick={() => setIsFlipped(!isFlipped)}>
+                                <div className={`w-full h-full transition-transform duration-500 preserve-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
+                                    <div className="absolute w-full h-full backface-hidden bg-white text-slate-900 rounded-[2rem] p-6 flex flex-col items-center shadow-xl border-t-8 border-blue-500">
+                                        <div className="w-full h-28 mb-4 rounded-xl bg-slate-50 flex items-center justify-center overflow-hidden">
+                                            <img src={`https://tse2.mm.bing.net/th?q=${encodeURIComponent(currentHomeWord.keyword + " simple cartoon vector illustration")}&w=300&h=300&c=7&rs=1&p=0`} className="h-full object-contain mix-blend-multiply opacity-90" alt="Illustration" />
+                                        </div>
+                                        <div className="flex gap-3 items-center mb-1 w-full justify-center">
+                                            <h2 className="text-[28px] font-black text-slate-800 truncate uppercase tracking-tight">{currentHomeWord.keyword}</h2>
+                                            <button onClick={(e) => { e.stopPropagation(); speak(currentHomeWord.keyword); }} className="p-2.5 bg-blue-100 hover:bg-blue-200 rounded-full text-blue-600 transition-colors shadow-sm active:scale-95">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                                            </button>
+                                        </div>
+                                        <p className="text-slate-400 font-mono font-medium mb-3">{currentHomeWord.ipa}</p>
+                                        
+                                        <div className="w-full bg-slate-100 rounded-xl p-3 mt-auto">
+                                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest text-center mb-2">Từ khóa liên quan</p>
+                                            <div className="flex flex-wrap justify-center gap-1.5">
+                                                {currentHomeWord.taboo.map((w, i) => (
+                                                    <span key={i} className="text-sm font-bold text-slate-600 bg-white px-2.5 py-1 rounded-md shadow-sm border border-slate-200">{w}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <p className="mt-4 text-xs text-blue-400 font-semibold animate-pulse">Chạm vào thẻ để xem nghĩa Tiếng Việt</p>
+                                    </div>
+
+                                    <div className="absolute w-full h-full backface-hidden bg-slate-800 text-white rounded-[2rem] p-6 flex flex-col items-center justify-center shadow-xl rotate-y-180 border-t-8 border-indigo-500">
+                                        <h2 className="text-4xl font-black text-indigo-300 uppercase mb-8 text-center leading-tight">{currentHomeWord.vietnamese_keyword}</h2>
+                                        
+                                        <div className="w-full bg-slate-700/50 rounded-xl p-4">
+                                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest text-center mb-3">Nghĩa của từ khóa liên quan</p>
+                                            <div className="flex flex-wrap justify-center gap-2">
+                                                {currentHomeWord.vietnamese_taboo.map((w, i) => (
+                                                    <span key={i} className="text-base font-bold text-white bg-slate-600 px-3 py-1.5 rounded-lg">{w}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4 mb-4">
+                                <button onClick={() => { setHomeIndex((homeIndex - 1 + shuffledPack.length) % shuffledPack.length); setIsFlipped(false); }} className="flex-1 bg-white/10 hover:bg-white/20 py-3.5 rounded-xl font-bold transition-all border border-white/5 flex items-center justify-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                                    TRƯỚC
+                                </button>
+                                <button onClick={() => { setHomeIndex((homeIndex + 1) % shuffledPack.length); setIsFlipped(false); }} className="flex-1 bg-white/10 hover:bg-white/20 py-3.5 rounded-xl font-bold transition-all border border-white/5 flex items-center justify-center gap-2">
+                                    TIẾP
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                                </button>
+                            </div>
+                            
+                            <button onClick={() => openTranslate(currentHomeWord)} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 py-4 rounded-xl font-black uppercase text-lg shadow-lg flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>
+                                Dịch & Lưu Sổ Tay
                             </button>
                         </div>
+                    )}
 
-                        <div className="overflow-y-auto pr-2 space-y-4 flex-grow custom-scrollbar">
-                            {Object.keys(notebook).length === 0 ? (
-                                <div className="flex flex-col items-center justify-center h-full opacity-60">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mb-4 text-slate-400"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-                                    <p className="font-bold text-lg mb-1">Sổ tay trống</p>
-                                    <p className="text-sm text-center px-4">Hãy dùng tính năng "Dịch & Lưu Sổ Tay" ở thẻ từ vựng để tạo ghi chú nhé.</p>
+                    {/* ================= TRANSLATE SCREEN ================= */}
+                    {screen === 'translate' && selectedWord && (
+                        <div className="glass-panel p-6 flex flex-col h-[90vh] animate-in fade-in slide-in-from-bottom-4 duration-300">
+                            <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
+                                <button onClick={() => setScreen('home')} className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition-all">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                                </button>
+                                <h2 className="text-xl font-black uppercase tracking-wider">Trợ Lý Dịch</h2>
+                                <button onClick={() => setScreen('notebook')} className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition-all text-amber-400">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+                                </button>
+                            </div>
+
+                            <div className="bg-gradient-to-r from-blue-900/50 to-indigo-900/50 border border-blue-500/30 p-5 rounded-[1.5rem] mb-6 text-center shadow-inner">
+                                <p className="text-[11px] text-blue-300 font-bold uppercase tracking-widest mb-1">Từ vựng mục tiêu</p>
+                                <h3 className="text-2xl font-black text-white">
+                                    {selectedWord.keyword}
+                                </h3>
+                                <p className="text-sm font-medium text-indigo-300 mt-1">({selectedWord.vietnamese_keyword})</p>
+                            </div>
+
+                            <div className="flex flex-col gap-5 flex-grow">
+                                <div className="bg-white rounded-2xl p-4 shadow-sm relative">
+                                    <span className="absolute -top-2.5 left-4 bg-blue-500 text-white text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md shadow-sm">Ý tưởng Tiếng Việt</span>
+                                    <textarea 
+                                        value={viText}
+                                        onChange={(e) => setViText(e.target.value)}
+                                        placeholder="Viết một câu tiếng Việt có chứa từ này..."
+                                        className="w-full h-28 bg-transparent outline-none text-slate-800 resize-none font-medium text-base pt-2 placeholder:text-slate-400"
+                                    />
                                 </div>
-                            ) : (
-                                Object.values(notebook).sort((a, b) => b.timestamp - a.timestamp).map((item, idx) => (
-                                    <div key={idx} className="bg-slate-800/80 p-5 rounded-2xl border border-slate-700 shadow-md relative overflow-hidden group">
-                                        <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-400"></div>
-                                        <div className="flex justify-between items-start mb-3 pl-2">
-                                            <h4 className="font-black text-amber-400 text-lg uppercase tracking-tight">{item.keyword}</h4>
-                                            <span className="text-[10px] bg-slate-700/80 text-slate-300 font-bold uppercase tracking-wider px-2 py-1 rounded-md border border-slate-600">{item.category}</span>
+
+                                <button 
+                                    onClick={handleTranslate} 
+                                    disabled={!viText.trim() || isTranslating}
+                                    className="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-xl font-black text-[15px] uppercase tracking-wide transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20 active:scale-[0.98]"
+                                >
+                                    {isTranslating ? (
+                                        <>
+                                            <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                            ĐANG DỊCH...
+                                        </>
+                                    ) : (
+                                        <>
+                                            DỊCH & LƯU VÀO SỔ TAY
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
+                                        </>
+                                    )}
+                                </button>
+
+                                <div className="bg-slate-800/80 rounded-2xl p-5 border-2 border-slate-700 flex-grow overflow-y-auto relative custom-scrollbar">
+                                    <span className="absolute -top-2.5 left-4 bg-slate-600 text-white text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md">Bản dịch Tiếng Anh</span>
+                                    {!enText ? (
+                                        <div className="flex flex-col items-center justify-center h-full text-slate-500">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mb-2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                                            <p className="italic text-sm">Bản dịch sẽ xuất hiện ở đây</p>
                                         </div>
-                                        <div className="pl-2">
-                                            <p className="text-[14px] text-slate-300 italic mb-3 pb-3 border-b border-slate-700/50">"{item.vi}"</p>
-                                            <p className="font-medium text-white text-[15px] leading-relaxed">
-                                                {item.en.split(/(\s+)/).map((segment, i) => {
-                                                    if (/\s+/.test(segment)) return <span key={i}>{segment}</span>;
+                                    ) : (
+                                        <div className="pt-2">
+                                            <p className="text-[17px] font-medium leading-relaxed text-blue-50">
+                                                {enText.split(/(\s+)/).map((segment, idx) => {
+                                                    if (/\s+/.test(segment)) return <span key={idx}>{segment}</span>;
                                                     return (
                                                         <span 
-                                                            key={i} 
+                                                            key={idx} 
                                                             onClick={() => speak(segment.replace(/[.,!?]/g, ''))} 
-                                                            className="clickable-word hover:text-amber-300 transition-colors"
-                                                            title="Chạm để nghe"
+                                                            className="clickable-word hover:text-blue-300 transition-colors"
                                                         >
                                                             {segment}
                                                         </span>
@@ -645,13 +590,79 @@ export default function App() {
                                                 })}
                                             </p>
                                         </div>
+                                    )}
+                                </div>
+                                
+                                <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-3 flex items-center gap-3 text-blue-200">
+                                    <div className="bg-blue-800/80 p-2 rounded-full text-blue-300">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M5 18v-6a6 6 0 0 1 12 0v6"/><path d="M12 2v4"/><path d="M12 13v9"/></svg>
                                     </div>
-                                ))
-                            )}
+                                    <p className="text-[12px] font-medium leading-snug">
+                                        <strong className="text-blue-100 block mb-0.5">Mẹo luyện nói:</strong> Chạm vào từng từ tiếng Anh ở trên để nghe phát âm.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-}
+                    )}
+
+                    {/* ================= NOTEBOOK SCREEN ================= */}
+                    {screen === 'notebook' && (
+                        <div className="glass-panel p-6 flex flex-col h-[90vh] animate-in fade-in slide-in-from-bottom-4 duration-300">
+                            <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
+                                <h2 className="text-2xl font-black uppercase flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-amber-400"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+                                    Sổ Tay
+                                </h2>
+                                <button onClick={() => setScreen('home')} className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition-all">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                </button>
+                            </div>
+
+                            <div className="overflow-y-auto pr-2 space-y-4 flex-grow custom-scrollbar">
+                                {Object.keys(notebook).length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center h-full opacity-60">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mb-4 text-slate-400"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                                        <p className="font-bold text-lg mb-1">Sổ tay trống</p>
+                                        <p className="text-sm text-center px-4">Hãy dùng tính năng "Dịch & Lưu Sổ Tay" ở thẻ từ vựng để tạo ghi chú nhé.</p>
+                                    </div>
+                                ) : (
+                                    Object.values(notebook).sort((a, b) => b.timestamp - a.timestamp).map((item, idx) => (
+                                        <div key={idx} className="bg-slate-800/80 p-5 rounded-2xl border border-slate-700 shadow-md relative overflow-hidden group">
+                                            <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-400"></div>
+                                            <div className="flex justify-between items-start mb-3 pl-2">
+                                                <h4 className="font-black text-amber-400 text-lg uppercase tracking-tight">{item.keyword}</h4>
+                                                <span className="text-[10px] bg-slate-700/80 text-slate-300 font-bold uppercase tracking-wider px-2 py-1 rounded-md border border-slate-600">{item.category}</span>
+                                            </div>
+                                            <div className="pl-2">
+                                                <p className="text-[14px] text-slate-300 italic mb-3 pb-3 border-b border-slate-700/50">"{item.vi}"</p>
+                                                <p className="font-medium text-white text-[15px] leading-relaxed">
+                                                    {item.en.split(/(\s+)/).map((segment, i) => {
+                                                        if (/\s+/.test(segment)) return <span key={i}>{segment}</span>;
+                                                        return (
+                                                            <span 
+                                                                key={i} 
+                                                                onClick={() => speak(segment.replace(/[.,!?]/g, ''))} 
+                                                                className="clickable-word hover:text-amber-300 transition-colors"
+                                                                title="Chạm để nghe"
+                                                            >
+                                                                {segment}
+                                                            </span>
+                                                        );
+                                                    })}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
