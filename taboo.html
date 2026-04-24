@@ -34,12 +34,24 @@
 
         const { useState, useEffect, useMemo, useCallback } = React;
 
-        // --- FIREBASE INITIALIZATION ---
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        // --- SAFE FIREBASE INITIALIZATION (DÀNH CHO GITHUB) ---
+        let app, auth, db;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        let isFirebaseActive = false;
+
+        try {
+            if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                const firebaseConfig = JSON.parse(__firebase_config);
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                isFirebaseActive = true;
+            } else {
+                console.warn("Chạy ở chế độ Local/GitHub (Không dùng Firebase). Sổ tay sẽ được lưu vào trình duyệt.");
+            }
+        } catch (error) {
+            console.error("Lỗi khởi tạo cấu hình:", error);
+        }
 
         // --- MASSIVE WORD DATABASE ---
         const wordDatabase = [
@@ -189,7 +201,7 @@
 
             // Cảm xúc (10 từ)
             { category: 'Cảm xúc', keyword: 'HAPPINESS', ipa: '/ˈhæp.i.nəs/', taboo: ['Smile', 'Joy', 'Glad', 'Laugh', 'Good'], vietnamese_keyword: 'Sự hạnh phúc', vietnamese_taboo: ['Cười', 'Niềm vui', 'Vui vẻ', 'Cười lớn', 'Tốt'] },
-            { category: 'Cảm xúc', keyword: 'ANXIETY', ipa: '/æŋˈzaɪ.ə.ti/', taboo: ['Worry', 'Nervous', 'Stress', 'Fear', 'Panic'], vietnamese_keyword: 'Sự loâu', vietnamese_taboo: ['Lo lắng', 'Bồn chồn', 'Căng thẳng', 'Sợ hãi', 'Hoảng loạn'] },
+            { category: 'Cảm xúc', keyword: 'ANXIETY', ipa: '/æŋˈzaɪ.ə.ti/', taboo: ['Worry', 'Nervous', 'Stress', 'Fear', 'Panic'], vietnamese_keyword: 'Sự lo âu', vietnamese_taboo: ['Lo lắng', 'Bồn chồn', 'Căng thẳng', 'Sợ hãi', 'Hoảng loạn'] },
             { category: 'Cảm xúc', keyword: 'ANGER', ipa: '/ˈæŋ.ɡər/', taboo: ['Mad', 'Red', 'Shout', 'Furious', 'Temper'], vietnamese_keyword: 'Sự tức giận', vietnamese_taboo: ['Điên tiết', 'Đỏ mặt', 'La hét', 'Thịnh nộ', 'Tính khí'] },
             { category: 'Cảm xúc', keyword: 'JEALOUSY', ipa: '/ˈdʒel.ə.si/', taboo: ['Envy', 'Want', 'Green', 'Others', 'Covet'], vietnamese_keyword: 'Sự ghen tị', vietnamese_taboo: ['Đố kỵ', 'Muốn', 'Màu xanh', 'Người khác', 'Thèm muốn'] },
             { category: 'Cảm xúc', keyword: 'SADNESS', ipa: '/ˈsæd.nəs/', taboo: ['Cry', 'Tears', 'Unhappy', 'Depressed', 'Blue'], vietnamese_keyword: 'Sự buồn bã', vietnamese_taboo: ['Khóc', 'Nước mắt', 'Không vui', 'Trầm cảm', 'Màu xanh/Buồn'] },
@@ -273,15 +285,11 @@
         ];
 
         function App() {
-            // --- FIREBASE STATE ---
+            // --- STATE ---
             const [user, setUser] = useState(null);
             const [notebook, setNotebook] = useState({});
 
-            // --- APP NAVIGATION STATE ---
-            // screens: 'home', 'translate', 'notebook'
             const [screen, setScreen] = useState('home');
-
-            // --- HOME & TRANSLATE STATE ---
             const [theme, setTheme] = useState('all');
             const [shuffledPack, setShuffledPack] = useState([...wordDatabase]);
             const [homeIndex, setHomeIndex] = useState(0);
@@ -342,47 +350,50 @@
 
                 const utterance = new SpeechSynthesisUtterance(text);
                 const bestVoice = getNaturalVoice();
-                
-                if (bestVoice) {
-                    utterance.voice = bestVoice;
-                }
+                if (bestVoice) utterance.voice = bestVoice;
                 
                 utterance.rate = 0.9;
                 utterance.pitch = 1.0;
-
                 window.speechSynthesis.speak(utterance);
             }, [getNaturalVoice]);
 
-            // --- FIREBASE EFFECT ---
+            // --- INITIALIZE DATA (FIREBASE OR LOCALSTORAGE) ---
             useEffect(() => {
-                const initAuth = async () => {
-                    try {
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                            await signInWithCustomToken(auth, __initial_auth_token);
-                        } else {
-                            await signInAnonymously(auth);
+                if (isFirebaseActive && auth) {
+                    // Môi trường có Firebase
+                    const initAuth = async () => {
+                        try {
+                            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                                await signInWithCustomToken(auth, __initial_auth_token);
+                            } else {
+                                await signInAnonymously(auth);
+                            }
+                        } catch (error) {
+                            console.error("Lỗi xác thực:", error);
                         }
-                    } catch (error) {
-                        console.error("Lỗi xác thực:", error);
+                    };
+                    initAuth();
+                    const unsubscribe = onAuthStateChanged(auth, setUser);
+                    return () => unsubscribe();
+                } else {
+                    // Môi trường chạy Offline / GitHub (Load từ trình duyệt)
+                    const localData = localStorage.getItem('vocab_master_notebook');
+                    if (localData) {
+                        setNotebook(JSON.parse(localData));
                     }
-                };
-                initAuth();
-                const unsubscribe = onAuthStateChanged(auth, setUser);
-                return () => unsubscribe();
+                }
             }, []);
 
             useEffect(() => {
-                if (!user) return;
-                const notebookRef = collection(db, 'artifacts', appId, 'users', user.uid, 'notebook');
-                const unsubscribe = onSnapshot(notebookRef, (snapshot) => {
-                    const data = {};
-                    snapshot.forEach(doc => {
-                        data[doc.id] = doc.data();
-                    });
-                    setNotebook(data);
-                }, (error) => console.error("Lỗi tải Sổ tay:", error));
-                
-                return () => unsubscribe();
+                if (isFirebaseActive && user && db) {
+                    const notebookRef = collection(db, 'artifacts', appId, 'users', user.uid, 'notebook');
+                    const unsubscribe = onSnapshot(notebookRef, (snapshot) => {
+                        const data = {};
+                        snapshot.forEach(doc => { data[doc.id] = doc.data(); });
+                        setNotebook(data);
+                    }, (error) => console.error("Lỗi tải Sổ tay:", error));
+                    return () => unsubscribe();
+                }
             }, [user]);
 
             // --- THEME HANDLER ---
@@ -404,15 +415,24 @@
                     const translatedText = data[0].map(item => item[0]).join('');
                     setEnText(translatedText);
 
-                    if (user && selectedWord) {
+                    const newNoteData = {
+                        keyword: selectedWord.keyword,
+                        category: selectedWord.category,
+                        vi: viText,
+                        en: translatedText,
+                        timestamp: Date.now()
+                    };
+
+                    if (isFirebaseActive && user && db && selectedWord) {
+                        // Lưu lên Firebase
                         const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'notebook', selectedWord.keyword);
-                        await setDoc(docRef, {
-                            keyword: selectedWord.keyword,
-                            category: selectedWord.category,
-                            vi: viText,
-                            en: translatedText,
-                            timestamp: Date.now()
-                        }, { merge: true });
+                        await setDoc(docRef, newNoteData, { merge: true });
+                    } else {
+                        // Lưu vào trình duyệt (Local Storage)
+                        const currentNotes = { ...notebook };
+                        currentNotes[selectedWord.keyword] = newNoteData;
+                        setNotebook(currentNotes);
+                        localStorage.setItem('vocab_master_notebook', JSON.stringify(currentNotes));
                     }
                 } catch (error) {
                     console.error(error);
