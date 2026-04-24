@@ -37,11 +37,42 @@
 
         const { useState, useEffect, useMemo, useCallback } = React;
 
-        // Khởi tạo Hệ thống Lưu trữ Đám mây
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        // --- CẤU HÌNH LƯU TRỮ ĐÁM MÂY (FIREBASE) ---
+        // Nếu bạn muốn dùng tính năng Đám mây đồng bộ thiết bị trên Github, 
+        // hãy tạo dự án Firebase (miễn phí) và dán cấu hình vào biến này. 
+        // Nếu để null, app sẽ tự động dùng LocalStorage.
+        const GITHUB_FIREBASE_CONFIG = null; 
+        /* Ví dụ cấu hình Firebase:
+        const GITHUB_FIREBASE_CONFIG = {
+            apiKey: "AIzaSy...",
+            authDomain: "your-app.firebaseapp.com",
+            projectId: "your-app",
+            storageBucket: "your-app.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:12345:web:abcd"
+        };
+        */
+
+        let app, auth, db;
+        let isCloudEnabled = false;
+
+        // Khởi tạo hệ thống lưu trữ an toàn (Chống trắng màn hình)
+        try {
+            const envConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+            const finalConfig = GITHUB_FIREBASE_CONFIG || envConfig;
+
+            if (finalConfig && Object.keys(finalConfig).length > 0) {
+                app = initializeApp(finalConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                isCloudEnabled = true;
+            } else {
+                console.warn("Chưa cấu hình Firebase Đám Mây. Ứng dụng chạy ở chế độ lưu cục bộ (LocalStorage).");
+            }
+        } catch (error) {
+            console.error("Lỗi khởi tạo lưu trữ:", error);
+        }
+
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
         const APP_DATA = [
@@ -188,7 +219,7 @@
                 { id: 5, text: "Is private school better than public school?", trans: "Trường tư có tốt hơn trường công?", vocab: [{w: "Resources", m: "Nguồn lực/Cơ sở vật chất"}, {w: "Tuition fee", m: "Học phí"}, {w: "Facility", m: "Cơ sở vật chất"}, {w: "Class size", m: "Sĩ số lớp"}, {w: "Privilege", m: "Đặc quyền"}] },
                 { id: 6, text: "Should exams be abolished?", trans: "Có nên bãi bỏ các kỳ thi không?", vocab: [{w: "Assessment", m: "Sự đánh giá"}, {w: "Standardized test", m: "Bài kiểm tra chuẩn hóa"}, {w: "Stressful", m: "Căng thẳng"}, {w: "Memorize", m: "Học vẹt/Ghi nhớ"}, {w: "Evaluate", m: "Đánh giá"}] },
                 { id: 7, text: "What skills are most important for the future workforce?", trans: "Kỹ năng nào quan trọng nhất cho lao động tương lai?", vocab: [{w: "Soft skills", m: "Kỹ năng mềm"}, {w: "Adaptability", m: "Khả năng thích ứng"}, {w: "Problem-solving", m: "Giải quyết vấn đề"}, {w: "Tech-savvy", m: "Am hiểu công nghệ"}, {w: "Communication", m: "Giao tiếp"}] },
-                { id: 8, text: "Should we study subjects we don't like?", trans: "Chúng ta có nên học những môn mình không thích?", vocab: [{w: "Well-rounded", m: "Toàn diện"}, {w: "Mandatory", m: "Bắt buộc"}, {w: "Boring", m: "Nhàm chán"}, {w: "Broaden knowledge", m: "Mở rộng kiến thức"}, {w: "Motivation", m: "Động lực"}] },
+                { id: 8, text: "Should we study subjects we don't like?", trans: "Chúng单 có nên học những môn mình không thích?", vocab: [{w: "Well-rounded", m: "Toàn diện"}, {w: "Mandatory", m: "Bắt buộc"}, {w: "Boring", m: "Nhàm chán"}, {w: "Broaden knowledge", m: "Mở rộng kiến thức"}, {w: "Motivation", m: "Động lực"}] },
                 { id: 9, text: "How does technology impact the classroom?", trans: "Công nghệ tác động đến lớp học ra sao?", vocab: [{w: "Digital literacy", m: "Kiến thức số"}, {w: "Engaging", m: "Thu hút"}, {w: "Interactive whiteboard", m: "Bảng tương tác"}, {w: "Resourceful", m: "Giàu tài nguyên"}, {w: "Integrate", m: "Tích hợp"}] },
                 { id: 10, text: "Is lifelong learning important?", trans: "Học tập suốt đời có quan trọng không?", vocab: [{w: "Continuous", m: "Liên tục"}, {w: "Upgrade skills", m: "Nâng cấp kỹ năng"}, {w: "Stay relevant", m: "Không bị tụt hậu"}, {w: "Self-improvement", m: "Tự hoàn thiện"}, {w: "Curious", m: "Tò màu"}] }
             ]},
@@ -268,7 +299,7 @@
                 { id: 1, text: "Do you trust the news you see online?", trans: "Bạn có tin tin tức bạn thấy online?", vocab: [{w: "Reliability", m: "Độ tin cậy"}, {w: "Verify", m: "Xác minh"}, {w: "Source", m: "Nguồn"}, {w: "Clickbait", m: "Tiêu đề câu view"}, {w: "Skeptical", m: "Hoài nghi"}] },
                 { id: 2, text: "Is traditional media dying?", trans: "Truyền thông truyền thống đang chết dần?", vocab: [{w: "Obsolete", m: "Lỗi thời"}, {w: "Newspaper", m: "Báo giấy"}, {w: "Shift", m: "Sự dịch chuyển"}, {w: "Digital era", m: "Kỷ nguyên số"}, {w: "Adapt", m: "Thích nghi"}] },
                 { id: 3, text: "How does advertising influence us?", trans: "Quảng cáo ảnh hưởng đến chúng ta ra sao?", vocab: [{w: "Subconscious", m: "Tiềm thức"}, {w: "Manipulate", m: "Thao túng"}, {w: "Persuasive", m: "Có tính thuyết phục"}, {w: "Consumerism", m: "Chủ nghĩa tiêu dùng"}, {w: "Target audience", m: "Khách hàng mục tiêu"}] },
-                { id: 4, text: "What are the dangers of fake news?", trans: "Mối nguy của tin giả là gì?", vocab: [{w: "Misinformation", m: "Thông tin sai lệch"}, {w: "Panic", m: "Sự hoảng loạn"}, {w: "Deceive", m: "Lừa dối"}, {w: "Reputation", m: "Danh tiếng"}, {w: "Spread rapidly", m: "Lan truyền nhanh"}] },
+                { id: 4, text: "What are the dangers of fake news?", trans: "Mối nguy của tin giả là gì?", vocab: [{w: "Misinformation", m: "Thông vị sai lệch"}, {w: "Panic", m: "Sự hoảng loạn"}, {w: "Deceive", m: "Lừa dối"}, {w: "Reputation", m: "Danh tiếng"}, {w: "Spread rapidly", m: "Lan truyền nhanh"}] },
                 { id: 5, text: "Should there be more censorship on the internet?", trans: "Có nên kiểm duyệt internet nhiều hơn không?", vocab: [{w: "Censorship", m: "Sự kiểm duyệt"}, {w: "Freedom of speech", m: "Tự do ngôn luận"}, {w: "Harmful content", m: "Nội dung độc hại"}, {w: "Regulate", m: "Kiểm soát"}, {w: "Monitor", m: "Giám sát"}] },
                 { id: 6, text: "How do celebrities impact young people?", trans: "Người nổi tiếng ảnh hưởng giới trẻ thế nào?", vocab: [{w: "Role model", m: "Hình mẫu"}, {w: "Influence", m: "Sức ảnh hưởng"}, {w: "Imitate", m: "Bắt chước"}, {w: "Trendsetter", m: "Người tạo xu hướng"}, {w: "Scandal", m: "Bê bối"}] },
                 { id: 7, text: "Is the media biased?", trans: "Truyền thông có bị định kiến không?", vocab: [{w: "Bias", m: "Sự thiên vị"}, {w: "Objective", m: "Khách quan"}, {w: "Agenda", m: "Chương trình/Động cơ"}, {w: "Perspective", m: "Góc nhìn"}, {w: "Neutral", m: "Trung lập"}] },
@@ -302,13 +333,22 @@
 
             // FIREBASE: Quản lý User và Trạng thái tải dữ liệu
             const [user, setUser] = useState(null);
-            const [isLoadingData, setIsLoadingData] = useState(true);
+            const [isLoadingData, setIsLoadingData] = useState(isCloudEnabled);
 
-            // LƯU TRỮ TRẠNG THÁI TOÀN CỤC (Thay thế localStorage bằng Cloud Storage)
-            const [globalData, setGlobalData] = useState({});
+            // LƯU TRỮ TRẠNG THÁI TOÀN CỤC (Kết hợp Cloud & LocalStorage)
+            const [globalData, setGlobalData] = useState(() => {
+                // Tải dữ liệu cũ từ LocalStorage nếu không dùng Đám mây
+                if (!isCloudEnabled) {
+                    const saved = localStorage.getItem('speakmaster_progress');
+                    return saved ? JSON.parse(saved) : {};
+                }
+                return {};
+            });
             
             // 1. Xác thực tài khoản của bạn một cách an toàn
             useEffect(() => {
+                if (!isCloudEnabled) return; // Bỏ qua nếu dùng LocalStorage
+                
                 const initAuth = async () => {
                     try {
                         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
@@ -327,7 +367,7 @@
 
             // 2. Tự động tải dữ liệu Sổ tay từ Đám mây về máy
             useEffect(() => {
-                if (!user) return;
+                if (!isCloudEnabled || !user) return; // Bỏ qua nếu dùng LocalStorage
                 
                 const progressRef = collection(db, 'artifacts', appId, 'users', user.uid, 'topicProgress');
                 
@@ -337,7 +377,7 @@
                         newData[doc.id] = doc.data().answers || {};
                     });
                     setGlobalData(newData);
-                    setIsLoadingData(false); // Tắt hiệu ứng loading khi đã có dữ liệu
+                    setIsLoadingData(false);
                 }, (error) => {
                     console.error("Lỗi tải Sổ tay từ Cloud:", error);
                     setIsLoadingData(false);
@@ -346,18 +386,36 @@
                 return () => unsubscribe();
             }, [user]);
 
-            // 3. Hàm lưu dữ liệu ngầm lên Đám mây
-            const saveToCloud = async (topicId, step, dataObject) => {
-                if (!user) return;
-                try {
-                    const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'topicProgress', String(topicId));
-                    await setDoc(docRef, {
-                        answers: {
+            // 3. Hàm lưu dữ liệu xử lý song song cả 2 môi trường
+            const saveProgressData = async (topicId, step, dataObject) => {
+                // Cập nhật State và lưu vào LocalStorage
+                setGlobalData(prev => {
+                    const nextData = {
+                        ...prev,
+                        [topicId]: {
+                            ...(prev[topicId] || {}),
                             [step]: dataObject
                         }
-                    }, { merge: true }); // Merge: true giúp không làm mất các câu đã lưu trước đó
-                } catch (error) {
-                    console.error("Lỗi lưu sổ tay:", error);
+                    };
+                    
+                    if (!isCloudEnabled) {
+                        localStorage.setItem('speakmaster_progress', JSON.stringify(nextData));
+                    }
+                    return nextData;
+                });
+
+                // Nếu có Đám mây, lưu ngầm lên server
+                if (isCloudEnabled && user) {
+                    try {
+                        const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'topicProgress', String(topicId));
+                        await setDoc(docRef, {
+                            answers: {
+                                [step]: dataObject
+                            }
+                        }, { merge: true });
+                    } catch (error) {
+                        console.error("Lỗi lưu sổ tay lên Đám mây:", error);
+                    }
                 }
             };
             
@@ -441,17 +499,8 @@
                 const currentData = currentTopicData[currentStep] || {};
                 const newData = { ...currentData, vi: text };
 
-                // Cập nhật hiển thị màn hình lập tức
-                setGlobalData(prev => ({
-                    ...prev,
-                    [selectedTopic.id]: {
-                        ...(prev[selectedTopic.id] || {}),
-                        [currentStep]: newData
-                    }
-                }));
-
-                // Đẩy dữ liệu lưu tự động lên Đám mây
-                saveToCloud(selectedTopic.id, currentStep, newData);
+                // Lưu dữ liệu thông qua hàm quản lý chung
+                saveProgressData(selectedTopic.id, currentStep, newData);
             };
 
             const next = () => {
@@ -541,17 +590,8 @@
                         const currentData = currentTopicData[currentStep] || {};
                         const newData = { ...currentData, en: translatedText.trim() };
 
-                        // Cập nhật giao diện
-                        setGlobalData(prev => ({
-                            ...prev,
-                            [selectedTopic.id]: {
-                                ...(prev[selectedTopic.id] || {}),
-                                [currentStep]: newData
-                            }
-                        }));
-
-                        // Lưu bản dịch Tiếng Anh vĩnh viễn lên Đám mây
-                        saveToCloud(selectedTopic.id, currentStep, newData);
+                        // Lưu bản dịch Tiếng Anh
+                        saveProgressData(selectedTopic.id, currentStep, newData);
                     } else {
                         setTranslationError("Không nhận được bản dịch hợp lệ.");
                     }
