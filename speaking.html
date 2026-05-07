@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SpeakMaster Pro Max - 200 Câu Hỏi B1-B2</title>
+    <title>SpeakMaster Pro Max - 400 Câu Hỏi B1-B2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -21,7 +21,6 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         .spinner { animation: spin 1s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
-        /* Hiệu ứng cho từng từ khi hover */
         .clickable-word { transition: all 0.2s ease; display: inline-block; border-radius: 0.25rem; padding: 0 2px; margin: 0 1px; }
         .clickable-word:hover { background-color: #dbeafe; color: #1d4ed8; transform: translateY(-1px); }
     </style>
@@ -30,33 +29,17 @@
     <div id="root"></div>
 
     <script type="text/babel" data-type="module">
-        // Import các thư viện Cloud Storage bảo mật
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const { useState, useEffect, useMemo, useCallback } = React;
 
-        // --- CẤU HÌNH LƯU TRỮ ĐÁM MÂY (FIREBASE) ---
-        // Nếu bạn muốn dùng tính năng Đám mây đồng bộ thiết bị trên Github, 
-        // hãy tạo dự án Firebase (miễn phí) và dán cấu hình vào biến này. 
-        // Nếu để null, app sẽ tự động dùng LocalStorage.
         const GITHUB_FIREBASE_CONFIG = null; 
-        /* Ví dụ cấu hình Firebase:
-        const GITHUB_FIREBASE_CONFIG = {
-            apiKey: "AIzaSy...",
-            authDomain: "your-app.firebaseapp.com",
-            projectId: "your-app",
-            storageBucket: "your-app.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:12345:web:abcd"
-        };
-        */
 
         let app, auth, db;
         let isCloudEnabled = false;
 
-        // Khởi tạo hệ thống lưu trữ an toàn (Chống trắng màn hình)
         try {
             const envConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
             const finalConfig = GITHUB_FIREBASE_CONFIG || envConfig;
@@ -76,7 +59,9 @@
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
         const APP_DATA = [
-            // --- 10 CHỦ ĐỀ B1 (INTERMEDIATE) ---
+            // ==========================================
+            // --- 20 CHỦ ĐỀ B1 (INTERMEDIATE) ---
+            // ==========================================
             { id: 1, topic: "Du lịch (Travel)", level: "B1", questions: [
                 { id: 1, text: "Do you prefer traveling alone or with friends?", trans: "Bạn thích đi du lịch một mình hay với bạn bè?", vocab: [{w: "Independence", m: "Sự độc lập"}, {w: "Companionship", m: "Sự đồng hành"}, {w: "Flexible", m: "Linh hoạt"}, {w: "Compromise", m: "Sự thỏa hiệp"}, {w: "Share costs", m: "Chia sẻ chi phí"}] },
                 { id: 2, text: "What is the most beautiful place you've ever seen?", trans: "Nơi đẹp nhất bạn từng thấy là gì?", vocab: [{w: "Breathtaking", m: "Đẹp nghẹt thở"}, {w: "Scenery", m: "Phong cảnh"}, {w: "Picturesque", m: "Đẹp như tranh"}, {w: "Unforgettable", m: "Khó quên"}, {w: "Landscape", m: "Cảnh quan"}] },
@@ -91,7 +76,7 @@
             ]},
             { id: 2, topic: "Sở thích (Hobbies)", level: "B1", questions: [
                 { id: 1, text: "What do you enjoy doing in your spare time?", trans: "Bạn thích làm gì lúc rảnh rỗi?", vocab: [{w: "Leisure", m: "Giải trí"}, {w: "Unwind", m: "Thư giãn"}, {w: "Pass time", m: "Giết thời gian"}, {w: "Fascinating", m: "Thú vị"}, {w: "Enthusiast", m: "Người đam mê"}] },
-                { id: 2, text: "How did you start your current hobby?", trans: "Bạn bắt đầu sở thích hiện tại như thế nào?", vocab: [{w: "Take up", m: "Bắt đầu làm gì"}, {w: "Influence", m: "Sự ảnh hưởng"}, {w: "Inspired by", m: "Lấy cảm hứng từ"}, {w: "Curiosity", m: "Sự tò mò"}, {w: "Trial and error", m: "Thử và sai"}] },
+                { id: 2, text: "How did you start your current hobby?", trans: "Bạn bắt đầu sở thích hiện tại như thế nào?", vocab: [{w: "Take up", m: "Bắt đầu làm gì"}, {w: "Influence", m: "Sự ảnh hưởng"}, {w: "Inspired by", m: "Lấy cảm hứng từ"}, {w: "Curiosity", m: "Sự tò mở"}, {w: "Trial and error", m: "Thử và sai"}] },
                 { id: 3, text: "Is your hobby common in your country?", trans: "Sở thích của bạn có phổ biến ở nước bạn không?", vocab: [{w: "Popularity", m: "Sự phổ biến"}, {w: "Mainstream", m: "Đại trà/Xu hướng"}, {w: "Widespread", m: "Lan rộng"}, {w: "Trend", m: "Trào lưu"}, {w: "Niche", m: "Ngách (ít người biết)"}] },
                 { id: 4, text: "Do you prefer indoor or outdoor activities?", trans: "Bạn thích hoạt động trong nhà hay ngoài trời?", vocab: [{w: "Preference", m: "Sự ưu tiên"}, {w: "Fresh air", m: "Không khí trong lành"}, {w: "Cozy", m: "Ấm cúng"}, {w: "Energetic", m: "Tràn đầy năng lượng"}, {w: "Introvert", m: "Người hướng nội"}] },
                 { id: 5, text: "How much time do you spend on your hobby?", trans: "Bạn dành bao nhiêu thời gian cho sở thích?", vocab: [{w: "Allocate", m: "Phân bổ"}, {w: "Daily basis", m: "Hàng ngày"}, {w: "Immerse myself", m: "Đắm chìm vào"}, {w: "Time-consuming", m: "Tốn thời gian"}, {w: "Occasional", m: "Thỉnh thoảng"}] },
@@ -197,9 +182,131 @@
                 { id: 9, text: "What is the most colorful festival you know?", trans: "Lễ hội rực rỡ nhất bạn biết là gì?", vocab: [{w: "Vibrant", m: "Sống động"}, {w: "Costume", m: "Trang phục"}, {w: "Parade", m: "Cuộc diễu hành"}, {w: "Fireworks", m: "Pháo hoa"}, {w: "Spectacular", m: "Ngoạn mục"}] },
                 { id: 10, text: "How do festivals bring people together?", trans: "Lễ hội kết nối mọi người như thế nào?", vocab: [{w: "Unite", m: "Đoàn kết"}, {w: "Community", m: "Cộng đồng"}, {w: "Share joy", m: "Chia sẻ niềm vui"}, {w: "Strengthen bond", m: "Tăng cường gắn kết"}, {w: "Belonging", m: "Sự thuộc về"}] }
             ]},
+            { id: 11, topic: "Bạn bè (Friends)", level: "B1", questions: [
+                { id: 1, text: "Do you have a lot of friends?", trans: "Bạn có nhiều bạn bè không?", vocab: [{w: "Circle of friends", m: "Vòng bạn bè"}, {w: "Socialize", m: "Giao lưu"}, {w: "Acquaintance", m: "Người quen"}, {w: "Close-knit", m: "Gắn bó"}, {w: "Outgoing", m: "Cởi mở"}] },
+                { id: 2, text: "What qualities do you look for in a friend?", trans: "Bạn tìm kiếm phẩm chất gì ở một người bạn?", vocab: [{w: "Loyalty", m: "Sự trung thành"}, {w: "Sense of humor", m: "Khiếu hài hước"}, {w: "Trustworthy", m: "Đáng tin cậy"}, {w: "Honest", m: "Thành thật"}, {w: "Supportive", m: "Biết hỗ trợ"}] },
+                { id: 3, text: "How did you meet your best friend?", trans: "Bạn đã gặp người bạn thân nhất như thế nào?", vocab: [{w: "Childhood", m: "Tuổi thơ"}, {w: "Classmate", m: "Bạn cùng lớp"}, {w: "Hit it off", m: "Tâm đầu ý hợp"}, {w: "Coincidence", m: "Sự tình cờ"}, {w: "Introduce", m: "Giới thiệu"}] },
+                { id: 4, text: "How often do you hang out with your friends?", trans: "Bạn có thường xuyên đi chơi với bạn bè không?", vocab: [{w: "Hang out", m: "Đi chơi"}, {w: "Catch up", m: "Hàn huyên"}, {w: "Gathering", m: "Buổi tụ tập"}, {w: "Weekend", m: "Cuối tuần"}, {w: "Busy schedule", m: "Lịch trình bận rộn"}] },
+                { id: 5, text: "Do you prefer a few close friends or many acquaintances?", trans: "Bạn thích ít bạn thân hay nhiều người quen?", vocab: [{w: "Quality", m: "Chất lượng"}, {w: "Quantity", m: "Số lượng"}, {w: "Intimate", m: "Thân mật"}, {w: "Rely on", m: "Dựa dẫm vào"}, {w: "Superficial", m: "Hời hợt"}] },
+                { id: 6, text: "What do you and your friends usually do together?", trans: "Bạn và bạn bè thường làm gì cùng nhau?", vocab: [{w: "Share interests", m: "Chung sở thích"}, {w: "Go to the movies", m: "Đi xem phim"}, {w: "Dine out", m: "Ăn ngoài"}, {w: "Chat", m: "Trò chuyện"}, {w: "Play sports", m: "Chơi thể thao"}] },
+                { id: 7, text: "Have you ever had a disagreement with a friend?", trans: "Bạn đã từng bất đồng ý kiến với bạn bè chưa?", vocab: [{w: "Argument", m: "Cuộc cãi vã"}, {w: "Misunderstanding", m: "Sự hiểu lầm"}, {w: "Make up", m: "Làm hòa"}, {w: "Forgive", m: "Tha thứ"}, {w: "Perspective", m: "Góc nhìn"}] },
+                { id: 8, text: "Is it easy to make new friends in your city?", trans: "Kết bạn mới ở thành phố của bạn có dễ không?", vocab: [{w: "Approachable", m: "Dễ gần"}, {w: "Community", m: "Cộng đồng"}, {w: "Join a club", m: "Tham gia câu lạc bộ"}, {w: "Friendly", m: "Thân thiện"}, {w: "Ice-breaker", m: "Sự phá băng (bắt chuyện)"}] },
+                { id: 9, text: "Can men and women just be friends?", trans: "Nam và nữ có thể chỉ là bạn bè không?", vocab: [{w: "Platonic", m: "Tình bạn trong sáng"}, {w: "Boundary", m: "Ranh giới"}, {w: "Complicate", m: "Làm phức tạp"}, {w: "Mutual respect", m: "Tôn trọng lẫn nhau"}, {w: "Relationship", m: "Mối quan hệ"}] },
+                { id: 10, text: "How do you maintain long-distance friendships?", trans: "Bạn duy trì tình bạn yêu xa như thế nào?", vocab: [{w: "Keep in touch", m: "Giữ liên lạc"}, {w: "Video call", m: "Gọi video"}, {w: "Message", m: "Tin nhắn"}, {w: "Effort", m: "Sự nỗ lực"}, {w: "Update", m: "Cập nhật"}] }
+            ]},
+            { id: 12, topic: "Trường học (School)", level: "B1", questions: [
+                { id: 1, text: "What is your favorite subject at school?", trans: "Môn học yêu thích của bạn ở trường là gì?", vocab: [{w: "Fascinating", m: "Thú vị"}, {w: "Major", m: "Chuyên ngành"}, {w: "Curriculum", m: "Chương trình học"}, {w: "Excel at", m: "Xuất sắc về"}, {w: "Knowledge", m: "Kiến thức"}] },
+                { id: 2, text: "Who was your favorite teacher?", trans: "Giáo viên yêu thích của bạn là ai?", vocab: [{w: "Inspire", m: "Truyền cảm hứng"}, {w: "Patient", m: "Kiên nhẫn"}, {w: "Dedicated", m: "Tận tụy"}, {w: "Mentor", m: "Người cố vấn"}, {w: "Strict", m: "Nghiêm khắc"}] },
+                { id: 3, text: "Do you have a lot of homework?", trans: "Bạn có nhiều bài tập về nhà không?", vocab: [{w: "Assignment", m: "Bài tập"}, {w: "Deadline", m: "Hạn chót"}, {w: "Overload", m: "Quá tải"}, {w: "Revision", m: "Sự ôn tập"}, {w: "Time management", m: "Quản lý thời gian"}] },
+                { id: 4, text: "What do you usually do during recess?", trans: "Bạn thường làm gì trong giờ ra chơi?", vocab: [{w: "Recess", m: "Giờ nghỉ giải lao"}, {w: "Chat", m: "Trò chuyện"}, {w: "Snack", m: "Ăn vặt"}, {w: "Playground", m: "Sân chơi"}, {w: "Refresh", m: "Thư giãn"}] },
+                { id: 5, text: "Did you enjoy going to school when you were younger?", trans: "Bạn có thích đi học khi còn nhỏ không?", vocab: [{w: "Nostalgic", m: "Hoài niệm"}, {w: "Carefree", m: "Vô tư"}, {w: "Innocent", m: "Ngây thơ"}, {w: "Primary school", m: "Trường tiểu học"}, {w: "Memorable", m: "Đáng nhớ"}] },
+                { id: 6, text: "Is it better to study alone or in a group?", trans: "Học một mình hay học nhóm tốt hơn?", vocab: [{w: "Concentrate", m: "Tập trung"}, {w: "Teamwork", m: "Làm việc nhóm"}, {w: "Distraction", m: "Sự xao nhãng"}, {w: "Brainstorm", m: "Động não"}, {w: "Efficiency", m: "Sự hiệu quả"}] },
+                { id: 7, text: "What are the benefits of learning a foreign language?", trans: "Lợi ích của việc học ngoại ngữ là gì?", vocab: [{w: "Bilingual", m: "Song ngữ"}, {w: "Opportunity", m: "Cơ hội"}, {w: "Broaden horizons", m: "Mở rộng tầm mắt"}, {w: "Communicate", m: "Giao tiếp"}, {w: "Culture", m: "Văn hóa"}] },
+                { id: 8, text: "How important are grades to you?", trans: "Điểm số quan trọng với bạn như thế nào?", vocab: [{w: "Academic performance", m: "Thành tích học tập"}, {w: "Pressure", m: "Áp lực"}, {w: "Evaluate", m: "Đánh giá"}, {w: "Reflect", m: "Phản ánh"}, {w: "Motivate", m: "Thúc đẩy"}] },
+                { id: 9, text: "Do you think school uniform is a good idea?", trans: "Bạn có nghĩ đồng phục học sinh là ý kiến hay?", vocab: [{w: "Equality", m: "Sự bình đẳng"}, {w: "Discipline", m: "Kỷ luật"}, {w: "Identity", m: "Bản sắc"}, {w: "Pride", m: "Sự tự hào"}, {w: "Comfortable", m: "Thoải mái"}] },
+                { id: 10, text: "What would you change about your school?", trans: "Bạn muốn thay đổi điều gì ở trường mình?", vocab: [{w: "Facility", m: "Cơ sở vật chất"}, {w: "Upgrade", m: "Nâng cấp"}, {w: "Extracurricular", m: "Ngoại khóa"}, {w: "Library", m: "Thư viện"}, {w: "Interactive", m: "Tính tương tác"}] }
+            ]},
+            { id: 13, topic: "Động vật (Animals)", level: "B1", questions: [
+                { id: 1, text: "Do you have any pets?", trans: "Bạn có nuôi thú cưng không?", vocab: [{w: "Furry friend", m: "Người bạn lắm lông"}, {w: "Companion", m: "Người bầu bạn"}, {w: "Adopt", m: "Nhận nuôi"}, {w: "Loyal", m: "Trung thành"}, {w: "Affectionate", m: "Đầy tình cảm"}] },
+                { id: 2, text: "What is your favorite animal?", trans: "Động vật yêu thích của bạn là gì?", vocab: [{w: "Fascinating", m: "Thú vị"}, {w: "Majestic", m: "Oai vệ"}, {w: "Intelligent", m: "Thông minh"}, {w: "Species", m: "Loài"}, {w: "Habitat", m: "Môi trường sống"}] },
+                { id: 3, text: "Are people in your country fond of animals?", trans: "Người dân nước bạn có thích động vật không?", vocab: [{w: "Animal lover", m: "Người yêu động vật"}, {w: "Cruelty", m: "Sự tàn nhẫn"}, {w: "Protect", m: "Bảo vệ"}, {w: "Stray dog", m: "Chó hoang"}, {w: "Popular", m: "Phổ biến"}] },
+                { id: 4, text: "Have you ever visited a zoo?", trans: "Bạn đã từng đi sở thú chưa?", vocab: [{w: "Enclosure", m: "Khu vực rào kín"}, {w: "Exotic", m: "Kỳ lạ/Đến từ nước ngoài"}, {w: "Observe", m: "Quan sát"}, {w: "Captivity", m: "Tình trạng bị giam cầm"}, {w: "Educational", m: "Mang tính giáo dục"}] },
+                { id: 5, text: "Should wild animals be kept in cages?", trans: "Động vật hoang dã có nên bị nhốt trong lồng?", vocab: [{w: "Cruel", m: "Tàn nhẫn"}, {w: "Freedom", m: "Sự tự do"}, {w: "Natural instinct", m: "Bản năng tự nhiên"}, {w: "Conservation", m: "Sự bảo tồn"}, {w: "Deprive", m: "Tước đoạt"}] },
+                { id: 6, text: "What animals are famous in your country?", trans: "Loài vật nào nổi tiếng ở nước bạn?", vocab: [{w: "Symbol", m: "Biểu tượng"}, {w: "Native", m: "Bản địa"}, {w: "Agriculture", m: "Nông nghiệp"}, {w: "Endangered", m: "Gặp nguy hiểm"}, {w: "Represent", m: "Đại diện"}] },
+                { id: 7, text: "Are you afraid of any animals?", trans: "Bạn có sợ loài vật nào không?", vocab: [{w: "Terrified", m: "Kinh hãi"}, {w: "Venomous", m: "Có nọc độc"}, {w: "Creepy", m: "Đáng sợ/Sởn gai ốc"}, {w: "Phobia", m: "Nỗi ám ảnh"}, {w: "Avoid", m: "Tránh xa"}] },
+                { id: 8, text: "How can we help protect endangered species?", trans: "Làm sao để bảo vệ các loài có nguy cơ tuyệt chủng?", vocab: [{w: "Awareness", m: "Nhận thức"}, {w: "Ban hunting", m: "Cấm săn bắn"}, {w: "Sanctuary", m: "Khu bảo tồn"}, {w: "Fundraise", m: "Gây quỹ"}, {w: "Preserve", m: "Bảo tồn"}] },
+                { id: 9, text: "Do you prefer cats or dogs?", trans: "Bạn thích mèo hay chó hơn?", vocab: [{w: "Independent", m: "Độc lập"}, {w: "Playful", m: "Thích chơi đùa"}, {w: "Trainable", m: "Dễ huấn luyện"}, {w: "Cuddle", m: "Ôm ấp"}, {w: "Personality", m: "Tính cách"}] },
+                { id: 10, text: "Is it important to teach children to be kind to animals?", trans: "Việc dạy trẻ em tử tế với động vật có quan trọng không?", vocab: [{w: "Empathy", m: "Sự đồng cảm"}, {w: "Compassion", m: "Lòng trắc ẩn"}, {w: "Responsibility", m: "Trách nhiệm"}, {w: "Respect", m: "Sự tôn trọng"}, {w: "Crucial", m: "Rất quan trọng"}] }
+            ]},
+            { id: 14, topic: "Thời trang (Fashion)", level: "B1", questions: [
+                { id: 1, text: "Do you care about fashion?", trans: "Bạn có quan tâm đến thời trang không?", vocab: [{w: "Trendy", m: "Hợp mốt"}, {w: "Appearance", m: "Ngoại hình"}, {w: "Stylish", m: "Phong cách"}, {w: "Comfort", m: "Sự thoải mái"}, {w: "Out of date", m: "Lỗi thời"}] },
+                { id: 2, text: "What kind of clothes do you usually wear?", trans: "Bạn thường mặc loại quần áo nào?", vocab: [{w: "Casual", m: "Thường ngày"}, {w: "Formal", m: "Trang trọng"}, {w: "T-shirt", m: "Áo thun"}, {w: "Jeans", m: "Quần jean"}, {w: "Sneakers", m: "Giày thể thao"}] },
+                { id: 3, text: "Where do you usually buy your clothes?", trans: "Bạn thường mua quần áo ở đâu?", vocab: [{w: "Boutique", m: "Cửa hàng thời trang"}, {w: "Online store", m: "Cửa hàng trực tuyến"}, {w: "Shopping mall", m: "Trung tâm mua sắm"}, {w: "Second-hand", m: "Đồ cũ/Sida"}, {w: "Affordable", m: "Giá cả phải chăng"}] },
+                { id: 4, text: "How much money do you spend on clothes?", trans: "Bạn tiêu bao nhiêu tiền cho quần áo?", vocab: [{w: "Budget", m: "Ngân sách"}, {w: "Splurge", m: "Vung tiền"}, {w: "Reasonable", m: "Hợp lý"}, {w: "Designer brand", m: "Thương hiệu thiết kế"}, {w: "Necessity", m: "Sự cần thiết"}] },
+                { id: 5, text: "Do you think expensive clothes mean better quality?", trans: "Bạn có nghĩ quần áo đắt tiền chất lượng tốt hơn?", vocab: [{w: "Material", m: "Chất liệu"}, {w: "Durability", m: "Độ bền"}, {w: "Overpriced", m: "Giá quá cao"}, {w: "Status symbol", m: "Biểu tượng địa vị"}, {w: "Guarantee", m: "Đảm bảo"}] },
+                { id: 6, text: "Have your fashion tastes changed since you were younger?", trans: "Gu thời trang của bạn có thay đổi so với hồi trẻ?", vocab: [{w: "Mature", m: "Trưởng thành"}, {w: "Evolve", m: "Phát triển/Tiến hóa"}, {w: "Colorful", m: "Nhiều màu sắc"}, {w: "Minimalist", m: "Tối giản"}, {w: "Taste", m: "Gu/Sở thích"}] },
+                { id: 7, text: "What do people in your country wear to weddings?", trans: "Người dân nước bạn mặc gì đi đám cưới?", vocab: [{w: "Elegant", m: "Thanh lịch"}, {w: "Suit", m: "Bộ vest"}, {w: "Traditional dress", m: "Trang phục truyền thống"}, {w: "Gorgeous", m: "Lộng lẫy"}, {w: "Respectful", m: "Trang trọng/Tôn trọng"}] },
+                { id: 8, text: "Do you like to wear accessories?", trans: "Bạn có thích đeo phụ kiện không?", vocab: [{w: "Accessory", m: "Phụ kiện"}, {w: "Jewelry", m: "Trang sức"}, {w: "Watch", m: "Đồng hồ"}, {w: "Match", m: "Phù hợp/Phối"}, {w: "Highlight", m: "Làm nổi bật"}] },
+                { id: 9, text: "Is it important to follow fashion trends?", trans: "Bắt kịp xu hướng thời trang có quan trọng không?", vocab: [{w: "Catch up with", m: "Bắt kịp"}, {w: "Fashion victim", m: "Nạn nhân thời trang"}, {w: "Express oneself", m: "Thể hiện bản thân"}, {w: "Unique", m: "Độc đáo"}, {w: "Confidence", m: "Sự tự tin"}] },
+                { id: 10, text: "What is your favorite color for clothes?", trans: "Màu sắc quần áo yêu thích của bạn là gì?", vocab: [{w: "Neutral", m: "Trung tính"}, {w: "Vibrant", m: "Sặc sỡ"}, {w: "Flattering", m: "Tôn dáng/Tôn da"}, {w: "Monochrome", m: "Đơn sắc"}, {w: "Combine", m: "Kết hợp"}] }
+            ]},
+            { id: 15, topic: "Mạng xã hội (Social Media)", level: "B1", questions: [
+                { id: 1, text: "How much time do you spend on social media?", trans: "Bạn dành bao nhiêu thời gian cho mạng xã hội?", vocab: [{w: "Scroll", m: "Cuộn/Lướt"}, {w: "Addicted", m: "Bị nghiện"}, {w: "Daily basis", m: "Hàng ngày"}, {w: "Limit", m: "Giới hạn"}, {w: "Track", m: "Theo dõi"}] },
+                { id: 2, text: "What is your favorite social media platform?", trans: "Nền tảng mạng xã hội yêu thích của bạn là gì?", vocab: [{w: "Platform", m: "Nền tảng"}, {w: "Interactive", m: "Tính tương tác"}, {w: "User-friendly", m: "Dễ sử dụng"}, {w: "Feature", m: "Tính năng"}, {w: "Popular", m: "Phổ biến"}] },
+                { id: 3, text: "Do you often post photos or videos?", trans: "Bạn có thường đăng ảnh hay video không?", vocab: [{w: "Upload", m: "Tải lên"}, {w: "Share", m: "Chia sẻ"}, {w: "Moment", m: "Khoảnh khắc"}, {w: "Filter", m: "Bộ lọc"}, {w: "Privacy", m: "Quyền riêng tư"}] },
+                { id: 4, text: "How do you use social media to communicate?", trans: "Bạn dùng mạng xã hội để giao tiếp thế nào?", vocab: [{w: "Message", m: "Tin nhắn"}, {w: "Video call", m: "Gọi video"}, {w: "Group chat", m: "Nhóm chat"}, {w: "Stay in touch", m: "Giữ liên lạc"}, {w: "Convenient", m: "Tiện lợi"}] },
+                { id: 5, text: "Are there any disadvantages to using social media?", trans: "Có bất lợi nào khi dùng mạng xã hội không?", vocab: [{w: "Cyberbullying", m: "Bắt nạt qua mạng"}, {w: "Fake news", m: "Tin giả"}, {w: "Distraction", m: "Sự xao nhãng"}, {w: "Compare", m: "So sánh"}, {w: "Time-wasting", m: "Tốn thời gian"}] },
+                { id: 6, text: "Do you think people share too much personal information online?", trans: "Bạn có nghĩ mọi người chia sẻ quá nhiều thông tin cá nhân trên mạng?", vocab: [{w: "Overshare", m: "Chia sẻ quá mức"}, {w: "Exposed", m: "Bị phơi bày"}, {w: "Risk", m: "Rủi ro"}, {w: "Scam", m: "Lừa đảo"}, {w: "Cautious", m: "Cẩn trọng"}] },
+                { id: 7, text: "Have you ever met someone offline that you knew online?", trans: "Bạn đã bao giờ gặp ngoài đời người quen trên mạng chưa?", vocab: [{w: "In person", m: "Gặp trực tiếp"}, {w: "Stranger", m: "Người lạ"}, {w: "Nervous", m: "Lo lắng"}, {w: "Common interest", m: "Sở thích chung"}, {w: "Expectation", m: "Sự kỳ vọng"}] },
+                { id: 8, text: "How can social media be helpful for studying?", trans: "Mạng xã hội giúp ích cho việc học như thế nào?", vocab: [{w: "Resource", m: "Nguồn tài liệu"}, {w: "Discussion", m: "Sự thảo luận"}, {w: "Community", m: "Cộng đồng"}, {w: "Exchange", m: "Trao đổi"}, {w: "Tutorial", m: "Video hướng dẫn"}] },
+                { id: 9, text: "Do older people use social media in your country?", trans: "Người lớn tuổi ở nước bạn có dùng mạng xã hội không?", vocab: [{w: "Generation", m: "Thế hệ"}, {w: "Catch up", m: "Bắt kịp"}, {w: "Tech-savvy", m: "Am hiểu công nghệ"}, {w: "Connect", m: "Kết nối"}, {w: "Entertain", m: "Giải trí"}] },
+                { id: 10, text: "Could you live without social media for a week?", trans: "Bạn có thể sống thiếu mạng xã hội một tuần không?", vocab: [{w: "Challenge", m: "Thử thách"}, {w: "Detox", m: "Cai nghiện"}, {w: "Isolated", m: "Bị cô lập"}, {w: "Focus", m: "Tập trung"}, {w: "Real life", m: "Cuộc sống thực"}] }
+            ]},
+            { id: 16, topic: "Kỷ niệm (Memories)", level: "B1", questions: [
+                { id: 1, text: "Do you have a good memory?", trans: "Bạn có trí nhớ tốt không?", vocab: [{w: "Memorize", m: "Ghi nhớ"}, {w: "Forgetful", m: "Hay quên"}, {w: "Detail", m: "Chi tiết"}, {w: "Recall", m: "Nhớ lại"}, {w: "Sharp", m: "Sắc bén/Nhạy bén"}] },
+                { id: 2, text: "What is your earliest childhood memory?", trans: "Kỷ niệm tuổi thơ sớm nhất của bạn là gì?", vocab: [{w: "Vivid", m: "Sống động"}, {w: "Faint", m: "Mờ nhạt"}, {w: "Kindergarten", m: "Trường mẫu giáo"}, {w: "Innocent", m: "Ngây thơ"}, {w: "Nostalgia", m: "Sự hoài niệm"}] },
+                { id: 3, text: "Do you like to keep old photographs?", trans: "Bạn có thích giữ những bức ảnh cũ không?", vocab: [{w: "Album", m: "Cuốn album"}, {w: "Capture", m: "Ghi lại"}, {w: "Precious", m: "Quý giá"}, {w: "Look back", m: "Nhìn lại"}, {w: "Digitalize", m: "Số hóa"}] },
+                { id: 4, text: "What is the happiest memory of your life?", trans: "Kỷ niệm hạnh phúc nhất đời bạn là gì?", vocab: [{w: "Joyful", m: "Vui sướng"}, {w: "Achievement", m: "Thành tựu"}, {w: "Surprise", m: "Sự ngạc nhiên"}, {w: "Unforgettable", m: "Không thể quên"}, {w: "Tears of joy", m: "Nước mắt hạnh phúc"}] },
+                { id: 5, text: "How do you usually remember important dates?", trans: "Bạn thường nhớ những ngày quan trọng bằng cách nào?", vocab: [{w: "Reminder", m: "Lời nhắc"}, {w: "Calendar", m: "Lịch"}, {w: "Alarm", m: "Báo thức"}, {w: "Note down", m: "Ghi chú lại"}, {w: "Anniversary", m: "Ngày kỷ niệm"}] },
+                { id: 6, text: "Do you think people rely too much on technology to remember things?", trans: "Bạn có nghĩ con người quá phụ thuộc vào công nghệ để ghi nhớ?", vocab: [{w: "Rely on", m: "Phụ thuộc vào"}, {w: "Smartphone", m: "Điện thoại thông minh"}, {w: "Lazy", m: "Lười biếng"}, {w: "Dependence", m: "Sự phụ thuộc"}, {w: "Brain power", m: "Sức mạnh trí não"}] },
+                { id: 7, text: "Have you ever forgotten something important?", trans: "Bạn đã từng quên điều gì quan trọng chưa?", vocab: [{w: "Slip my mind", m: "Quên mất"}, {w: "Apologize", m: "Xin lỗi"}, {w: "Embarrassing", m: "Đáng xấu hổ"}, {w: "Consequence", m: "Hậu quả"}, {w: "Make up for", m: "Bù đắp cho"}] },
+                { id: 8, text: "Why do some people remember the past better than others?", trans: "Tại sao vài người nhớ quá khứ giỏi hơn người khác?", vocab: [{w: "Genetics", m: "Di truyền"}, {w: "Emotional attachment", m: "Sự gắn kết cảm xúc"}, {w: "Practice", m: "Sự luyện tập"}, {w: "Attention to detail", m: "Chú ý chi tiết"}, {w: "Impactful", m: "Có sức ảnh hưởng"}] },
+                { id: 9, text: "Do smells or sounds ever bring back memories for you?", trans: "Mùi hương hay âm thanh có gợi lại kỷ niệm cho bạn không?", vocab: [{w: "Trigger", m: "Kích hoạt/Gợi lên"}, {w: "Scent", m: "Mùi hương"}, {w: "Familiar", m: "Quen thuộc"}, {w: "Flashback", m: "Đoạn hồi tưởng"}, {w: "Atmosphere", m: "Không khí"}] },
+                { id: 10, text: "Is it better to focus on the past or the future?", trans: "Tập trung vào quá khứ hay tương lai thì tốt hơn?", vocab: [{w: "Present moment", m: "Giây phút hiện tại"}, {w: "Learn from mistakes", m: "Học từ sai lầm"}, {w: "Move on", m: "Bước tiếp"}, {w: "Goal setting", m: "Đặt mục tiêu"}, {w: "Balance", m: "Sự cân bằng"}] }
+            ]},
+            { id: 17, topic: "Công việc nhà (Housework)", level: "B1", questions: [
+                { id: 1, text: "Do you help with housework at home?", trans: "Bạn có giúp làm việc nhà không?", vocab: [{w: "Chore", m: "Việc vặt"}, {w: "Share the burden", m: "Chia sẻ gánh nặng"}, {w: "Sweep the floor", m: "Quét nhà"}, {w: "Wash dishes", m: "Rửa bát"}, {w: "Responsibility", m: "Trách nhiệm"}] },
+                { id: 2, text: "What household chore do you hate doing the most?", trans: "Bạn ghét làm việc nhà nào nhất?", vocab: [{w: "Exhausting", m: "Kiệt sức"}, {w: "Boring", m: "Nhàm chán"}, {w: "Ironing", m: "Ủi đồ"}, {w: "Take out the trash", m: "Đổ rác"}, {w: "Time-consuming", m: "Tốn thời gian"}] },
+                { id: 3, text: "Who does most of the housework in your family?", trans: "Ai làm phần lớn việc nhà trong gia đình bạn?", vocab: [{w: "Housewife", m: "Nội trợ"}, {w: "Split equally", m: "Chia đều"}, {w: "Traditional", m: "Truyền thống"}, {w: "Breadwinner", m: "Trụ cột gia đình"}, {w: "Take turns", m: "Luân phiên"}] },
+                { id: 4, text: "Do you think children should do chores?", trans: "Bạn có nghĩ trẻ em nên làm việc nhà không?", vocab: [{w: "Life skill", m: "Kỹ năng sống"}, {w: "Independent", m: "Độc lập"}, {w: "Appreciate", m: "Trân trọng"}, {w: "Allowance", m: "Tiền tiêu vặt"}, {w: "Discipline", m: "Kỷ luật"}] },
+                { id: 5, text: "Has technology made housework easier?", trans: "Công nghệ có làm việc nhà dễ dàng hơn không?", vocab: [{w: "Appliance", m: "Thiết bị"}, {w: "Washing machine", m: "Máy giặt"}, {w: "Vacuum cleaner", m: "Máy hút bụi"}, {w: "Labor-saving", m: "Tiết kiệm sức lao động"}, {w: "Convenient", m: "Tiện lợi"}] },
+                { id: 6, text: "Do you prefer a tidy or messy room?", trans: "Bạn thích phòng gọn gàng hay bừa bộn?", vocab: [{w: "Organized", m: "Có tổ chức"}, {w: "Clutter", m: "Sự lộn xộn"}, {w: "Find things easily", m: "Dễ tìm đồ"}, {w: "Comfortable", m: "Thoải mái"}, {w: "Clean up", m: "Dọn dẹp"}] },
+                { id: 7, text: "How often do you clean your house?", trans: "Bạn có thường lau dọn nhà cửa không?", vocab: [{w: "Regularly", m: "Thường xuyên"}, {w: "Spring cleaning", m: "Dọn nhà đón Tết/Xuân"}, {w: "Dust", m: "Bụi bặm"}, {w: "Hygiene", m: "Vệ sinh"}, {w: "Weekend", m: "Cuối tuần"}] },
+                { id: 8, text: "Is cooking considered a chore or a hobby?", trans: "Nấu ăn được xem là việc nhà hay sở thích?", vocab: [{w: "Perspective", m: "Góc nhìn"}, {w: "Creativity", m: "Sự sáng tạo"}, {w: "Obligation", m: "Nghĩa vụ"}, {w: "Enjoyable", m: "Thú vị"}, {w: "Daily task", m: "Nhiệm vụ hàng ngày"}] },
+                { id: 9, text: "Would you hire a cleaner if you had enough money?", trans: "Bạn có thuê người giúp việc nếu có đủ tiền không?", vocab: [{w: "Maid/Cleaner", m: "Người giúp việc"}, {w: "Afford", m: "Đủ khả năng chi trả"}, {w: "Save time", m: "Tiết kiệm thời gian"}, {w: "Focus on work", m: "Tập trung công việc"}, {w: "Trustworthy", m: "Đáng tin"}] },
+                { id: 10, text: "What is the most difficult part of maintaining a house?", trans: "Phần khó nhất khi duy trì một ngôi nhà là gì?", vocab: [{w: "Maintenance", m: "Sự bảo trì"}, {w: "Repair", m: "Sửa chữa"}, {w: "Bill", m: "Hóa đơn"}, {w: "Consistency", m: "Sự kiên trì"}, {w: "Endless", m: "Không hồi kết"}] }
+            ]},
+            { id: 18, topic: "Giấc mơ (Dreams)", level: "B1", questions: [
+                { id: 1, text: "Do you often remember your dreams?", trans: "Bạn có thường nhớ giấc mơ của mình không?", vocab: [{w: "Faintly", m: "Mờ nhạt"}, {w: "Vivid", m: "Sống động"}, {w: "Wake up", m: "Thức dậy"}, {w: "Subconscious", m: "Tiềm thức"}, {w: "Detail", m: "Chi tiết"}] },
+                { id: 2, text: "Have you ever had a nightmare?", trans: "Bạn đã từng gặp ác mộng chưa?", vocab: [{w: "Nightmare", m: "Ác mộng"}, {w: "Scary", m: "Đáng sợ"}, {w: "Sweat", m: "Đổ mồ hôi"}, {w: "Relieved", m: "Nhẹ nhõm"}, {w: "Stress", m: "Căng thẳng"}] },
+                { id: 3, text: "Do you think dreams have special meanings?", trans: "Bạn có nghĩ giấc mơ có ý nghĩa đặc biệt không?", vocab: [{w: "Interpret", m: "Giải mã"}, {w: "Symbol", m: "Biểu tượng"}, {w: "Premonition", m: "Điềm báo"}, {w: "Scientific", m: "Khoa học"}, {w: "Reflection", m: "Sự phản chiếu"}] },
+                { id: 4, text: "What was your dream job when you were a child?", trans: "Công việc mơ ước lúc nhỏ của bạn là gì?", vocab: [{w: "Astronaut", m: "Phi hành gia"}, {w: "Superhero", m: "Siêu anh hùng"}, {w: "Ambitious", m: "Đầy tham vọng"}, {w: "Realistic", m: "Thực tế"}, {w: "Change my mind", m: "Thay đổi suy nghĩ"}] },
+                { id: 5, text: "Have any of your dreams come true?", trans: "Có giấc mơ nào của bạn đã thành hiện thực chưa?", vocab: [{w: "Achieve", m: "Đạt được"}, {w: "Effort", m: "Sự nỗ lực"}, {w: "Milestone", m: "Cột mốc"}, {w: "Proud", m: "Tự hào"}, {w: "Keep trying", m: "Tiếp tục cố gắng"}] },
+                { id: 6, text: "Would you like to learn how to control your dreams?", trans: "Bạn có muốn học cách điều khiển giấc mơ không?", vocab: [{w: "Lucid dream", m: "Giấc mơ sáng suốt"}, {w: "Fascinating", m: "Thú vị"}, {w: "Imagination", m: "Trí tưởng tượng"}, {w: "Experience", m: "Trải nghiệm"}, {w: "Fantasy", m: "Ảo mộng"}] },
+                { id: 7, text: "Do you share your dreams with other people?", trans: "Bạn có kể giấc mơ của mình cho người khác không?", vocab: [{w: "Describe", m: "Miêu tả"}, {w: "Weird", m: "Kỳ lạ"}, {w: "Listen", m: "Lắng nghe"}, {w: "Laugh", m: "Cười"}, {w: "Meaningless", m: "Vô nghĩa"}] },
+                { id: 8, text: "What is your biggest dream for the future?", trans: "Giấc mơ lớn nhất cho tương lai của bạn là gì?", vocab: [{w: "Successful", m: "Thành công"}, {w: "Travel the world", m: "Du lịch thế giới"}, {w: "Happy family", m: "Gia đình hạnh phúc"}, {w: "Financial freedom", m: "Tự do tài chính"}, {w: "Contribute", m: "Đóng góp"}] },
+                { id: 9, text: "Do people in your country believe in dream interpretation?", trans: "Người dân nước bạn có tin vào việc giải mã giấc mơ không?", vocab: [{w: "Superstition", m: "Sự mê tín"}, {w: "Fortune teller", m: "Thầy bói"}, {w: "Luck", m: "Sự may mắn"}, {w: "Curious", m: "Tò mò"}, {w: "Tradition", m: "Truyền thống"}] },
+                { id: 10, text: "What do you do to pursue your dreams?", trans: "Bạn làm gì để theo đuổi ước mơ của mình?", vocab: [{w: "Set goals", m: "Đặt mục tiêu"}, {w: "Take action", m: "Hành động"}, {w: "Overcome obstacles", m: "Vượt qua rào cản"}, {w: "Persistent", m: "Kiên trì"}, {w: "Never give up", m: "Không bỏ cuộc"}] }
+            ]},
+            { id: 19, topic: "Quê hương (Hometown)", level: "B1", questions: [
+                { id: 1, text: "Where is your hometown located?", trans: "Quê hương của bạn nằm ở đâu?", vocab: [{w: "Locate", m: "Nằm ở"}, {w: "Province", m: "Tỉnh"}, {w: "Region", m: "Khu vực"}, {w: "Capital", m: "Thủ đô"}, {w: "Distance", m: "Khoảng cách"}] },
+                { id: 2, text: "What is your hometown famous for?", trans: "Quê bạn nổi tiếng về điều gì?", vocab: [{w: "Specialty", m: "Đặc sản"}, {w: "Historical site", m: "Di tích lịch sử"}, {w: "Scenery", m: "Phong cảnh"}, {w: "Hospitality", m: "Sự hiếu khách"}, {w: "Tourist attraction", m: "Điểm du lịch"}] },
+                { id: 3, text: "Do you like living in your hometown?", trans: "Bạn có thích sống ở quê mình không?", vocab: [{w: "Peaceful", m: "Yên bình"}, {w: "Belonging", m: "Cảm giác thuộc về"}, {w: "Pace of life", m: "Nhịp sống"}, {w: "Boring", m: "Nhàm chán"}, {w: "Comfortable", m: "Thoải mái"}] },
+                { id: 4, text: "Has your hometown changed much since you were a child?", trans: "Quê bạn có thay đổi nhiều so với lúc bạn còn nhỏ không?", vocab: [{w: "Develop", m: "Phát triển"}, {w: "Infrastructure", m: "Cơ sở hạ tầng"}, {w: "Modernize", m: "Hiện đại hóa"}, {w: "Crowded", m: "Đông đúc"}, {w: "Standard of living", m: "Mức sống"}] },
+                { id: 5, text: "What do people in your hometown usually do for a living?", trans: "Người dân quê bạn thường làm gì để kiếm sống?", vocab: [{w: "Agriculture", m: "Nông nghiệp"}, {w: "Factory worker", m: "Công nhân"}, {w: "Business", m: "Kinh doanh"}, {w: "Fishery", m: "Ngư nghiệp"}, {w: "Income", m: "Thu nhập"}] },
+                { id: 6, text: "How is the transportation in your hometown?", trans: "Giao thông ở quê bạn thế nào?", vocab: [{w: "Convenient", m: "Thuận tiện"}, {w: "Public transport", m: "Giao thông công cộng"}, {w: "Traffic jam", m: "Tắc đường"}, {w: "Improve", m: "Cải thiện"}, {w: "Motorbike", m: "Xe máy"}] },
+                { id: 7, text: "Would you recommend your hometown to visitors?", trans: "Bạn có giới thiệu quê mình cho du khách không?", vocab: [{w: "Definitely", m: "Chắc chắn rồi"}, {w: "Experience", m: "Trải nghiệm"}, {w: "Local culture", m: "Văn hóa địa phương"}, {w: "Friendly", m: "Thân thiện"}, {w: "Worth visiting", m: "Đáng để thăm"}] },
+                { id: 8, text: "What do you dislike about your hometown?", trans: "Bạn không thích điều gì ở quê mình?", vocab: [{w: "Lack of facilities", m: "Thiếu cơ sở vật chất"}, {w: "Pollution", m: "Sự ô nhiễm"}, {w: "Job opportunity", m: "Cơ hội việc làm"}, {w: "Entertainment", m: "Khu giải trí"}, {w: "Conservative", m: "Bảo thủ"}] },
+                { id: 9, text: "Do you plan to live in your hometown in the future?", trans: "Bạn có định sống ở quê trong tương lai không?", vocab: [{w: "Settle down", m: "An cư/Ổn định"}, {w: "Career", m: "Sự nghiệp"}, {w: "Retire", m: "Nghỉ hưu"}, {w: "Family tie", m: "Sự gắn kết gia đình"}, {w: "City life", m: "Cuộc sống thành thị"}] },
+                { id: 10, text: "How often do you visit your hometown?", trans: "Bạn có thường về thăm quê không?", vocab: [{w: "Holiday", m: "Kỳ nghỉ"}, {w: "Once a month", m: "Mỗi tháng một lần"}, {w: "Homesick", m: "Nhớ nhà"}, {w: "Gathering", m: "Tụ tập"}, {w: "Catch up", m: "Cập nhật tình hình"}] }
+            ]},
+            { id: 20, topic: "Phương tiện giao thông (Transport)", level: "B1", questions: [
+                { id: 1, text: "How do you usually travel to work or school?", trans: "Bạn thường đi làm hay đi học bằng phương tiện gì?", vocab: [{w: "Commute", m: "Đi lại"}, {w: "Motorbike", m: "Xe máy"}, {w: "Bus", m: "Xe buýt"}, {w: "Convenient", m: "Tiện lợi"}, {w: "Punctual", m: "Đúng giờ"}] },
+                { id: 2, text: "What is the most popular means of transport in your country?", trans: "Phương tiện phổ biến nhất ở nước bạn là gì?", vocab: [{w: "Vehicle", m: "Phương tiện"}, {w: "Affordable", m: "Giá cả phải chăng"}, {w: "Flexible", m: "Linh hoạt"}, {w: "Navigate", m: "Điều hướng/Di chuyển"}, {w: "Common", m: "Phổ biến"}] },
+                { id: 3, text: "Do you prefer public transport or driving?", trans: "Bạn thích giao thông công cộng hay tự lái xe?", vocab: [{w: "Privacy", m: "Sự riêng tư"}, {w: "Cost-effective", m: "Tiết kiệm chi phí"}, {w: "Crowded", m: "Đông đúc"}, {w: "Control", m: "Sự kiểm soát"}, {w: "Environmentally friendly", m: "Thân thiện môi trường"}] },
+                { id: 4, text: "Is traffic a big problem in your city?", trans: "Giao thông có phải vấn đề lớn ở thành phố bạn?", vocab: [{w: "Congestion", m: "Sự tắc nghẽn"}, {w: "Rush hour", m: "Giờ cao điểm"}, {w: "Stuck", m: "Bị kẹt"}, {w: "Frustrating", m: "Gây bực bội"}, {w: "Infrastructure", m: "Cơ sở hạ tầng"}] },
+                { id: 5, text: "How can we reduce traffic jams?", trans: "Làm sao để giảm tắc đường?", vocab: [{w: "Encourage", m: "Khuyến khích"}, {w: "Public transport", m: "Giao thông công cộng"}, {w: "Widen roads", m: "Mở rộng đường"}, {w: "Carpooling", m: "Đi chung xe"}, {w: "Rule", m: "Luật lệ"}] },
+                { id: 6, text: "Do you like flying?", trans: "Bạn có thích đi máy bay không?", vocab: [{w: "Flight", m: "Chuyến bay"}, {w: "Time-saving", m: "Tiết kiệm thời gian"}, {w: "Aviation", m: "Hàng không"}, {w: "Take off", m: "Cất cánh"}, {w: "Turbulence", m: "Sự nhiễu động"}] },
+                { id: 7, text: "Have you ever traveled by train?", trans: "Bạn đã từng đi tàu hỏa chưa?", vocab: [{w: "Railway", m: "Đường sắt"}, {w: "Scenery", m: "Phong cảnh"}, {w: "Relaxing", m: "Thư giãn"}, {w: "Compartment", m: "Toa/Khoang tàu"}, {w: "Slow", m: "Chậm chạp"}] },
+                { id: 8, text: "Is it safe to ride a bicycle in your city?", trans: "Đạp xe ở thành phố của bạn có an toàn không?", vocab: [{w: "Bicycle lane", m: "Làn đường xe đạp"}, {w: "Helmet", m: "Mũ bảo hiểm"}, {w: "Dangerous", m: "Nguy hiểm"}, {w: "Exercise", m: "Tập thể dục"}, {w: "Pollution", m: "Ô nhiễm"}] },
+                { id: 9, text: "What do you think transport will be like in the future?", trans: "Bạn nghĩ giao thông tương lai sẽ thế nào?", vocab: [{w: "Flying car", m: "Xe bay"}, {w: "Autonomous", m: "Tự lái"}, {w: "Electric vehicle", m: "Xe điện"}, {w: "Speed", m: "Tốc độ"}, {w: "Eco-friendly", m: "Thân thiện MT"}] },
+                { id: 10, text: "Have you ever gotten lost while traveling?", trans: "Bạn đã từng bị lạc khi đi lại chưa?", vocab: [{w: "Get lost", m: "Bị lạc"}, {w: "Direction", m: "Phương hướng"}, {w: "Map", m: "Bản đồ"}, {w: "Ask for help", m: "Hỏi sự giúp đỡ"}, {w: "Navigation app", m: "Ứng dụng chỉ đường"}] }
+            ]},
 
-            // --- 10 CHỦ ĐỀ B2 (UPPER-INTERMEDIATE) ---
-            { id: 11, topic: "Công nghệ (Technology)", level: "B2", questions: [
+            // ==========================================
+            // --- 20 CHỦ ĐỀ B2 (UPPER-INTERMEDIATE) ---
+            // ==========================================
+            { id: 21, topic: "Công nghệ (Technology)", level: "B2", questions: [
                 { id: 1, text: "How has technology changed the way we communicate?", trans: "Công nghệ đã thay đổi cách chúng ta liên lạc thế nào?", vocab: [{w: "Revolutionize", m: "Cách mạng hóa"}, {w: "Instantaneous", m: "Tức thời"}, {w: "Barrier", m: "Rào cản"}, {w: "Virtual", m: "Ảo"}, {w: "Stay connected", m: "Giữ liên lạc"}] },
                 { id: 2, text: "Do you think we are too dependent on smartphones?", trans: "Bạn có nghĩ mình quá phụ thuộc vào điện thoại?", vocab: [{w: "Dependency", m: "Sự phụ thuộc"}, {w: "Addiction", m: "Sự nghiện"}, {w: "Indispensable", m: "Không thể thiếu"}, {w: "Screen time", m: "Thời gian dùng màn hình"}, {w: "Detox", m: "Cai nghiện/Giải độc"}] },
                 { id: 3, text: "What are the pros and cons of AI?", trans: "Ưu nhược điểm của AI là gì?", vocab: [{w: "Artificial Intelligence", m: "Trí tuệ nhân tạo"}, {w: "Efficiency", m: "Hiệu quả"}, {w: "Job displacement", m: "Mất việc làm"}, {w: "Algorithm", m: "Thuật toán"}, {w: "Ethical", m: "Thuộc đạo đức"}] },
@@ -211,7 +318,7 @@
                 { id: 9, text: "How can technology solve environmental problems?", trans: "Công nghệ giải quyết vấn đề môi trường thế nào?", vocab: [{w: "Alternative energy", m: "Năng lượng thay thế"}, {w: "Monitor", m: "Giám sát"}, {w: "Sustainable", m: "Bền vững"}, {w: "Emission", m: "Khí thải"}, {w: "Eco-friendly", m: "Thân thiện MT"}] },
                 { id: 10, text: "What will technology be like in 50 years?", trans: "Công nghệ 50 năm nữa sẽ ra sao?", vocab: [{w: "Futuristic", m: "Thuộc về tương lai"}, {w: "Unimaginable", m: "Không thể tưởng tượng"}, {w: "Space exploration", m: "Khám phá vũ trụ"}, {w: "Implant", m: "Cấy ghép"}, {w: "Advance", m: "Tiến bộ"}] }
             ]},
-            { id: 12, topic: "Giáo dục (Education)", level: "B2", questions: [
+            { id: 22, topic: "Giáo dục (Education)", level: "B2", questions: [
                 { id: 1, text: "Is university education necessary for everyone?", trans: "Học đại học có cần thiết cho tất cả mọi người?", vocab: [{w: "Tertiary education", m: "Giáo dục đại học"}, {w: "Degree", m: "Bằng cấp"}, {w: "Vocational training", m: "Đào tạo nghề"}, {w: "Practical skills", m: "Kỹ năng thực tế"}, {w: "Guarantee", m: "Đảm bảo"}] },
                 { id: 2, text: "Should students wear uniforms at school?", trans: "Học sinh có nên mặc đồng phục không?", vocab: [{w: "Equality", m: "Sự bình đẳng"}, {w: "Discipline", m: "Kỷ luật"}, {w: "Identity", m: "Bản sắc/Nhận dạng"}, {w: "Distraction", m: "Sự xao nhãng"}, {w: "Peer pressure", m: "Áp lực đồng trang lứa"}] },
                 { id: 3, text: "What are the advantages of online learning?", trans: "Ưu điểm của học trực tuyến là gì?", vocab: [{w: "Flexibility", m: "Sự linh hoạt"}, {w: "Self-paced", m: "Tự học theo tiến độ"}, {w: "Accessible", m: "Dễ tiếp cận"}, {w: "Distance learning", m: "Học từ xa"}, {w: "Cost-effective", m: "Tiết kiệm chi phí"}] },
@@ -219,11 +326,11 @@
                 { id: 5, text: "Is private school better than public school?", trans: "Trường tư có tốt hơn trường công?", vocab: [{w: "Resources", m: "Nguồn lực/Cơ sở vật chất"}, {w: "Tuition fee", m: "Học phí"}, {w: "Facility", m: "Cơ sở vật chất"}, {w: "Class size", m: "Sĩ số lớp"}, {w: "Privilege", m: "Đặc quyền"}] },
                 { id: 6, text: "Should exams be abolished?", trans: "Có nên bãi bỏ các kỳ thi không?", vocab: [{w: "Assessment", m: "Sự đánh giá"}, {w: "Standardized test", m: "Bài kiểm tra chuẩn hóa"}, {w: "Stressful", m: "Căng thẳng"}, {w: "Memorize", m: "Học vẹt/Ghi nhớ"}, {w: "Evaluate", m: "Đánh giá"}] },
                 { id: 7, text: "What skills are most important for the future workforce?", trans: "Kỹ năng nào quan trọng nhất cho lao động tương lai?", vocab: [{w: "Soft skills", m: "Kỹ năng mềm"}, {w: "Adaptability", m: "Khả năng thích ứng"}, {w: "Problem-solving", m: "Giải quyết vấn đề"}, {w: "Tech-savvy", m: "Am hiểu công nghệ"}, {w: "Communication", m: "Giao tiếp"}] },
-                { id: 8, text: "Should we study subjects we don't like?", trans: "Chúng单 có nên học những môn mình không thích?", vocab: [{w: "Well-rounded", m: "Toàn diện"}, {w: "Mandatory", m: "Bắt buộc"}, {w: "Boring", m: "Nhàm chán"}, {w: "Broaden knowledge", m: "Mở rộng kiến thức"}, {w: "Motivation", m: "Động lực"}] },
+                { id: 8, text: "Should we study subjects we don't like?", trans: "Chúng ta có nên học những môn mình không thích?", vocab: [{w: "Well-rounded", m: "Toàn diện"}, {w: "Mandatory", m: "Bắt buộc"}, {w: "Boring", m: "Nhàm chán"}, {w: "Broaden knowledge", m: "Mở rộng kiến thức"}, {w: "Motivation", m: "Động lực"}] },
                 { id: 9, text: "How does technology impact the classroom?", trans: "Công nghệ tác động đến lớp học ra sao?", vocab: [{w: "Digital literacy", m: "Kiến thức số"}, {w: "Engaging", m: "Thu hút"}, {w: "Interactive whiteboard", m: "Bảng tương tác"}, {w: "Resourceful", m: "Giàu tài nguyên"}, {w: "Integrate", m: "Tích hợp"}] },
-                { id: 10, text: "Is lifelong learning important?", trans: "Học tập suốt đời có quan trọng không?", vocab: [{w: "Continuous", m: "Liên tục"}, {w: "Upgrade skills", m: "Nâng cấp kỹ năng"}, {w: "Stay relevant", m: "Không bị tụt hậu"}, {w: "Self-improvement", m: "Tự hoàn thiện"}, {w: "Curious", m: "Tò màu"}] }
+                { id: 10, text: "Is lifelong learning important?", trans: "Học tập suốt đời có quan trọng không?", vocab: [{w: "Continuous", m: "Liên tục"}, {w: "Upgrade skills", m: "Nâng cấp kỹ năng"}, {w: "Stay relevant", m: "Không bị tụt hậu"}, {w: "Self-improvement", m: "Tự hoàn thiện"}, {w: "Curious", m: "Tò mò"}] }
             ]},
-            { id: 13, topic: "Công việc (Work Life)", level: "B2", questions: [
+            { id: 23, topic: "Công việc (Work Life)", level: "B2", questions: [
                 { id: 1, text: "What defines a good workplace environment?", trans: "Điều gì tạo nên môi trường làm việc tốt?", vocab: [{w: "Collaboration", m: "Sự cộng tác"}, {w: "Toxic", m: "Độc hại"}, {w: "Supportive", m: "Hỗ trợ"}, {w: "Colleague", m: "Đồng nghiệp"}, {w: "Company culture", m: "Văn hóa công ty"}] },
                 { id: 2, text: "Should people work from home forever?", trans: "Mọi người có nên làm ở nhà mãi mãi không?", vocab: [{w: "Remote work", m: "Làm việc từ xa"}, {w: "Productivity", m: "Năng suất"}, {w: "Commute", m: "Đi lại"}, {w: "Isolation", m: "Sự cô lập"}, {w: "Hybrid", m: "Kết hợp"}] },
                 { id: 3, text: "Is a high salary better than job satisfaction?", trans: "Lương cao có tốt hơn sự hài lòng công việc?", vocab: [{w: "Compensation", m: "Tiền lương/Thù lao"}, {w: "Fulfillment", m: "Sự thỏa mãn"}, {w: "Burnout", m: "Kiệt sức"}, {w: "Motivate", m: "Thúc đẩy"}, {w: "Trade-off", m: "Sự đánh đổi"}] },
@@ -235,7 +342,7 @@
                 { id: 9, text: "Will robots take our jobs?", trans: "Liệu robot sẽ cướp việc của chúng ta?", vocab: [{w: "Displacement", m: "Sự thay thế"}, {w: "Manual labor", m: "Lao động chân tay"}, {w: "Outsource", m: "Thuê ngoài"}, {w: "Upgrade", m: "Nâng cấp"}, {w: "Irreplaceable", m: "Không thể thay thế"}] },
                 { id: 10, text: "Is job security a thing of the past?", trans: "Sự ổn định công việc có phải là chuyện quá khứ?", vocab: [{w: "Gig economy", m: "Nền kinh tế việc làm tự do"}, {w: "Freelance", m: "Làm tự do"}, {w: "Stable", m: "Ổn định"}, {w: "Contract", m: "Hợp đồng"}, {w: "Adaptable", m: "Dễ thích nghi"}] }
             ]},
-            { id: 14, topic: "Toàn cầu hóa (Globalization)", level: "B2", questions: [
+            { id: 24, topic: "Toàn cầu hóa (Globalization)", level: "B2", questions: [
                 { id: 1, text: "How does globalization affect local cultures?", trans: "Toàn cầu hóa ảnh hưởng văn hóa địa phương thế nào?", vocab: [{w: "Identity", m: "Bản sắc"}, {w: "Assimilate", m: "Đồng hóa"}, {w: "Diversity", m: "Sự đa dạng"}, {w: "Westernization", m: "Tây phương hóa"}, {w: "Preserve", m: "Bảo tồn"}] },
                 { id: 2, text: "What are the benefits of free trade?", trans: "Lợi ích của tự do thương mại là gì?", vocab: [{w: "Economy", m: "Kinh tế"}, {w: "Import/Export", m: "Xuất/Nhập khẩu"}, {w: "Tariff", m: "Thuế quan"}, {w: "Boost", m: "Thúc đẩy"}, {w: "Consumer", m: "Người tiêu dùng"}] },
                 { id: 3, text: "Does globalization help poor countries?", trans: "Toàn cầu hóa có giúp các nước nghèo không?", vocab: [{w: "Developing nation", m: "Quốc gia đang phát triển"}, {w: "Investment", m: "Sự đầu tư"}, {w: "Exploit", m: "Bóc lột/Khai thác"}, {w: "Standard of living", m: "Mức sống"}, {w: "Poverty", m: "Sự nghèo đói"}] },
@@ -247,7 +354,7 @@
                 { id: 9, text: "Can globalization lead to world peace?", trans: "Toàn cầu hóa có dẫn đến hòa bình thế giới?", vocab: [{w: "Diplomacy", m: "Ngoại giao"}, {w: "Interconnected", m: "Kết nối với nhau"}, {w: "Mutual understanding", m: "Sự hiểu biết lẫn nhau"}, {w: "Conflict", m: "Xung đột"}, {w: "Harmony", m: "Sự hòa hợp"}] },
                 { id: 10, text: "What is the future of global politics?", trans: "Tương lai của chính trị toàn cầu là gì?", vocab: [{w: "Superpower", m: "Siêu cường quốc"}, {w: "Alliance", m: "Liên minh"}, {w: "Shift", m: "Sự chuyển dịch"}, {w: "Influence", m: "Sức ảnh hưởng"}, {w: "Cooperate", m: "Hợp tác"}] }
             ]},
-            { id: 15, topic: "Tâm lý (Psychology)", level: "B2", questions: [
+            { id: 25, topic: "Tâm lý (Psychology)", level: "B2", questions: [
                 { id: 1, text: "What motivates you to work hard?", trans: "Điều gì thúc đẩy bạn làm việc chăm chỉ?", vocab: [{w: "Motivation", m: "Động lực"}, {w: "Ambition", m: "Tham vọng"}, {w: "Inner drive", m: "Động lực bên trong"}, {w: "Reward", m: "Phần thưởng"}, {w: "Achieve", m: "Đạt được"}] },
                 { id: 2, text: "Is intelligence inherited or learned?", trans: "Thông minh là do di truyền hay do học tập?", vocab: [{w: "Nature vs Nurture", m: "Bẩm sinh vs Nuôi dưỡng"}, {w: "Genetics", m: "Di truyền học"}, {w: "Environment", m: "Môi trường"}, {w: "Cognitive ability", m: "Khả năng nhận thức"}, {w: "Cultivate", m: "Trau dồi"}] },
                 { id: 3, text: "How do you overcome your fears?", trans: "Làm sao để vượt qua nỗi sợ?", vocab: [{w: "Anxiety", m: "Sự lo âu"}, {w: "Face it", m: "Đối mặt với nó"}, {w: "Phobia", m: "Hội chứng sợ hãi"}, {w: "Courage", m: "Sự can đảm"}, {w: "Step out of comfort zone", m: "Thoát khỏi vùng an toàn"}] },
@@ -259,7 +366,7 @@
                 { id: 9, text: "How do group dynamics work?", trans: "Động lực nhóm hoạt động như thế nào?", vocab: [{w: "Peer pressure", m: "Áp lực đồng trang lứa"}, {w: "Conformity", m: "Sự tuân thủ/hòa nhập"}, {w: "Influence", m: "Sự ảnh hưởng"}, {w: "Leadership", m: "Vai trò lãnh đạo"}, {w: "Teamwork", m: "Làm việc nhóm"}] },
                 { id: 10, text: "Can people really change their habits?", trans: "Mọi người có thực sự đổi được thói quen?", vocab: [{w: "Willpower", m: "Ý chí"}, {w: "Neuroplasticity", m: "Tính dẻo của não"}, {w: "Routine", m: "Thói quen hàng ngày"}, {w: "Relapse", m: "Tái phạm"}, {w: "Consistency", m: "Sự kiên trì"}] }
             ]},
-            { id: 16, topic: "Tội phạm (Crime & Justice)", level: "B2", questions: [
+            { id: 26, topic: "Tội phạm (Crime)", level: "B2", questions: [
                 { id: 1, text: "Is prison the best way to punish criminals?", trans: "Nhà tù có phải cách tốt nhất để trừng phạt tội phạm?", vocab: [{w: "Rehabilitation", m: "Cải tạo"}, {w: "Incarceration", m: "Sự giam cầm"}, {w: "Deterrent", m: "Biện pháp răn đe"}, {w: "Offender", m: "Người phạm tội"}, {w: "Alternative", m: "Giải pháp thay thế"}] },
                 { id: 2, text: "Should the death penalty be abolished?", trans: "Án tử hình có nên bị bãi bỏ?", vocab: [{w: "Capital punishment", m: "Án tử hình"}, {w: "Execute", m: "Hành quyết"}, {w: "Human rights", m: "Nhân quyền"}, {w: "Controversial", m: "Gây tranh cãi"}, {w: "Life sentence", m: "Tù chung thân"}] },
                 { id: 3, text: "How can we prevent crime in cities?", trans: "Làm sao để ngăn tội phạm trong thành phố?", vocab: [{w: "Prevention", m: "Sự ngăn ngừa"}, {w: "Surveillance", m: "Sự giám sát"}, {w: "Police presence", m: "Sự hiện diện của cảnh sát"}, {w: "Poverty reduction", m: "Giảm nghèo"}, {w: "Education", m: "Giáo dục"}] },
@@ -271,7 +378,7 @@
                 { id: 9, text: "Who is responsible for public safety?", trans: "Ai chịu trách nhiệm cho an toàn công cộng?", vocab: [{w: "Law enforcement", m: "Lực lượng hành pháp"}, {w: "Government", m: "Chính phủ"}, {w: "Citizen", m: "Công dân"}, {w: "Security guard", m: "Bảo vệ"}, {w: "Vigilant", m: "Cảnh giác"}] },
                 { id: 10, text: "Will there be less crime in the future?", trans: "Tương lai sẽ ít tội phạm hơn chứ?", vocab: [{w: "Utopia", m: "Xã hội không tưởng"}, {w: "Advanced technology", m: "Công nghệ tiên tiến"}, {w: "Predict", m: "Dự đoán"}, {w: "Eradicate", m: "Tiêu diệt hoàn toàn"}, {w: "Optimistic", m: "Lạc quan"}] }
             ]},
-            { id: 17, topic: "Văn hóa (Art & Culture)", level: "B2", questions: [
+            { id: 27, topic: "Văn hóa (Culture)", level: "B2", questions: [
                 { id: 1, text: "Should the government fund the arts?", trans: "Chính phủ có nên tài trợ cho nghệ thuật?", vocab: [{w: "Subsidize", m: "Trợ cấp"}, {w: "Sponsor", m: "Tài trợ"}, {w: "Public funds", m: "Quỹ công"}, {w: "Flourish", m: "Phát triển mạnh"}, {w: "Necessity", m: "Sự cần thiết"}] },
                 { id: 2, text: "Is graffiti art or vandalism?", trans: "Vẽ bậy là nghệ thuật hay phá hoại?", vocab: [{w: "Vandalism", m: "Sự phá hoại"}, {w: "Street art", m: "Nghệ thuật đường phố"}, {w: "Self-expression", m: "Sự thể hiện bản thân"}, {w: "Illegal", m: "Bất hợp pháp"}, {w: "Creativity", m: "Sự sáng tạo"}] },
                 { id: 3, text: "What is the role of art in society?", trans: "Vai trò của nghệ thuật đối với xã hội?", vocab: [{w: "Expression", m: "Sự biểu đạt"}, {w: "Reflect", m: "Phản ánh"}, {w: "Inspire", m: "Truyền cảm hứng"}, {w: "Provoke thought", m: "Gợi suy nghĩ"}, {w: "Aesthetics", m: "Thẩm mỹ"}] },
@@ -283,7 +390,7 @@
                 { id: 9, text: "Should museums be free for everyone?", trans: "Bảo tàng có nên miễn phí cho tất cả?", vocab: [{w: "Accessibility", m: "Sự dễ tiếp cận"}, {w: "Admission fee", m: "Phí vào cửa"}, {w: "Educational", m: "Mang tính giáo dục"}, {w: "Exhibition", m: "Triển lãm"}, {w: "Maintain", m: "Duy trì"}] },
                 { id: 10, text: "How does globalization change the arts?", trans: "Toàn cầu hóa thay đổi nghệ thuật ra sao?", vocab: [{w: "Hybridization", m: "Sự lai tạo"}, {w: "Influence", m: "Ảnh hưởng"}, {w: "Mainstream", m: "Đại trà"}, {w: "Diverse", m: "Đa dạng"}, {w: "Lose originality", m: "Mất đi tính nguyên bản"}] }
             ]},
-            { id: 18, topic: "Đô thị hóa (Urbanization)", level: "B2", questions: [
+            { id: 28, topic: "Đô thị hóa (Urbanization)", level: "B2", questions: [
                 { id: 1, text: "Why are people moving to big cities?", trans: "Tại sao mọi người chuyển đến các thành phố lớn?", vocab: [{w: "Migration", m: "Di cư"}, {w: "Opportunity", m: "Cơ hội"}, {w: "Standard of living", m: "Mức sống"}, {w: "Facility", m: "Cơ sở vật chất"}, {w: "Employment", m: "Việc làm"}] },
                 { id: 2, text: "What are the problems of living in a metropolis?", trans: "Vấn đề của việc sống ở siêu đô thị là gì?", vocab: [{w: "Congestion", m: "Tắc nghẽn"}, {w: "Cost of living", m: "Chi phí sống"}, {w: "Pollution", m: "Ô nhiễm"}, {w: "Overcrowded", m: "Quá đông đúc"}, {w: "Stressful", m: "Căng thẳng"}] },
                 { id: 3, text: "Is the countryside better for children?", trans: "Nông thôn có tốt hơn cho trẻ em?", vocab: [{w: "Environment", m: "Môi trường"}, {w: "Nature", m: "Thiên nhiên"}, {w: "Spacious", m: "Rộng rãi"}, {w: "Safe", m: "An toàn"}, {w: "Lack of facilities", m: "Thiếu cơ sở vật chất"}] },
@@ -295,7 +402,7 @@
                 { id: 9, text: "How does city life affect mental health?", trans: "Sống ở thành phố ảnh hưởng tâm thần thế nào?", vocab: [{w: "Isolation", m: "Sự cô lập"}, {w: "Fast-paced", m: "Nhịp sống nhanh"}, {w: "Anxiety", m: "Sự lo âu"}, {w: "Alienation", m: "Sự xa lánh"}, {w: "Pressure", m: "Áp lực"}] },
                 { id: 10, text: "Can small towns survive urbanization?", trans: "Thị trấn nhỏ có tồn tại được trước đô thị hóa?", vocab: [{w: "Decentralization", m: "Sự phi tập trung"}, {w: "Local business", m: "Doanh nghiệp địa phương"}, {w: "Tourism", m: "Du lịch"}, {w: "Charm", m: "Sự quyến rũ"}, {w: "Revitalize", m: "Tái sinh/Phục hồi"}] }
             ]},
-            { id: 19, topic: "Truyền thông (Media)", level: "B2", questions: [
+            { id: 29, topic: "Truyền thông (Media)", level: "B2", questions: [
                 { id: 1, text: "Do you trust the news you see online?", trans: "Bạn có tin tin tức bạn thấy online?", vocab: [{w: "Reliability", m: "Độ tin cậy"}, {w: "Verify", m: "Xác minh"}, {w: "Source", m: "Nguồn"}, {w: "Clickbait", m: "Tiêu đề câu view"}, {w: "Skeptical", m: "Hoài nghi"}] },
                 { id: 2, text: "Is traditional media dying?", trans: "Truyền thông truyền thống đang chết dần?", vocab: [{w: "Obsolete", m: "Lỗi thời"}, {w: "Newspaper", m: "Báo giấy"}, {w: "Shift", m: "Sự dịch chuyển"}, {w: "Digital era", m: "Kỷ nguyên số"}, {w: "Adapt", m: "Thích nghi"}] },
                 { id: 3, text: "How does advertising influence us?", trans: "Quảng cáo ảnh hưởng đến chúng ta ra sao?", vocab: [{w: "Subconscious", m: "Tiềm thức"}, {w: "Manipulate", m: "Thao túng"}, {w: "Persuasive", m: "Có tính thuyết phục"}, {w: "Consumerism", m: "Chủ nghĩa tiêu dùng"}, {w: "Target audience", m: "Khách hàng mục tiêu"}] },
@@ -307,7 +414,7 @@
                 { id: 9, text: "Does the media create unrealistic beauty standards?", trans: "Truyền thông tạo ra tiêu chuẩn vẻ đẹp phi thực tế?", vocab: [{w: "Perception", m: "Sự nhận thức"}, {w: "Flawless", m: "Hoàn hảo/Không tì vết"}, {w: "Photoshop", m: "Chỉnh sửa ảnh"}, {w: "Insecurity", m: "Sự tự ti"}, {w: "Expectation", m: "Kỳ vọng"}] },
                 { id: 10, text: "Will social media replace traditional news?", trans: "Mạng xã hội sẽ thay thế tin tức truyền thống?", vocab: [{w: "Real-time", m: "Thời gian thực"}, {w: "Citizen journalism", m: "Báo chí công dân"}, {w: "Convenience", m: "Sự tiện lợi"}, {w: "Algorithm", m: "Thuật toán"}, {w: "Coexist", m: "Cùng tồn tại"}] }
             ]},
-            { id: 20, topic: "Khởi nghiệp (Business)", level: "B2", questions: [
+            { id: 30, topic: "Khởi nghiệp (Business)", level: "B2", questions: [
                 { id: 1, text: "What makes a business successful?", trans: "Điều gì tạo nên một doanh nghiệp thành công?", vocab: [{w: "Entrepreneur", m: "Doanh nhân"}, {w: "Strategy", m: "Chiến lược"}, {w: "Customer satisfaction", m: "Sự hài lòng của khách"}, {w: "Innovation", m: "Sự đổi mới"}, {w: "Profit margin", m: "Tỷ suất lợi nhuận"}] },
                 { id: 2, text: "Should everyone try to start a business?", trans: "Mọi người có nên thử khởi nghiệp không?", vocab: [{w: "Risk-taking", m: "Sự mạo hiểm"}, {w: "Not for everyone", m: "Không dành cho tất cả"}, {w: "Financial burden", m: "Gánh nặng tài chính"}, {w: "Leadership skill", m: "Kỹ năng lãnh đạo"}, {w: "Venture", m: "Dự án kinh doanh"}] },
                 { id: 3, text: "What is the biggest challenge for startups?", trans: "Thử thách lớn nhất cho khởi nghiệp là gì?", vocab: [{w: "Capital", m: "Vốn"}, {w: "Fierce competition", m: "Cạnh tranh khốc liệt"}, {w: "Cash flow", m: "Dòng tiền"}, {w: "Brand awareness", m: "Độ nhận diện TH"}, {w: "Bankruptcy", m: "Phá sản"}] },
@@ -318,6 +425,126 @@
                 { id: 8, text: "How to survive a financial crisis?", trans: "Sống sót qua khủng hoảng tài chính thế nào?", vocab: [{w: "Resilience", m: "Sự kiên cường"}, {w: "Cut cost", m: "Cắt giảm chi phí"}, {w: "Adapt", m: "Thích nghi"}, {w: "Emergency fund", m: "Quỹ khẩn cấp"}, {w: "Downsize", m: "Thu hẹp quy mô"}] },
                 { id: 9, text: "Is marketing more important than the product?", trans: "Tiếp thị có quan trọng hơn sản phẩm không?", vocab: [{w: "Branding", m: "Thương hiệu"}, {w: "Core value", m: "Giá trị cốt lõi"}, {w: "Campaign", m: "Chiến dịch"}, {w: "Crucial", m: "Quan trọng"}, {w: "Go hand in hand", m: "Đi đôi với nhau"}] },
                 { id: 10, text: "What will businesses be like in the future?", trans: "Doanh nghiệp trong tương lai sẽ như thế nào?", vocab: [{w: "Automation", m: "Tự động hóa"}, {w: "Remote-first", m: "Ưu tiên làm từ xa"}, {w: "Eco-conscious", m: "Có ý thức về MT"}, {w: "Artificial Intelligence", m: "Trí tuệ nhân tạo"}, {w: "Adaptable", m: "Dễ thích nghi"}] }
+            ]},
+            { id: 31, text: "Biến đổi khí hậu (Climate Change)", level: "B2", questions: [
+                { id: 1, text: "Do you think individual actions can stop climate change?", trans: "Bạn nghĩ hành động cá nhân có thể ngăn biến đổi khí hậu không?", vocab: [{w: "Contribution", m: "Sự đóng góp"}, {w: "Carbon footprint", m: "Dấu chân carbon"}, {w: "Insignificant", m: "Không đáng kể"}, {w: "Collective effort", m: "Nỗ lực tập thể"}, {w: "Impact", m: "Tác động"}] },
+                { id: 2, text: "What role should governments play in protecting the environment?", trans: "Chính phủ nên đóng vai trò gì trong việc bảo vệ môi trường?", vocab: [{w: "Regulation", m: "Quy định"}, {w: "Enforce", m: "Thực thi"}, {w: "Policy", m: "Chính sách"}, {w: "Subsidize", m: "Trợ cấp"}, {w: "Penalty", m: "Hình phạt"}] },
+                { id: 3, text: "How will climate change affect your country in the next 50 years?", trans: "Biến đổi khí hậu sẽ ảnh hưởng nước bạn thế nào trong 50 năm tới?", vocab: [{w: "Sea level rise", m: "Nước biển dâng"}, {w: "Coastal city", m: "Thành phố ven biển"}, {w: "Agriculture", m: "Nông nghiệp"}, {w: "Devastating", m: "Tàn phá"}, {w: "Adaptation", m: "Sự thích nghi"}] },
+                { id: 4, text: "Should air travel be restricted to reduce emissions?", trans: "Có nên hạn chế đi lại bằng đường hàng không để giảm khí thải?", vocab: [{w: "Aviation", m: "Hàng không"}, {w: "Emission", m: "Khí thải"}, {w: "Impractical", m: "Thiếu thực tế"}, {w: "Alternative", m: "Sự thay thế"}, {w: "Taxation", m: "Sự đánh thuế"}] },
+                { id: 5, text: "Is it possible to completely switch to renewable energy?", trans: "Có thể chuyển đổi hoàn toàn sang năng lượng tái tạo không?", vocab: [{w: "Transition", m: "Sự chuyển đổi"}, {w: "Fossil fuel", m: "Nhiên liệu hóa thạch"}, {w: "Infrastructure", m: "Cơ sở hạ tầng"}, {w: "Reliability", m: "Độ tin cậy"}, {w: "Feasible", m: "Khả thi"}] },
+                { id: 6, text: "What are the economic consequences of global warming?", trans: "Hậu quả kinh tế của sự nóng lên toàn cầu là gì?", vocab: [{w: "Disaster relief", m: "Cứu trợ thiên tai"}, {w: "Crop failure", m: "Mất mùa"}, {w: "Insurance", m: "Bảo hiểm"}, {w: "Financial burden", m: "Gánh nặng tài chính"}, {w: "Recession", m: "Suy thoái"}] },
+                { id: 7, text: "Should companies be heavily fined for polluting?", trans: "Các công ty có nên bị phạt nặng vì gây ô nhiễm?", vocab: [{w: "Deterrent", m: "Biện pháp răn đe"}, {w: "Accountability", m: "Trách nhiệm giải trình"}, {w: "Profit-driven", m: "Bị thúc đẩy bởi lợi nhuận"}, {w: "Strict", m: "Nghiêm ngặt"}, {w: "Compliance", m: "Sự tuân thủ"}] },
+                { id: 8, text: "How does consumerism contribute to environmental problems?", trans: "Chủ nghĩa tiêu dùng góp phần vào các vấn đề môi trường thế nào?", vocab: [{w: "Overconsumption", m: "Tiêu thụ quá mức"}, {w: "Waste generation", m: "Việc tạo ra rác thải"}, {w: "Fast fashion", m: "Thời trang nhanh"}, {w: "Throwaway culture", m: "Văn hóa vứt bỏ"}, {w: "Depletion", m: "Sự cạn kiệt"}] },
+                { id: 9, text: "Can technology solve the climate crisis?", trans: "Công nghệ có thể giải quyết cuộc khủng hoảng khí hậu không?", vocab: [{w: "Innovation", m: "Sự đổi mới"}, {w: "Carbon capture", m: "Thu giữ carbon"}, {w: "Over-reliance", m: "Phụ thuộc quá mức"}, {w: "Mitigate", m: "Làm nhẹ bớt"}, {w: "Double-edged sword", m: "Con dao hai lưỡi"}] },
+                { id: 10, text: "What is the most effective way to educate people about the environment?", trans: "Cách hiệu quả nhất để giáo dục mọi người về môi trường là gì?", vocab: [{w: "Curriculum", m: "Chương trình học"}, {w: "Campaign", m: "Chiến dịch"}, {w: "Practical experience", m: "Trải nghiệm thực tế"}, {w: "Media coverage", m: "Đưa tin trên truyền thông"}, {w: "Awareness", m: "Nhận thức"}] }
+            ]},
+            { id: 32, topic: "Sức khỏe tinh thần (Mental Health)", level: "B2", questions: [
+                { id: 1, text: "Why is mental health becoming a major issue today?", trans: "Tại sao sức khỏe tinh thần lại trở thành vấn đề lớn ngày nay?", vocab: [{w: "Fast-paced life", m: "Nhịp sống nhanh"}, {w: "Stressful", m: "Căng thẳng"}, {w: "Isolation", m: "Sự cô lập"}, {w: "Expectation", m: "Kỳ vọng"}, {w: "Awareness", m: "Sự nhận thức"}] },
+                { id: 2, text: "How does social media affect teenagers' mental well-being?", trans: "Mạng xã hội ảnh hưởng đến tinh thần của thanh thiếu niên ra sao?", vocab: [{w: "Comparison", m: "Sự so sánh"}, {w: "Self-esteem", m: "Lòng tự trọng"}, {w: "Cyberbullying", m: "Bắt nạt qua mạng"}, {w: "Validation", m: "Sự công nhận"}, {w: "Detrimental", m: "Có hại"}] },
+                { id: 3, text: "Is there still a stigma surrounding mental illness in your country?", trans: "Có còn sự kỳ thị xung quanh bệnh tâm thần ở nước bạn không?", vocab: [{w: "Stigma", m: "Sự kỳ thị"}, {w: "Taboo", m: "Điều cấm kỵ"}, {w: "Misunderstanding", m: "Sự hiểu lầm"}, {w: "Seek help", m: "Tìm kiếm sự giúp đỡ"}, {w: "Open up", m: "Mở lòng"}] },
+                { id: 4, text: "Should schools teach students how to manage stress?", trans: "Trường học có nên dạy học sinh cách quản lý căng thẳng không?", vocab: [{w: "Coping mechanism", m: "Cơ chế đối phó"}, {w: "Resilience", m: "Sự kiên cường"}, {w: "Equip", m: "Trang bị"}, {w: "Crucial", m: "Rất quan trọng"}, {w: "Curriculum", m: "Chương trình học"}] },
+                { id: 5, text: "What can employers do to support their staff's mental health?", trans: "Nhà tuyển dụng có thể làm gì để hỗ trợ sức khỏe tinh thần nhân viên?", vocab: [{w: "Work-life balance", m: "Cân bằng công việc - cuộc sống"}, {w: "Counseling", m: "Tư vấn"}, {w: "Flexible hours", m: "Giờ giấc linh hoạt"}, {w: "Burnout", m: "Kiệt sức"}, {w: "Supportive", m: "Có tính hỗ trợ"}] },
+                { id: 6, text: "How does physical exercise relate to mental well-being?", trans: "Tập thể dục liên quan đến sức khỏe tinh thần như thế nào?", vocab: [{w: "Endorphins", m: "Hóc môn hạnh phúc"}, {w: "Relieve tension", m: "Giảm căng thẳng"}, {w: "Boost mood", m: "Cải thiện tâm trạng"}, {w: "Interconnected", m: "Liên kết với nhau"}, {w: "Distraction", m: "Sự xao nhãng"}] },
+                { id: 7, text: "Are people today lonelier than in the past?", trans: "Mọi người ngày nay có cô đơn hơn trong quá khứ không?", vocab: [{w: "Alienation", m: "Sự xa lánh"}, {w: "Virtual connection", m: "Kết nối ảo"}, {w: "Lack of intimacy", m: "Thiếu sự thân mật"}, {w: "Urbanization", m: "Đô thị hóa"}, {w: "Paradox", m: "Nghịch lý"}] },
+                { id: 8, text: "What is the best way to help a friend who is feeling depressed?", trans: "Cách tốt nhất để giúp người bạn đang trầm cảm là gì?", vocab: [{w: "Listen attentively", m: "Lắng nghe chăm chú"}, {w: "Empathy", m: "Sự đồng cảm"}, {w: "Professional help", m: "Sự trợ giúp chuyên môn"}, {w: "Patience", m: "Sự kiên nhẫn"}, {w: "Judge", m: "Phán xét"}] },
+                { id: 9, text: "Do you think modern life demands too much from individuals?", trans: "Bạn có nghĩ cuộc sống hiện đại đòi hỏi quá nhiều ở mỗi cá nhân?", vocab: [{w: "Overwhelming", m: "Áp đảo/Quá sức"}, {w: "Multitasking", m: "Làm nhiều việc cùng lúc"}, {w: "Perfectionism", m: "Chủ nghĩa hoàn hảo"}, {w: "Unrealistic", m: "Phi thực tế"}, {w: "Pressure", m: "Áp lực"}] },
+                { id: 10, text: "How can society promote better mental health for everyone?", trans: "Làm sao xã hội có thể thúc đẩy sức khỏe tinh thần tốt hơn cho mọi người?", vocab: [{w: "Accessible healthcare", m: "Y tế dễ tiếp cận"}, {w: "Destigmatize", m: "Xóa bỏ kỳ thị"}, {w: "Campaign", m: "Chiến dịch"}, {w: "Community support", m: "Hỗ trợ từ cộng đồng"}, {w: "Prioritize", m: "Ưu tiên"}] }
+            ]},
+            { id: 33, topic: "Đầu tư & Tài chính (Finance)", level: "B2", questions: [
+                { id: 1, text: "Why is financial literacy important for young people?", trans: "Tại sao kiến thức tài chính lại quan trọng đối với người trẻ?", vocab: [{w: "Financial literacy", m: "Kiến thức tài chính"}, {w: "Debt", m: "Nợ nần"}, {w: "Budgeting", m: "Lập ngân sách"}, {w: "Independence", m: "Sự độc lập"}, {w: "Manage", m: "Quản lý"}] },
+                { id: 2, text: "Is it better to save money or invest it?", trans: "Tiết kiệm tiền hay đem đầu tư thì tốt hơn?", vocab: [{w: "Inflation", m: "Lạm phát"}, {w: "Interest rate", m: "Lãi suất"}, {w: "Risk tolerance", m: "Khả năng chịu rủi ro"}, {w: "Generate wealth", m: "Tạo ra của cải"}, {w: "Devalue", m: "Mất giá"}] },
+                { id: 3, text: "What are the risks of investing in stock markets?", trans: "Rủi ro khi đầu tư vào thị trường chứng khoán là gì?", vocab: [{w: "Volatility", m: "Sự biến động"}, {w: "Crash", m: "Sự sụp đổ"}, {w: "Unpredictable", m: "Không thể đoán trước"}, {w: "Lose money", m: "Mất tiền"}, {w: "Long-term", m: "Dài hạn"}] },
+                { id: 4, text: "Should schools teach students how to manage money?", trans: "Trường học có nên dạy học sinh cách quản lý tiền không?", vocab: [{w: "Practical skill", m: "Kỹ năng thực tế"}, {w: "Curriculum", m: "Chương trình học"}, {w: "Prepare", m: "Chuẩn bị"}, {w: "Adulthood", m: "Tuổi trưởng thành"}, {w: "Essential", m: "Thiết yếu"}] },
+                { id: 5, text: "How has technology changed the way we handle money?", trans: "Công nghệ đã thay đổi cách chúng ta xử lý tiền bạc thế nào?", vocab: [{w: "Cashless", m: "Không dùng tiền mặt"}, {w: "Transaction", m: "Giao dịch"}, {w: "Cryptocurrency", m: "Tiền điện tử"}, {w: "Convenience", m: "Sự tiện lợi"}, {w: "Security", m: "Bảo mật"}] },
+                { id: 6, text: "Do you think people are too obsessed with becoming rich?", trans: "Bạn có nghĩ con người quá ám ảnh với việc làm giàu không?", vocab: [{w: "Materialism", m: "Chủ nghĩa vật chất"}, {w: "Greed", m: "Sự tham lam"}, {w: "Measure of success", m: "Thước đo thành công"}, {w: "Sacrifice", m: "Sự hy sinh"}, {w: "Contentment", m: "Sự mãn nguyện"}] },
+                { id: 7, text: "What is the impact of credit cards on personal spending?", trans: "Tác động của thẻ tín dụng đến chi tiêu cá nhân là gì?", vocab: [{w: "Overspend", m: "Tiêu quá đà"}, {w: "Temptation", m: "Sự cám dỗ"}, {w: "Interest", m: "Tiền lãi"}, {w: "Convenient", m: "Tiện lợi"}, {w: "Debt cycle", m: "Vòng xoáy nợ nần"}] },
+                { id: 8, text: "Is buying a house always a good investment?", trans: "Mua nhà có luôn là một khoản đầu tư tốt không?", vocab: [{w: "Real estate", m: "Bất động sản"}, {w: "Asset", m: "Tài sản"}, {w: "Mortgage", m: "Thế chấp"}, {w: "Maintenance", m: "Chi phí bảo trì"}, {w: "Appreciate", m: "Tăng giá"}] },
+                { id: 9, text: "How does the economy of a country affect its citizens' daily lives?", trans: "Nền kinh tế của một quốc gia ảnh hưởng đến đời sống người dân ra sao?", vocab: [{w: "Cost of living", m: "Chi phí sống"}, {w: "Unemployment rate", m: "Tỷ lệ thất nghiệp"}, {w: "Purchasing power", m: "Sức mua"}, {w: "Welfare", m: "Phúc lợi"}, {w: "Stability", m: "Sự ổn định"}] },
+                { id: 10, text: "What advice would you give to someone who wants to start investing?", trans: "Bạn sẽ cho lời khuyên gì với người muốn bắt đầu đầu tư?", vocab: [{w: "Research", m: "Nghiên cứu"}, {w: "Diversify", m: "Đa dạng hóa"}, {w: "Patience", m: "Sự kiên nhẫn"}, {w: "Consult", m: "Tham khảo ý kiến"}, {w: "Start small", m: "Bắt đầu nhỏ"}] }
+            ]},
+            { id: 34, topic: "Vũ trụ & Không gian (Space)", level: "B2", questions: [
+                { id: 1, text: "Should governments spend money on space exploration?", trans: "Chính phủ có nên chi tiền cho việc khám phá không gian?", vocab: [{w: "Justifiable", m: "Có thể biện minh/Hợp lý"}, {w: "Budget", m: "Ngân sách"}, {w: "Pressing issue", m: "Vấn đề cấp bách"}, {w: "Scientific advancement", m: "Tiến bộ khoa học"}, {w: "Waste of money", m: "Lãng phí tiền bạc"}] },
+                { id: 2, text: "What are the benefits of exploring other planets?", trans: "Lợi ích của việc khám phá các hành tinh khác là gì?", vocab: [{w: "Resource depletion", m: "Cạn kiệt tài nguyên"}, {w: "Alternative habitat", m: "Môi trường sống thay thế"}, {w: "Discovery", m: "Sự khám phá"}, {w: "Technological spin-off", m: "Công nghệ phái sinh"}, {w: "Curiosity", m: "Sự tò mò"}] },
+                { id: 3, text: "Do you believe there is life on other planets?", trans: "Bạn có tin có sự sống trên các hành tinh khác không?", vocab: [{w: "Extraterrestrial", m: "Ngoài hành tinh"}, {w: "Probability", m: "Xác suất"}, {w: "Vastness", m: "Sự bao la"}, {w: "Evidence", m: "Bằng chứng"}, {w: "Microorganism", m: "Vi sinh vật"}] },
+                { id: 4, text: "Would you like to travel to space as a tourist?", trans: "Bạn có muốn du lịch vũ trụ với tư cách du khách không?", vocab: [{w: "Space tourism", m: "Du lịch vũ trụ"}, {w: "Zero gravity", m: "Không trọng lực"}, {w: "Fascinating", m: "Thú vị"}, {w: "Risk", m: "Rủi ro"}, {w: "Unaffordable", m: "Không thể chi trả"}] },
+                { id: 5, text: "How does space research help us on Earth?", trans: "Nghiên cứu vũ trụ giúp ích cho chúng ta trên Trái đất thế nào?", vocab: [{w: "Satellite", m: "Vệ tinh"}, {w: "Weather forecasting", m: "Dự báo thời tiết"}, {w: "Communication", m: "Giao tiếp"}, {w: "Monitor", m: "Giám sát"}, {w: "Innovation", m: "Sự đổi mới"}] },
+                { id: 6, text: "What are the dangers of space exploration?", trans: "Sự nguy hiểm của việc khám phá không gian là gì?", vocab: [{w: "Radiation", m: "Bức xạ"}, {w: "Space debris", m: "Mảnh vỡ vũ trụ"}, {w: "Life-threatening", m: "Đe dọa tính mạng"}, {w: "Isolation", m: "Sự cô lập"}, {w: "Malfunction", m: "Sự trục trặc"}] },
+                { id: 7, text: "Should space exploration be privatized or run by governments?", trans: "Nghiên cứu vũ trụ nên được tư nhân hóa hay do chính phủ điều hành?", vocab: [{w: "Privatization", m: "Tư nhân hóa"}, {w: "Competition", m: "Sự cạnh tranh"}, {w: "Funding", m: "Tài trợ"}, {w: "Regulation", m: "Sự quy định"}, {w: "Collaboration", m: "Sự hợp tác"}] },
+                { id: 8, text: "Will humans ever colonize Mars?", trans: "Liệu con người có bao giờ xâm chiếm sao Hỏa?", vocab: [{w: "Colonize", m: "Định cư/Xâm chiếm"}, {w: "Harsh environment", m: "Môi trường khắc nghiệt"}, {w: "Terraform", m: "Cải tạo hành tinh"}, {w: "Survival", m: "Sự sinh tồn"}, {w: "Long-term goal", m: "Mục tiêu dài hạn"}] },
+                { id: 9, text: "Is learning about astronomy important for children?", trans: "Học về thiên văn học có quan trọng với trẻ em không?", vocab: [{w: "Astronomy", m: "Thiên văn học"}, {w: "Inspire", m: "Truyền cảm hứng"}, {w: "Perspective", m: "Góc nhìn"}, {w: "Critical thinking", m: "Tư duy phản biện"}, {w: "Ignite", m: "Thắp sáng (đam mê)"}] },
+                { id: 10, text: "What might be the consequences of contacting aliens?", trans: "Hậu quả của việc liên lạc với người ngoài hành tinh có thể là gì?", vocab: [{w: "Unpredictable", m: "Không thể đoán trước"}, {w: "Hostile", m: "Thù địch"}, {w: "Technological gap", m: "Khoảng cách công nghệ"}, {w: "Mutual understanding", m: "Hiểu biết lẫn nhau"}, {w: "Catastrophic", m: "Thảm khốc"}] }
+            ]},
+            { id: 35, topic: "Đạo đức sinh học (Bioethics)", level: "B2", questions: [
+                { id: 1, text: "Do you think genetic engineering on humans is ethical?", trans: "Bạn có nghĩ chỉnh sửa gen trên con người là hợp đạo đức?", vocab: [{w: "Genetic engineering", m: "Chỉnh sửa gen"}, {w: "Ethical", m: "Hợp đạo đức"}, {w: "Designer baby", m: "Trẻ sơ sinh thiết kế gen"}, {w: "Interfere", m: "Can thiệp"}, {w: "Consequence", m: "Hậu quả"}] },
+                { id: 2, text: "Should animals be used for medical research?", trans: "Có nên dùng động vật cho nghiên cứu y học không?", vocab: [{w: "Animal testing", m: "Thử nghiệm trên ĐV"}, {w: "Cruel", m: "Tàn nhẫn"}, {w: "Alternative", m: "Giải pháp thay thế"}, {w: "Breakthrough", m: "Bước đột phá"}, {w: "Justify", m: "Biện minh"}] },
+                { id: 3, text: "What are the pros and cons of cloning?", trans: "Ưu nhược điểm của việc nhân bản vô tính là gì?", vocab: [{w: "Cloning", m: "Nhân bản vô tính"}, {w: "Organ transplant", m: "Ghép tạng"}, {w: "Identity", m: "Bản sắc"}, {w: "Moral issue", m: "Vấn đề đạo đức"}, {w: "Unnatural", m: "Trái tự nhiên"}] },
+                { id: 4, text: "Should people have the right to choose when they die (Euthanasia)?", trans: "Con người có nên có quyền chọn cái chết êm ái (Trợ tử)?", vocab: [{w: "Euthanasia", m: "Trợ tử/Cái chết êm ái"}, {w: "Terminal illness", m: "Bệnh nan y"}, {w: "Suffering", m: "Sự đau đớn"}, {w: "Dignity", m: "Nhân phẩm"}, {w: "Controversial", m: "Gây tranh cãi"}] },
+                { id: 5, text: "Is it right to create artificial organs for transplants?", trans: "Tạo nội tạng nhân tạo để cấy ghép có đúng đắn không?", vocab: [{w: "Artificial organ", m: "Nội tạng nhân tạo"}, {w: "Shortage", m: "Sự thiếu hụt"}, {w: "Lifesaving", m: "Cứu mạng"}, {w: "Rejection", m: "Sự đào thải (y học)"}, {w: "Prolong life", m: "Kéo dài tuổi thọ"}] },
+                { id: 6, text: "How far should science go in trying to extend human life?", trans: "Khoa học nên tiến xa đến đâu trong việc kéo dài tuổi thọ?", vocab: [{w: "Immortality", m: "Sự bất tử"}, {w: "Overpopulation", m: "Bùng nổ dân số"}, {w: "Quality of life", m: "Chất lượng sống"}, {w: "Limit", m: "Giới hạn"}, {w: "Resource allocation", m: "Phân bổ tài nguyên"}] },
+                { id: 7, text: "Should healthcare be free for everyone?", trans: "Chăm sóc sức khỏe có nên miễn phí cho tất cả mọi người?", vocab: [{w: "Universal healthcare", m: "Y tế toàn dân"}, {w: "Human right", m: "Nhân quyền"}, {w: "Taxpayer", m: "Người đóng thuế"}, {w: "Quality", m: "Chất lượng"}, {w: "Accessible", m: "Dễ tiếp cận"}] },
+                { id: 8, text: "Do fast food companies have a moral responsibility for obesity?", trans: "Các công ty đồ ăn nhanh có trách nhiệm đạo đức với nạn béo phì không?", vocab: [{w: "Responsibility", m: "Trách nhiệm"}, {w: "Obesity", m: "Béo phì"}, {w: "Marketing tactic", m: "Chiến thuật tiếp thị"}, {w: "Personal choice", m: "Lựa chọn cá nhân"}, {w: "Regulate", m: "Kiểm soát/Quy định"}] },
+                { id: 9, text: "Should vaccinations be mandatory by law?", trans: "Tiêm chủng có nên bị bắt buộc bởi luật pháp không?", vocab: [{w: "Mandatory", m: "Bắt buộc"}, {w: "Herd immunity", m: "Miễn dịch cộng đồng"}, {w: "Outbreak", m: "Sự bùng phát"}, {w: "Personal freedom", m: "Tự do cá nhân"}, {w: "Protect", m: "Bảo vệ"}] },
+                { id: 10, text: "What is the biggest ethical dilemma in modern medicine?", trans: "Tình huống tiến thoái lưỡng nan về đạo đức lớn nhất trong y học hiện đại là gì?", vocab: [{w: "Dilemma", m: "Tiến thoái lưỡng nan"}, {w: "Resource scarcity", m: "Sự khan hiếm tài nguyên"}, {w: "Prioritize", m: "Ưu tiên"}, {w: "Profit vs Care", m: "Lợi nhuận vs Chăm sóc"}, {w: "Complex", m: "Phức tạp"}] }
+            ]},
+            { id: 36, topic: "Đa dạng văn hóa (Diversity)", level: "B2", questions: [
+                { id: 1, text: "Why is cultural diversity important in a society?", trans: "Tại sao đa dạng văn hóa lại quan trọng trong một xã hội?", vocab: [{w: "Tolerance", m: "Sự khoan dung"}, {w: "Perspective", m: "Góc nhìn"}, {w: "Enrich", m: "Làm phong phú"}, {w: "Harmony", m: "Sự hòa hợp"}, {w: "Prejudice", m: "Định kiến"}] },
+                { id: 2, text: "How does immigration affect a country's culture?", trans: "Sự nhập cư ảnh hưởng đến văn hóa một quốc gia như thế nào?", vocab: [{w: "Immigration", m: "Sự nhập cư"}, {w: "Melting pot", m: "Nồi lẩu thập cẩm (đa VH)"}, {w: "Integration", m: "Sự hội nhập"}, {w: "Multicultural", m: "Đa văn hóa"}, {w: "Clash", m: "Sự xung đột"}] },
+                { id: 3, text: "What are the challenges of living in a multicultural society?", trans: "Thách thức khi sống trong xã hội đa văn hóa là gì?", vocab: [{w: "Language barrier", m: "Rào cản ngôn ngữ"}, {w: "Discrimination", m: "Sự phân biệt đối xử"}, {w: "Misunderstanding", m: "Sự hiểu lầm"}, {w: "Stereotype", m: "Khuôn mẫu/Định kiến"}, {w: "Respect", m: "Tôn trọng"}] },
+                { id: 4, text: "Should immigrants be forced to adopt the local culture?", trans: "Người nhập cư có nên bị buộc phải theo văn hóa địa phương?", vocab: [{w: "Assimilate", m: "Đồng hóa"}, {w: "Retain", m: "Giữ lại"}, {w: "Identity", m: "Bản sắc"}, {w: "Impose", m: "Áp đặt"}, {w: "Balance", m: "Sự cân bằng"}] },
+                { id: 5, text: "How can schools promote cultural understanding among students?", trans: "Trường học có thể thúc đẩy sự hiểu biết văn hóa giữa học sinh thế nào?", vocab: [{w: "Curriculum", m: "Chương trình học"}, {w: "Exchange program", m: "Chương trình trao đổi"}, {w: "Celebrate", m: "Kỷ niệm/Tôn vinh"}, {w: "Empathy", m: "Sự đồng cảm"}, {w: "Inclusive", m: "Bao hàm/Hòa nhập"}] },
+                { id: 6, text: "Is globalization destroying unique local cultures?", trans: "Có phải toàn cầu hóa đang phá hủy các văn hóa địa phương độc đáo?", vocab: [{w: "Homogenization", m: "Sự đồng nhất hóa"}, {w: "Westernization", m: "Tây phương hóa"}, {w: "Preserve", m: "Bảo tồn"}, {w: "Erosion", m: "Sự xói mòn/Mất dần"}, {w: "Adapt", m: "Thích nghi"}] },
+                { id: 7, text: "What can we learn from interacting with people from different backgrounds?", trans: "Ta học được gì khi tương tác với người từ các bối cảnh khác nhau?", vocab: [{w: "Broaden horizons", m: "Mở rộng tầm nhìn"}, {w: "Open-minded", m: "Cởi mở"}, {w: "Overcome bias", m: "Vượt qua thành kiến"}, {w: "Insight", m: "Cái nhìn sâu sắc"}, {w: "Global citizen", m: "Công dân toàn cầu"}] },
+                { id: 8, text: "Do you think language translation apps will make learning languages obsolete?", trans: "Bạn có nghĩ ứng dụng dịch thuật sẽ khiến việc học ngôn ngữ trở nên lỗi thời?", vocab: [{w: "Obsolete", m: "Lỗi thời"}, {w: "Nuance", m: "Sắc thái ý nghĩa"}, {w: "Emotion", m: "Cảm xúc"}, {w: "Convenience", m: "Sự tiện lợi"}, {w: "Irreplaceable", m: "Không thể thay thế"}] },
+                { id: 9, text: "How does traditional food help preserve cultural identity?", trans: "Thức ăn truyền thống giúp bảo tồn bản sắc văn hóa thế nào?", vocab: [{w: "Recipe", m: "Công thức"}, {w: "Pass down", m: "Truyền lại"}, {w: "Symbolize", m: "Tượng trưng"}, {w: "Authenticity", m: "Tính nguyên bản"}, {w: "Heritage", m: "Di sản"}] },
+                { id: 10, text: "Why do some people resist cultural changes?", trans: "Tại sao một số người chống lại những thay đổi văn hóa?", vocab: [{w: "Conservative", m: "Bảo thủ"}, {w: "Fear of the unknown", m: "Sợ những điều chưa biết"}, {w: "Comfort zone", m: "Vùng an toàn"}, {w: "Threat", m: "Mối đe dọa"}, {w: "Nostalgia", m: "Sự hoài niệm"}] }
+            ]},
+            { id: 37, topic: "Năng lượng tái tạo (Renewable Energy)", level: "B2", questions: [
+                { id: 1, text: "Why is the shift to renewable energy important?", trans: "Tại sao việc chuyển sang năng lượng tái tạo lại quan trọng?", vocab: [{w: "Sustainability", m: "Sự bền vững"}, {w: "Depletion", m: "Sự cạn kiệt"}, {w: "Fossil fuel", m: "Nhiên liệu hóa thạch"}, {w: "Emission", m: "Khí thải"}, {w: "Mitigate", m: "Làm giảm nhẹ"}] },
+                { id: 2, text: "What are the main types of renewable energy used in your country?", trans: "Các loại năng lượng tái tạo chính được dùng ở nước bạn là gì?", vocab: [{w: "Solar power", m: "Năng lượng mặt trời"}, {w: "Wind turbine", m: "Tuabin gió"}, {w: "Hydropower", m: "Thủy điện"}, {w: "Abundant", m: "Dồi dào"}, {w: "Geographical", m: "Thuộc địa lý"}] },
+                { id: 3, text: "What are the drawbacks of using solar and wind power?", trans: "Nhược điểm của việc sử dụng năng lượng mặt trời và gió là gì?", vocab: [{w: "Intermittent", m: "Không liên tục"}, {w: "Storage", m: "Lưu trữ"}, {w: "Initial cost", m: "Chi phí ban đầu"}, {w: "Space-consuming", m: "Tốn không gian"}, {w: "Weather-dependent", m: "Phụ thuộc thời tiết"}] },
+                { id: 4, text: "Should governments tax companies that use fossil fuels heavily?", trans: "Chính phủ có nên đánh thuế nặng các công ty dùng nhiên liệu hóa thạch?", vocab: [{w: "Carbon tax", m: "Thuế carbon"}, {w: "Incentive", m: "Động lực/Khuyến khích"}, {w: "Penalize", m: "Trừng phạt"}, {w: "Transition", m: "Sự chuyển đổi"}, {w: "Economic impact", m: "Tác động kinh tế"}] },
+                { id: 5, text: "Do you think nuclear power is a safe alternative to coal?", trans: "Bạn có nghĩ điện hạt nhân là giải pháp an toàn thay cho than đá?", vocab: [{w: "Nuclear power", m: "Điện hạt nhân"}, {w: "Radioactive waste", m: "Chất thải phóng xạ"}, {w: "Disaster", m: "Thảm họa"}, {w: "Efficient", m: "Hiệu quả"}, {w: "Controversial", m: "Gây tranh cãi"}] },
+                { id: 6, text: "How can ordinary citizens save energy at home?", trans: "Người dân bình thường có thể tiết kiệm năng lượng ở nhà thế nào?", vocab: [{w: "Energy-efficient", m: "Tiết kiệm năng lượng"}, {w: "Appliance", m: "Thiết bị"}, {w: "Insulation", m: "Cách nhiệt"}, {w: "Unplug", m: "Rút phích cắm"}, {w: "Habit", m: "Thói quen"}] },
+                { id: 7, text: "Will electric cars completely replace gas cars in the future?", trans: "Xe điện có hoàn toàn thay thế xe xăng trong tương lai không?", vocab: [{w: "Electric vehicle (EV)", m: "Xe điện"}, {w: "Charging station", m: "Trạm sạc"}, {w: "Battery lifespan", m: "Tuổi thọ pin"}, {w: "Phase out", m: "Loại bỏ dần"}, {w: "Mainstream", m: "Xu hướng chủ đạo"}] },
+                { id: 8, text: "What are the economic benefits of the green energy sector?", trans: "Lợi ích kinh tế của lĩnh vực năng lượng xanh là gì?", vocab: [{w: "Job creation", m: "Tạo việc làm"}, {w: "Innovation", m: "Sự đổi mới"}, {w: "Long-term investment", m: "Đầu tư dài hạn"}, {w: "Independence", m: "Sự độc lập"}, {w: "Boost", m: "Thúc đẩy"}] },
+                { id: 9, text: "Is it the responsibility of developed nations to help poorer countries transition to green energy?", trans: "Các nước phát triển có trách nhiệm giúp nước nghèo chuyển đổi năng lượng xanh?", vocab: [{w: "Financial aid", m: "Viện trợ tài chính"}, {w: "Technology transfer", m: "Chuyển giao công nghệ"}, {w: "Global issue", m: "Vấn đề toàn cầu"}, {w: "Obligation", m: "Nghĩa vụ"}, {w: "Fairness", m: "Sự công bằng"}] },
+                { id: 10, text: "What is the biggest obstacle to achieving 100% renewable energy?", trans: "Trở ngại lớn nhất để đạt 100% năng lượng tái tạo là gì?", vocab: [{w: "Infrastructure", m: "Cơ sở hạ tầng"}, {w: "Vested interest", m: "Lợi ích nhóm"}, {w: "Cost", m: "Chi phí"}, {w: "Grid system", m: "Hệ thống điện lưới"}, {w: "Political will", m: "Ý chí chính trị"}] }
+            ]},
+            { id: 38, topic: "Thiết kế Đô thị (Urban Planning)", level: "B2", questions: [
+                { id: 1, text: "What makes a city a good place to live?", trans: "Điều gì khiến một thành phố trở thành nơi đáng sống?", vocab: [{w: "Livability", m: "Mức độ đáng sống"}, {w: "Infrastructure", m: "Cơ sở hạ tầng"}, {w: "Amenity", m: "Tiện nghi"}, {w: "Safety", m: "Sự an toàn"}, {w: "Green space", m: "Không gian xanh"}] },
+                { id: 2, text: "Should cars be banned from city centers?", trans: "Có nên cấm ô tô vào trung tâm thành phố?", vocab: [{w: "Pedestrian zone", m: "Khu vực đi bộ"}, {w: "Congestion", m: "Sự tắc nghẽn"}, {w: "Air quality", m: "Chất lượng không khí"}, {w: "Inconvenience", m: "Sự bất tiện"}, {w: "Promote", m: "Thúc đẩy"}] },
+                { id: 3, text: "How does the architecture of a city affect its people?", trans: "Kiến trúc của thành phố ảnh hưởng đến người dân thế nào?", vocab: [{w: "Aesthetics", m: "Thẩm mỹ"}, {w: "Mood", m: "Tâm trạng"}, {w: "Functionality", m: "Tính ứng dụng"}, {w: "Heritage", m: "Di sản"}, {w: "Identity", m: "Bản sắc"}] },
+                { id: 4, text: "What are the main problems with rapid urbanization?", trans: "Các vấn đề chính của đô thị hóa nhanh chóng là gì?", vocab: [{w: "Overcrowding", m: "Quá đông đúc"}, {w: "Slum", m: "Khu ổ chuột"}, {w: "Strain", m: "Sự quá tải/áp lực"}, {w: "Pollution", m: "Ô nhiễm"}, {w: "Inequality", m: "Sự bất bình đẳng"}] },
+                { id: 5, text: "How important are public parks in urban areas?", trans: "Công viên công cộng quan trọng thế nào ở khu vực đô thị?", vocab: [{w: "Recreation", m: "Sự giải trí"}, {w: "Lung of the city", m: "Lá phổi thành phố"}, {w: "Socialize", m: "Giao lưu"}, {w: "Well-being", m: "Sức khỏe tốt"}, {w: "Oasis", m: "Ốc đảo"}] },
+                { id: 6, text: "Should historical buildings be preserved or demolished for new developments?", trans: "Nên bảo tồn hay phá bỏ tòa nhà lịch sử để phát triển dự án mới?", vocab: [{w: "Preservation", m: "Sự bảo tồn"}, {w: "Demolish", m: "Phá dỡ"}, {w: "Modernization", m: "Sự hiện đại hóa"}, {w: "Compromise", m: "Sự thỏa hiệp"}, {w: "Cultural value", m: "Giá trị văn hóa"}] },
+                { id: 7, text: "How can cities become more environmentally friendly?", trans: "Làm sao để các thành phố trở nên thân thiện với môi trường hơn?", vocab: [{w: "Sustainable", m: "Bền vững"}, {w: "Waste management", m: "Quản lý rác thải"}, {w: "Eco-friendly", m: "Thân thiện MT"}, {w: "Public transport", m: "Giao thông công cộng"}, {w: "Renewable", m: "Tái tạo"}] },
+                { id: 8, text: "What is the role of public transportation in urban planning?", trans: "Vai trò của giao thông công cộng trong quy hoạch đô thị là gì?", vocab: [{w: "Accessibility", m: "Khả năng tiếp cận"}, {w: "Reduce traffic", m: "Giảm lưu lượng xe"}, {w: "Affordable", m: "Giá cả phải chăng"}, {w: "Network", m: "Mạng lưới"}, {w: "Efficiency", m: "Hiệu quả"}] },
+                { id: 9, text: "Is it better to build tall skyscrapers or spread the city out?", trans: "Xây nhà chọc trời hay mở rộng diện tích thành phố thì tốt hơn?", vocab: [{w: "High-rise", m: "Nhà cao tầng"}, {w: "Urban sprawl", m: "Sự mở rộng đô thị"}, {w: "Land scarcity", m: "Sự khan hiếm đất"}, {w: "Density", m: "Mật độ"}, {w: "Commute", m: "Đi lại"}] },
+                { id: 10, text: "What will the 'smart cities' of the future look like?", trans: "Thành phố thông minh trong tương lai sẽ trông như thế nào?", vocab: [{w: "Interconnected", m: "Kết nối liên thông"}, {w: "Sensor", m: "Cảm biến"}, {w: "Automated", m: "Tự động hóa"}, {w: "Data-driven", m: "Dựa trên dữ liệu"}, {w: "Optimize", m: "Tối ưu hóa"}] }
+            ]},
+            { id: 39, topic: "Tâm lý đám đông (Mob Psychology)", level: "B2", questions: [
+                { id: 1, text: "Why do people often conform to the behavior of a group?", trans: "Tại sao mọi người thường hùa theo hành vi của một nhóm?", vocab: [{w: "Conformity", m: "Sự tuân theo"}, {w: "Peer pressure", m: "Áp lực đồng trang lứa"}, {w: "Fit in", m: "Hòa nhập"}, {w: "Fear of missing out", m: "Sợ bị bỏ lỡ (FOMO)"}, {w: "Instinct", m: "Bản năng"}] },
+                { id: 2, text: "How does anonymity on the internet affect people's behavior?", trans: "Sự ẩn danh trên internet ảnh hưởng đến hành vi con người ra sao?", vocab: [{w: "Anonymity", m: "Sự ẩn danh"}, {w: "Cyberbullying", m: "Bắt nạt qua mạng"}, {w: "Lack of accountability", m: "Thiếu trách nhiệm"}, {w: "Aggressive", m: "Hung hăng"}, {w: "Unleash", m: "Giải phóng"}] },
+                { id: 3, text: "Can you think of a time when the 'wisdom of the crowd' was wrong?", trans: "Bạn có thể nghĩ ra lúc nào mà 'trí tuệ đám đông' bị sai không?", vocab: [{w: "Mob mentality", m: "Tâm lý bầy đàn"}, {w: "Irrational", m: "Phi lý trí"}, {w: "Panic", m: "Sự hoảng loạn"}, {w: "Blindly follow", m: "Mù quáng làm theo"}, {w: "Critical thinking", m: "Tư duy phản biện"}] },
+                { id: 4, text: "How do advertising companies use group psychology to sell products?", trans: "Các công ty QC dùng tâm lý nhóm để bán hàng thế nào?", vocab: [{w: "Manipulate", m: "Thao túng"}, {w: "Trend", m: "Xu hướng"}, {w: "Endorsement", m: "Sự chứng thực (bởi người nổi tiếng)"}, {w: "Scarcity", m: "Sự khan hiếm"}, {w: "Desire", m: "Khao khát"}] },
+                { id: 5, text: "Is it always good to follow the rules of society?", trans: "Có phải lúc nào cũng tốt khi tuân theo các quy tắc xã hội?", vocab: [{w: "Norm", m: "Chuẩn mực"}, {w: "Status quo", m: "Hiện trạng"}, {w: "Rebel", m: "Nổi loạn"}, {w: "Progress", m: "Sự tiến bộ"}, {w: "Question", m: "Đặt câu hỏi/Nghi ngờ"}] },
+                { id: 6, text: "Why do rumors spread so quickly in a group?", trans: "Tại sao tin đồn lại lan truyền quá nhanh trong một nhóm?", vocab: [{w: "Rumor", m: "Tin đồn"}, {w: "Gossip", m: "Chuyện phiếm"}, {w: "Curiosity", m: "Sự tò mò"}, {w: "Exaggerate", m: "Phóng đại"}, {w: "Verify", m: "Xác minh"}] },
+                { id: 7, text: "What makes a person a strong independent thinker?", trans: "Điều gì tạo nên một người suy nghĩ độc lập mạnh mẽ?", vocab: [{w: "Independent", m: "Độc lập"}, {w: "Analyze", m: "Phân tích"}, {w: "Objective", m: "Khách quan"}, {w: "Stand one's ground", m: "Giữ vững lập trường"}, {w: "Courage", m: "Sự can đảm"}] },
+                { id: 8, text: "How does panic buying happen during a crisis?", trans: "Hiện tượng mua sắm hoảng loạn xảy ra thế nào trong khủng hoảng?", vocab: [{w: "Panic buying", m: "Mua sắm hoảng loạn"}, {w: "Shortage", m: "Sự thiếu hụt"}, {w: "Hoard", m: "Tích trữ"}, {w: "Contagious", m: "Có tính lây lan"}, {w: "Survival", m: "Sự sinh tồn"}] },
+                { id: 9, text: "Do leaders create followers, or do followers create leaders?", trans: "Lãnh đạo tạo ra người theo sau, hay người theo sau tạo ra lãnh đạo?", vocab: [{w: "Charisma", m: "Sự uy tín/Quyến rũ"}, {w: "Dynamic", m: "Động lực học"}, {w: "Represent", m: "Đại diện"}, {w: "Mutual", m: "Lẫn nhau"}, {w: "Inspire", m: "Truyền cảm hứng"}] },
+                { id: 10, text: "How can individuals protect themselves from negative group influence?", trans: "Cá nhân có thể bảo vệ mình khỏi ảnh hưởng xấu từ nhóm thế nào?", vocab: [{w: "Self-awareness", m: "Tự nhận thức"}, {w: "Boundary", m: "Ranh giới"}, {w: "Evaluate", m: "Đánh giá"}, {w: "Distance", m: "Giữ khoảng cách"}, {w: "Core value", m: "Giá trị cốt lõi"}] }
+            ]},
+            { id: 40, topic: "Lãnh đạo & Tương lai (Leadership)", level: "B2", questions: [
+                { id: 1, text: "Are great leaders born or made?", trans: "Lãnh đạo xuất chúng là bẩm sinh hay do rèn luyện?", vocab: [{w: "Innate", m: "Bẩm sinh"}, {w: "Acquire", m: "Đạt được/Học được"}, {w: "Cultivate", m: "Trau dồi"}, {w: "Experience", m: "Kinh nghiệm"}, {w: "Potential", m: "Tiềm năng"}] },
+                { id: 2, text: "What is the difference between a boss and a leader?", trans: "Sự khác biệt giữa sếp và nhà lãnh đạo là gì?", vocab: [{w: "Dictate", m: "Ra lệnh"}, {w: "Guide", m: "Hướng dẫn"}, {w: "Empathy", m: "Sự đồng cảm"}, {w: "Micromanage", m: "Quản lý vi mô"}, {w: "Empower", m: "Trao quyền"}] },
+                { id: 3, text: "How important is communication in leadership?", trans: "Giao tiếp quan trọng thế nào trong vai trò lãnh đạo?", vocab: [{w: "Articulate", m: "Lưu loát/Rõ ràng"}, {w: "Active listening", m: "Lắng nghe chủ động"}, {w: "Transparency", m: "Sự minh bạch"}, {w: "Misunderstanding", m: "Sự hiểu lầm"}, {w: "Bridge the gap", m: "Thu hẹp khoảng cách"}] },
+                { id: 4, text: "Should a leader always be confident?", trans: "Một người lãnh đạo có nên luôn luôn tự tin không?", vocab: [{w: "Confidence", m: "Sự tự tin"}, {w: "Vulnerability", m: "Sự dễ tổn thương"}, {w: "Arrogance", m: "Sự kiêu ngạo"}, {w: "Acknowledge", m: "Thừa nhận"}, {w: "Authentic", m: "Chân thực"}] },
+                { id: 5, text: "What is the biggest challenge leaders face in the modern workplace?", trans: "Thách thức lớn nhất của lãnh đạo trong môi trường hiện đại là gì?", vocab: [{w: "Adaptability", m: "Khả năng thích ứng"}, {w: "Remote work", m: "Làm việc từ xa"}, {w: "Generation gap", m: "Khoảng cách thế hệ"}, {w: "Mental health", m: "Sức khỏe tinh thần"}, {w: "Rapid change", m: "Thay đổi chóng mặt"}] },
+                { id: 6, text: "How should a leader handle failure?", trans: "Một nhà lãnh đạo nên xử lý sự thất bại như thế nào?", vocab: [{w: "Take responsibility", m: "Nhận trách nhiệm"}, {w: "Blame", m: "Đổ lỗi"}, {w: "Learn from mistakes", m: "Học từ sai lầm"}, {w: "Resilience", m: "Sự kiên cường"}, {w: "Bounce back", m: "Vực dậy"}] },
+                { id: 7, text: "Is it better for a leader to be loved or feared?", trans: "Lãnh đạo được yêu mến hay bị sợ hãi thì tốt hơn?", vocab: [{w: "Respect", m: "Sự tôn trọng"}, {w: "Intimidate", m: "Dọa nạt"}, {w: "Affection", m: "Sự yêu mến"}, {w: "Authoritarian", m: "Độc đoán"}, {w: "Balance", m: "Sự cân bằng"}] },
+                { id: 8, text: "How does technology change the role of a manager?", trans: "Công nghệ thay đổi vai trò của một người quản lý thế nào?", vocab: [{w: "Data-driven", m: "Dựa trên dữ liệu"}, {w: "Automate", m: "Tự động hóa"}, {w: "Track progress", m: "Theo dõi tiến độ"}, {w: "Human touch", m: "Sự kết nối con người"}, {w: "Facilitator", m: "Người điều phối"}] },
+                { id: 9, text: "What skills will be most important for future leaders?", trans: "Kỹ năng nào sẽ quan trọng nhất đối với các nhà lãnh đạo tương lai?", vocab: [{w: "Emotional intelligence", m: "Trí tuệ cảm xúc"}, {w: "Visionary", m: "Có tầm nhìn xa"}, {w: "Agility", m: "Sự nhanh nhạy"}, {w: "Inclusive", m: "Hòa nhập/Bao hàm"}, {w: "Tech-savvy", m: "Am hiểu công nghệ"}] },
+                { id: 10, text: "Can anyone learn to be a good leader?", trans: "Bất cứ ai cũng có thể học để trở thành lãnh đạo tốt đúng không?", vocab: [{w: "Willingness", m: "Sự sẵn lòng"}, {w: "Self-awareness", m: "Tự nhận thức"}, {w: "Mentorship", m: "Sự cố vấn"}, {w: "Practice", m: "Thực hành"}, {w: "Continuous learning", m: "Học tập không ngừng"}] }
             ]}
         ];
 
@@ -328,16 +555,12 @@
             const [isSpeaking, setIsSpeaking] = useState(false);
             const [showSummary, setShowSummary] = useState(false);
             
-            // State copy sổ tay
             const [isCopied, setIsCopied] = useState(false);
 
-            // FIREBASE: Quản lý User và Trạng thái tải dữ liệu
             const [user, setUser] = useState(null);
             const [isLoadingData, setIsLoadingData] = useState(isCloudEnabled);
 
-            // LƯU TRỮ TRẠNG THÁI TOÀN CỤC (Kết hợp Cloud & LocalStorage)
             const [globalData, setGlobalData] = useState(() => {
-                // Tải dữ liệu cũ từ LocalStorage nếu không dùng Đám mây
                 if (!isCloudEnabled) {
                     const saved = localStorage.getItem('speakmaster_progress');
                     return saved ? JSON.parse(saved) : {};
@@ -345,9 +568,8 @@
                 return {};
             });
             
-            // 1. Xác thực tài khoản của bạn một cách an toàn
             useEffect(() => {
-                if (!isCloudEnabled) return; // Bỏ qua nếu dùng LocalStorage
+                if (!isCloudEnabled) return; 
                 
                 const initAuth = async () => {
                     try {
@@ -365,9 +587,8 @@
                 return () => unsubscribe();
             }, []);
 
-            // 2. Tự động tải dữ liệu Sổ tay từ Đám mây về máy
             useEffect(() => {
-                if (!isCloudEnabled || !user) return; // Bỏ qua nếu dùng LocalStorage
+                if (!isCloudEnabled || !user) return; 
                 
                 const progressRef = collection(db, 'artifacts', appId, 'users', user.uid, 'topicProgress');
                 
@@ -386,9 +607,7 @@
                 return () => unsubscribe();
             }, [user]);
 
-            // 3. Hàm lưu dữ liệu xử lý song song cả 2 môi trường
             const saveProgressData = async (topicId, step, dataObject) => {
-                // Cập nhật State và lưu vào LocalStorage
                 setGlobalData(prev => {
                     const nextData = {
                         ...prev,
@@ -404,7 +623,6 @@
                     return nextData;
                 });
 
-                // Nếu có Đám mây, lưu ngầm lên server
                 if (isCloudEnabled && user) {
                     try {
                         const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'topicProgress', String(topicId));
@@ -477,7 +695,6 @@
                 window.speechSynthesis.speak(utterance);
             }, [getNaturalVoice]);
 
-            // Hàm xử lý khi bấm vào từng từ
             const handleWordClick = (word) => {
                 const cleanWord = word.replace(/[.,!?";:()[\]{}]/g, ''); 
                 if (cleanWord.trim()) {
@@ -491,15 +708,12 @@
 
             const progress = selectedTopic ? ((currentStep + 1) / selectedTopic.questions.length) * 100 : 0;
             
-            // Lấy dữ liệu của chủ đề hiện tại
             const currentTopicData = selectedTopic ? (globalData[selectedTopic.id] || {}) : {};
 
             const handleViTextChange = (e) => {
                 const text = e.target.value;
                 const currentData = currentTopicData[currentStep] || {};
                 const newData = { ...currentData, vi: text };
-
-                // Lưu dữ liệu thông qua hàm quản lý chung
                 saveProgressData(selectedTopic.id, currentStep, newData);
             };
 
@@ -531,7 +745,6 @@
                 window.speechSynthesis.cancel();
             }
 
-            // Hàm copy toàn bộ dữ liệu Sổ tay
             const copySummaryToClipboard = () => {
                 if (!selectedTopic) return;
                 
@@ -577,7 +790,6 @@
                 setTranslationError("");
                 
                 try {
-                    // SỬ DỤNG GOOGLE TRANSLATE API MIỄN PHÍ
                     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=vi&tl=en&dt=t&q=${encodeURIComponent(currentViText)}`;
                     const response = await fetch(url);
                     
@@ -589,8 +801,6 @@
                     if (translatedText) {
                         const currentData = currentTopicData[currentStep] || {};
                         const newData = { ...currentData, en: translatedText.trim() };
-
-                        // Lưu bản dịch Tiếng Anh
                         saveProgressData(selectedTopic.id, currentStep, newData);
                     } else {
                         setTranslationError("Không nhận được bản dịch hợp lệ.");
@@ -606,7 +816,6 @@
             const currentViText = currentTopicData[currentStep]?.vi || "";
             const currentEnText = currentTopicData[currentStep]?.en || "";
 
-            // Hàm mở chủ đề và tự động nhảy đến câu chưa học
             const handleOpenTopic = (t) => {
                 setSelectedTopic(t);
                 const tData = globalData[t.id] || {};
@@ -617,7 +826,6 @@
 
             return (
                 <div className="max-w-6xl mx-auto px-4 py-8 md:py-12">
-                    {/* Header */}
                     <div className="flex justify-between items-center mb-10">
                         <div>
                             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">SpeakMaster Pro Max</h1>
@@ -661,7 +869,7 @@
                                     <div className="mb-12">
                                         <h2 className="text-lg font-black text-blue-600 uppercase tracking-widest mb-6 flex items-center gap-3">
                                             <span className="w-8 h-1.5 bg-blue-600 rounded-full"></span>
-                                            Chủ đề trình độ B1
+                                            Chủ đề trình độ B1 (20 Topics)
                                         </h2>
                                         <div className="topic-grid">
                                             {APP_DATA.filter(t => t.level === 'B1').map(t => (
@@ -672,7 +880,7 @@
                                     <div>
                                         <h2 className="text-lg font-black text-indigo-600 uppercase tracking-widest mb-6 flex items-center gap-3">
                                             <span className="w-8 h-1.5 bg-indigo-600 rounded-full"></span>
-                                            Chủ đề trình độ B2
+                                            Chủ đề trình độ B2 (20 Topics)
                                         </h2>
                                         <div className="topic-grid">
                                             {APP_DATA.filter(t => t.level === 'B2').map(t => (
@@ -684,7 +892,6 @@
                             )}
                         </div>
                     ) : showSummary ? (
-                        // MÀN HÌNH TỔNG HỢP (SUMMARY)
                         <div className="max-w-4xl mx-auto animate-in slide-in-from-bottom-8 duration-500">
                             <div className="glass-card rounded-[2.5rem] p-8 md:p-12 shadow-xl border-t-8 border-t-amber-400">
                                 <div className="text-center mb-10">
@@ -726,7 +933,6 @@
                                     )}
                                 </div>
 
-                                {/* Các nút Action trong Sổ tay */}
                                 <div className="flex flex-col sm:flex-row gap-4">
                                     <button 
                                         onClick={() => setShowSummary(false)}
@@ -756,9 +962,7 @@
                             </div>
                         </div>
                     ) : (
-                        // GIAO DIỆN HỌC TẬP & DỊCH
                         <div className="max-w-4xl mx-auto animate-in slide-in-from-bottom-8 duration-500">
-                            {/* Progress bar */}
                             <div className="mb-8 text-center">
                                 <div className="flex justify-between text-[12px] font-black text-slate-400 uppercase tracking-widest mb-3">
                                     <span>{selectedTopic.topic}</span>
@@ -769,7 +973,6 @@
                                 </div>
                             </div>
 
-                            {/* Flashcard */}
                             <div className="glass-card rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden border-t-8 border-t-blue-500">
                                 <div className={`absolute top-0 right-0 px-8 py-2 rounded-bl-3xl text-[11px] font-black uppercase tracking-widest shadow-md ${selectedTopic.level === 'B1' ? 'bg-blue-600 text-white' : 'bg-indigo-600 text-white'}`}>
                                     Level {selectedTopic.level}
@@ -803,7 +1006,6 @@
                                     )}
                                 </div>
 
-                                {/* Từ vựng */}
                                 <div className="mt-12 pt-8 border-t-2 border-dashed border-slate-200">
                                     <div className="flex items-center gap-2 mb-5">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={selectedTopic.level === 'B1' ? 'text-blue-500' : 'text-indigo-500'}><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
@@ -824,7 +1026,6 @@
                                     </div>
                                 </div>
 
-                                {/* Trợ lý Dịch Ý Tưởng */}
                                 <div className="mt-12 pt-8 border-t-2 border-dashed border-slate-200 bg-slate-50/50 -mx-8 -mb-8 px-8 pb-8 rounded-b-[2.5rem]">
                                     <div className="flex items-center justify-between mb-5">
                                         <div className="flex items-center gap-2">
@@ -836,7 +1037,6 @@
                                     </div>
                                     
                                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                                        {/* Box Tiếng Việt */}
                                         <div className="flex flex-col gap-3">
                                             <textarea 
                                                 value={currentViText}
@@ -864,12 +1064,11 @@
                                             {translationError && <p className="text-red-500 text-sm font-medium pl-1">{translationError}</p>}
                                         </div>
                                         
-                                        {/* Box Tiếng Anh (Nhấn từng chữ để nghe) */}
                                         <div className="flex flex-col gap-3">
                                             <div className="w-full h-40 p-5 rounded-2xl bg-blue-50/30 border-2 border-blue-100 overflow-y-auto relative text-[17px] shadow-inner">
                                                 {!currentEnText ? (
                                                     <div className="flex flex-col items-center justify-center h-full text-slate-300 opacity-60">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mb-2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mb-2"><path d="M21 15a2 2 0 0 1-2-2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                                                         <span className="italic text-sm font-medium">Bản dịch sẽ xuất hiện ở đây...</span>
                                                     </div>
                                                 ) : (
@@ -893,7 +1092,6 @@
                                                 )}
                                             </div>
                                             
-                                            {/* Ghi chú */}
                                             <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 flex items-center gap-3 text-blue-700">
                                                 <div className="bg-blue-100 p-2 rounded-full">
                                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M5 18v-6a6 6 0 0 1 12 0v6"/><path d="M12 2v4"/><path d="M12 13v9"/></svg>
@@ -905,33 +1103,32 @@
                                         </div>
                                     </div>
                                 </div>
+                            </div>
 
-                                {/* Actions Điều hướng */}
-                                <div className="mt-8 flex gap-4 pt-4">
-                                    <button 
-                                        disabled={currentStep === 0}
-                                        onClick={back}
-                                        className="flex-1 py-4 bg-slate-100 rounded-[1.2rem] font-bold text-slate-600 hover:bg-slate-200 transition-all disabled:opacity-30 disabled:cursor-not-allowed border border-slate-200"
-                                    >
-                                        Quay lại
-                                    </button>
-                                    <button 
-                                        onClick={next}
-                                        className={`flex-[2] py-4 text-white rounded-[1.2rem] font-black text-lg shadow-xl transition-all active:scale-[0.98] flex justify-center items-center gap-2 ${selectedTopic.level === 'B1' ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-200' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200'}`}
-                                    >
-                                        {currentStep === selectedTopic.questions.length - 1 ? (
-                                            <React.Fragment>
-                                                Hoàn thành & Mở Sổ Tay
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
-                                            </React.Fragment>
-                                        ) : (
-                                            <React.Fragment>
-                                                Câu tiếp theo
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-                                            </React.Fragment>
-                                        )}
-                                    </button>
-                                </div>
+                            <div className="mt-8 flex gap-4 pt-4">
+                                <button 
+                                    disabled={currentStep === 0}
+                                    onClick={back}
+                                    className="flex-1 py-4 bg-slate-100 rounded-[1.2rem] font-bold text-slate-600 hover:bg-slate-200 transition-all disabled:opacity-30 disabled:cursor-not-allowed border border-slate-200"
+                                >
+                                    Quay lại
+                                </button>
+                                <button 
+                                    onClick={next}
+                                    className={`flex-[2] py-4 text-white rounded-[1.2rem] font-black text-lg shadow-xl transition-all active:scale-[0.98] flex justify-center items-center gap-2 ${selectedTopic.level === 'B1' ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-200' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200'}`}
+                                >
+                                    {currentStep === selectedTopic.questions.length - 1 ? (
+                                        <React.Fragment>
+                                            Hoàn thành & Mở Sổ Tay
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+                                        </React.Fragment>
+                                    ) : (
+                                        <React.Fragment>
+                                            Câu tiếp theo
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                                        </React.Fragment>
+                                    )}
+                                </button>
                             </div>
                         </div>
                     )}
@@ -940,7 +1137,6 @@
         }
 
         function TopicCard({ topic, onClick, progressData }) {
-            // Tính toán phần trăm tiến độ
             const completedCount = Object.keys(progressData).filter(key => progressData[key]?.en).length;
             const percent = Math.round((completedCount / topic.questions.length) * 100);
 
@@ -966,7 +1162,6 @@
                         </p>
                     </div>
 
-                    {/* Thanh tiến độ của thẻ */}
                     <div className="mt-6 pt-5 border-t border-slate-100 z-10 relative">
                         <div className="flex justify-between text-[11px] font-bold text-slate-500 mb-2">
                             <span>Tiến độ học</span>
