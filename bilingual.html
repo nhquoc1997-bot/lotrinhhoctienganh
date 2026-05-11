@@ -51,6 +51,9 @@
             animation: spin 1s linear infinite; display: inline-block;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Custom CSS cho giao diện Sổ Tay (Glassmorphism) */
+        .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 0.8); }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
@@ -64,13 +67,13 @@
         <header class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-40">
             <div class="max-w-6xl mx-auto px-4 py-4 flex flex-wrap gap-4 justify-between items-center">
                 <div class="flex items-center gap-3">
-                    <div class="bg-blue-600 text-white p-2 rounded-lg shadow-md">
+                    <div class="bg-blue-600 text-white p-2 rounded-lg shadow-md cursor-pointer" onclick="exitToMain()">
                         <i class="ph ph-translate text-2xl"></i>
                     </div>
-                    <h1 class="text-xl font-bold text-slate-900 hidden sm:block">Trình Tạo Song Ngữ</h1>
+                    <h1 class="text-xl font-bold text-slate-900 hidden sm:block cursor-pointer" onclick="exitToMain()">Trình Tạo Song Ngữ</h1>
                 </div>
-                <div class="flex items-center gap-4">
-                    <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-lg border border-slate-200">
+                <div class="flex items-center gap-2 md:gap-4">
+                    <div class="hidden md:flex items-center gap-2 bg-slate-100 p-1 rounded-lg border border-slate-200">
                         <i class="ph ph-list-numbers text-slate-500 ml-1"></i>
                         <select id="chunkSize" class="bg-transparent border-none outline-none text-sm font-medium text-slate-700 py-1 pr-2 cursor-pointer">
                             <option value="random" selected>Gộp 2-3 câu</option>
@@ -85,7 +88,12 @@
                             <option value="vi-en">Tiếng Việt ➔ Tiếng Anh</option>
                         </select>
                     </div>
-                    <!-- Nút Cài đặt API Key -->
+                    
+                    <!-- NÚT MỞ DANH SÁCH SỔ TAY ĐÃ LƯU -->
+                    <button id="myNotebooksBtn" class="bg-amber-100 text-amber-700 p-1.5 px-3 rounded-lg border border-amber-200 hover:bg-amber-200 transition-colors flex items-center gap-2 font-bold text-sm shadow-sm" title="Sổ tay đã lưu">
+                        <i class="ph-fill ph-books text-lg"></i> <span class="hidden sm:inline">Sổ tay của tôi</span>
+                    </button>
+
                     <button id="settingsBtn" class="bg-slate-100 p-1.5 rounded-lg border border-slate-200 hover:bg-slate-200 transition-colors" title="Cài đặt AI">
                         <i class="ph ph-gear text-slate-700 text-xl"></i>
                     </button>
@@ -107,9 +115,8 @@
                         <button id="startPracticeBtn" class="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg shadow-sm transition-colors flex justify-center items-center gap-2">
                             <i class="ph ph-pencil-simple text-lg"></i> Luyện Dịch
                         </button>
-                        <!-- NÚT LUYỆN ĐẶT CÂU HỎI -->
                         <button id="startAskBtn" class="flex-1 md:flex-none bg-purple-600 hover:bg-purple-700 text-white font-medium py-2.5 px-4 rounded-lg shadow-sm transition-colors flex justify-center items-center gap-2">
-                            <i class="ph ph-question text-lg"></i> Luyện Đặt Câu Hỏi
+                            <i class="ph ph-question text-lg"></i> Luyện Đặt Câu
                         </button>
                     </div>
                 </div>
@@ -128,11 +135,16 @@
                         <i class="ph-fill ph-check-circle text-green-500"></i> Kết quả Song Ngữ
                     </h2>
                     <div class="flex flex-wrap items-center gap-2">
+                        <!-- NÚT LƯU VÀO SỔ TAY -->
+                        <button id="saveToNotebookBtn" class="text-sm font-bold text-amber-700 bg-amber-100 hover:bg-amber-200 py-2 px-4 rounded-lg flex items-center gap-1 border border-amber-300 transition-colors shadow-sm">
+                            <i class="ph ph-floppy-disk text-lg"></i> Lưu vào Sổ tay
+                        </button>
+                        <div class="w-px h-6 bg-slate-300 mx-1"></div>
                         <button id="copyEnBtn" class="text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 py-2 px-3 rounded-lg flex items-center gap-1 border border-slate-300 transition-colors">
-                            <i class="ph ph-copy"></i> Tiếng Anh
+                            <i class="ph ph-copy"></i> T.Anh
                         </button>
                         <button id="copyViBtn" class="text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 py-2 px-3 rounded-lg flex items-center gap-1 border border-slate-300 transition-colors">
-                            <i class="ph ph-copy"></i> Tiếng Việt
+                            <i class="ph ph-copy"></i> T.Việt
                         </button>
                         <button id="copyAllBtn" class="text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 py-2 px-3 rounded-lg flex items-center gap-1 border border-blue-200 transition-colors">
                             <i class="ph ph-copy"></i> Tất cả
@@ -142,8 +154,33 @@
                 <div id="outputArea" class="flex flex-col gap-6"></div>
             </section>
 
+            <!-- DANH SÁCH SỔ TAY ĐÃ LƯU (MỚI THÊM) -->
+            <section id="savedListSection" class="hidden flex-col gap-6 w-full fade-in">
+                <div class="flex justify-between items-center mb-2">
+                    <div>
+                        <h2 class="text-2xl font-extrabold text-slate-800 flex items-center gap-2">
+                            <i class="ph-fill ph-books text-amber-500"></i> Thư Viện Sổ Tay
+                        </h2>
+                        <p class="text-slate-500 text-sm mt-1">Lưu trữ tối đa 50 bản dịch gần nhất để chống giật lag bộ nhớ.</p>
+                    </div>
+                    <button onclick="exitToMain()" class="text-sm font-medium text-slate-500 hover:text-blue-600 py-2 px-4 rounded-lg bg-white border border-slate-200 shadow-sm transition-colors">
+                        <i class="ph ph-plus"></i> Dịch bài mới
+                    </button>
+                </div>
+                <!-- Grid chứa các thẻ bài đã lưu -->
+                <div id="savedGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Nội dung render qua JS -->
+                </div>
+            </section>
+
+            <!-- GIAO DIỆN XEM CHI TIẾT SỔ TAY -->
+            <section id="notebookSection" class="hidden flex-col gap-6 max-w-4xl mx-auto w-full fade-in">
+                <!-- Nội dung sổ tay sẽ được render bằng JS vào đây -->
+            </section>
+
             <!-- 2. CHẾ ĐỘ LUYỆN DỊCH -->
             <section id="practiceSection" class="hidden flex-col gap-6 max-w-3xl mx-auto w-full">
+                <!-- (Giữ nguyên như cũ) -->
                 <div class="flex justify-between items-center">
                     <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
                         <i class="ph-fill ph-pencil-simple text-blue-600"></i> Luyện Dịch Sang Tiếng Anh
@@ -179,6 +216,7 @@
 
             <!-- 3. CHẾ ĐỘ LUYỆN ĐẶT CÂU HỎI -->
             <section id="askSection" class="hidden flex-col gap-6 max-w-3xl mx-auto w-full">
+                <!-- (Giữ nguyên như cũ) -->
                 <div class="flex justify-between items-center">
                     <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
                         <i class="ph-fill ph-question text-purple-600"></i> Luyện Đặt Câu Hỏi Từ Văn Bản
@@ -225,7 +263,6 @@
                         <div class="bg-white p-3 rounded-lg border border-slate-200 mt-2">
                             <p class="text-xs text-slate-500 mb-1">Câu hỏi của bạn (đã sửa lỗi ngữ pháp bằng tiếng Anh):</p>
                             <div id="askUserDiff" class="text-lg font-medium"></div>
-                            <!-- PHẦN DỊCH NGHĨA CÂU ĐÃ SỬA -->
                             <p class="text-sm text-slate-600 mt-3 pt-2 border-t border-slate-100 flex items-start gap-1">
                                 <i class="ph ph-translate mt-0.5 text-slate-400"></i>
                                 <span>Nghĩa là: <span id="askCorrectedVi" class="font-medium"></span></span>
@@ -296,7 +333,6 @@
     <script>
         // --- QUẢN LÝ CẤU HÌNH AI ---
         let userApiKey = localStorage.getItem('gemini_api_key') || "";
-
         const apiModal = document.getElementById('apiModal');
         const apiKeyInput = document.getElementById('apiKeyInput');
 
@@ -444,7 +480,6 @@
             } catch (error) { return "[Lỗi dịch thuật]"; }
         }
 
-        // Core AI Function
         async function callAI(promptText) {
             if (userApiKey) {
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${userApiKey}`;
@@ -475,8 +510,6 @@
         async function aiSuggestQuestions(contextText) {
             const prompt = `Đoạn văn: "${contextText}"
             Nhiệm vụ: Dựa vào thông tin cụ thể CÓ TRONG ĐOẠN VĂN TRÊN, hãy gợi ý 3 cách đặt câu hỏi GIAO TIẾP ĐƠN GIẢN cho người đang đọc.
-            Ví dụ: Nếu đoạn văn là "I go to the park with my friends tomorrow", hãy gợi ý hỏi "Where do you go?" hoặc "Who do you go with?" hoặc "When do you go?".
-            Tuyệt đối không dùng từ phức tạp. Sử dụng các từ để hỏi cơ bản: Who, What, Where, When, Why, How gắn với hành động/sự việc trong đoạn.
             BẮT BUỘC TRẢ VỀ CHÍNH XÁC ĐỊNH DẠNG JSON SAU:
             {
               "suggestions": [
@@ -487,15 +520,9 @@
         }
 
         async function aiEvaluateQuestion(contextText, userQuestion) {
-            const prompt = `Đoạn văn: "${contextText}"
-            Câu hỏi người dùng đặt: "${userQuestion}"
-            
-            Nhiệm vụ:
-            1. Câu hỏi tiếng Anh này có đúng ngữ pháp giao tiếp cơ bản không?
-            2. Câu hỏi này có bám sát thông tin trong đoạn văn không?
-            Yêu cầu: Khuyến khích sự tự nhiên, đơn giản. Chấp nhận văn nói ngắn gọn. Không ép dùng cấu trúc học thuật.
-            
-            BẮT BUỘC TRẢ VỀ CHÍNH XÁC ĐỊNH DẠNG JSON SAU (không markdown, không chữ khác):
+            const prompt = `Đoạn văn: "${contextText}"\nCâu hỏi người dùng đặt: "${userQuestion}"
+            Nhiệm vụ: Câu hỏi tiếng Anh này có đúng ngữ pháp giao tiếp cơ bản không? Có bám sát đoạn văn không?
+            BẮT BUỘC TRẢ VỀ CHÍNH XÁC ĐỊNH DẠNG JSON SAU:
             {
               "isGood": true,
               "feedbackVi": "Nhận xét ngắn gọn, thân thiện bằng tiếng Việt...",
@@ -515,6 +542,8 @@
         const inputSection = document.getElementById('inputSection');
         const loadingIndicator = document.getElementById('loadingIndicator');
         const resultSection = document.getElementById('resultSection');
+        const savedListSection = document.getElementById('savedListSection');
+        const notebookSection = document.getElementById('notebookSection');
         const practiceSection = document.getElementById('practiceSection');
         const askSection = document.getElementById('askSection');
 
@@ -527,6 +556,8 @@
             document.getElementById('loadingMsg').textContent = msg;
             inputSection.classList.add('hidden');
             resultSection.classList.add('hidden');
+            savedListSection.classList.add('hidden');
+            notebookSection.classList.add('hidden');
             practiceSection.classList.add('hidden');
             askSection.classList.add('hidden');
             loadingIndicator.classList.replace('hidden', 'flex');
@@ -541,6 +572,8 @@
             practiceSection.classList.add('hidden');
             askSection.classList.add('hidden');
             resultSection.classList.add('hidden');
+            notebookSection.classList.add('hidden');
+            savedListSection.classList.add('hidden');
             inputSection.classList.remove('hidden');
         }
 
@@ -572,6 +605,54 @@
             return chunks;
         }
 
+        // --- LƯU TRỮ VÀ QUẢN LÝ SỔ TAY LOCALSTORAGE (CHỐNG LAG) ---
+        const NOTEBOOK_STORAGE_KEY = 'bilingual_saved_notebooks';
+        const MAX_SAVES = 50; // Giới hạn 50 sổ tay để chống đầy bộ nhớ và lag UI
+        let currentTempPairs = []; // Chứa dữ liệu của bài vừa dịch xong nhưng chưa lưu
+
+        function getSavedNotebooks() {
+            try {
+                const data = localStorage.getItem(NOTEBOOK_STORAGE_KEY);
+                return data ? JSON.parse(data) : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function saveNotebookToLocal(pairs, title) {
+            let notebooks = getSavedNotebooks();
+            const newNotebook = {
+                id: Date.now().toString(),
+                date: new Date().toLocaleString('vi-VN', {hour: '2-digit', minute:'2-digit', day: '2-digit', month: '2-digit', year: 'numeric'}),
+                title: title || `Bản dịch ${new Date().toLocaleDateString('vi-VN')}`,
+                pairs: pairs
+            };
+
+            notebooks.unshift(newNotebook); // Thêm lên đầu danh sách
+            
+            // XÓA BẢN CŨ NẾU VƯỢT QUÁ GIỚI HẠN CHỐNG LAG
+            if (notebooks.length > MAX_SAVES) {
+                notebooks = notebooks.slice(0, MAX_SAVES);
+            }
+
+            try {
+                localStorage.setItem(NOTEBOOK_STORAGE_KEY, JSON.stringify(notebooks));
+                showToast('Đã lưu thành công vào Sổ tay!');
+                return newNotebook;
+            } catch (error) {
+                showToast('Không thể lưu. Bộ nhớ điện thoại có thể đã đầy!', 'error');
+                return null;
+            }
+        }
+
+        function deleteNotebook(id) {
+            let notebooks = getSavedNotebooks();
+            notebooks = notebooks.filter(n => n.id !== id);
+            localStorage.setItem(NOTEBOOK_STORAGE_KEY, JSON.stringify(notebooks));
+            renderSavedList(); // Vẽ lại danh sách
+            showToast('Đã xóa khỏi Sổ tay');
+        }
+
         // --- CHẾ ĐỘ 1: DỊCH ---
         translateBtn.addEventListener('click', async () => {
             const text = sourceText.value.trim();
@@ -583,12 +664,22 @@
             showLoading("Đang dịch văn bản...");
             const outputArea = document.getElementById('outputArea');
             outputArea.innerHTML = '';
+            currentTempPairs = []; // Reset dữ liệu tạm thời
 
             try {
                 for (let i = 0; i < chunks.length; i++) {
                     const originalP = chunks[i];
                     const translatedP = await translateText(originalP, dir[0], dir[1]);
 
+                    // Đưa vào mảng lưu trữ tạm thời
+                    currentTempPairs.push({
+                        source: originalP,
+                        target: translatedP,
+                        sourceLang: dir[0],
+                        targetLang: dir[1]
+                    });
+
+                    // Render giao diện kết quả dịch bình thường
                     const row = document.createElement('div');
                     row.className = 'grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8 p-5 md:p-7 bg-white rounded-2xl shadow-sm border border-slate-200';
                     
@@ -613,7 +704,193 @@
             }
         });
 
-        // --- CÁC HÀM XỬ LÝ NÚT COPY ---
+        // --- NÚT LƯU BẢN DỊCH VÀO SỔ TAY ---
+        document.getElementById('saveToNotebookBtn').addEventListener('click', function() {
+            if(currentTempPairs.length === 0) return;
+            
+            // Tự động tạo tiêu đề từ đoạn đầu tiên để lưu luôn
+            const firstWords = currentTempPairs[0].source.substring(0, 30) + "...";
+            const autoTitle = `Đoạn: ${firstWords}`;
+            
+            // Lưu tự động không cần hiển thị popup hỏi tên
+            const savedItem = saveNotebookToLocal(currentTempPairs, autoTitle);
+            
+            if (savedItem) {
+                // Đổi giao diện nút tạm thời để báo đã lưu thành công thay vì chuyển trang
+                const btn = this;
+                const originalHtml = btn.innerHTML;
+                
+                btn.innerHTML = `<i class="ph-fill ph-check-circle text-lg"></i> Đã lưu xong`;
+                btn.classList.remove('bg-amber-100', 'text-amber-700', 'border-amber-300', 'hover:bg-amber-200');
+                btn.classList.add('bg-green-100', 'text-green-700', 'border-green-300', 'hover:bg-green-200');
+                
+                // Trả lại trạng thái ban đầu sau 2 giây
+                setTimeout(() => {
+                    btn.innerHTML = originalHtml;
+                    btn.classList.remove('bg-green-100', 'text-green-700', 'border-green-300', 'hover:bg-green-200');
+                    btn.classList.add('bg-amber-100', 'text-amber-700', 'border-amber-300', 'hover:bg-amber-200');
+                }, 2000);
+            }
+        });
+
+        // --- GIAO DIỆN XEM DANH SÁCH ĐÃ LƯU ---
+        document.getElementById('myNotebooksBtn').addEventListener('click', () => {
+            hideLoading();
+            inputSection.classList.add('hidden');
+            resultSection.classList.add('hidden');
+            notebookSection.classList.add('hidden');
+            practiceSection.classList.add('hidden');
+            askSection.classList.add('hidden');
+            savedListSection.classList.remove('hidden');
+            
+            renderSavedList();
+        });
+
+        function renderSavedList() {
+            const grid = document.getElementById('savedGrid');
+            const notebooks = getSavedNotebooks();
+            
+            if(notebooks.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full py-16 text-center bg-white rounded-2xl border border-dashed border-slate-300">
+                        <i class="ph-fill ph-folder-open text-5xl text-slate-300 mb-3"></i>
+                        <p class="text-slate-500 font-medium text-lg">Sổ tay của bạn đang trống.</p>
+                        <p class="text-slate-400 text-sm mt-1">Dịch một đoạn văn và bấm "Lưu vào Sổ tay" nhé!</p>
+                    </div>`;
+                return;
+            }
+
+            let html = '';
+            notebooks.forEach(n => {
+                const previewSnippet = n.pairs[0] ? (n.pairs[0].sourceLang === 'vi' ? n.pairs[0].source : n.pairs[0].target).substring(0, 80) + "..." : "";
+                
+                html += `
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all group flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-start mb-3">
+                                <span class="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-md border border-amber-100 flex items-center gap-1"><i class="ph ph-calendar-blank"></i> ${n.date}</span>
+                                <button onclick="deleteNotebook('${n.id}')" class="text-slate-300 hover:text-red-500 transition-colors" title="Xóa sổ tay này">
+                                    <i class="ph-fill ph-trash text-lg"></i>
+                                </button>
+                            </div>
+                            <h3 class="font-extrabold text-slate-800 text-lg mb-2 line-clamp-1">${n.title}</h3>
+                            <p class="text-slate-500 text-sm italic line-clamp-2 mb-4 bg-slate-50 p-2 rounded-lg border border-slate-100">"${previewSnippet}"</p>
+                        </div>
+                        <div class="flex justify-between items-center mt-2 border-t border-slate-100 pt-3">
+                            <span class="text-xs font-bold text-slate-400"><i class="ph-fill ph-stack"></i> ${n.pairs.length} đoạn</span>
+                            <button onclick="openSavedNotebookById('${n.id}')" class="text-sm font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-xl transition-colors">Xem chi tiết</button>
+                        </div>
+                    </div>
+                `;
+            });
+            grid.innerHTML = html;
+        }
+
+        // Trick function to call from inline HTML onclick
+        window.deleteNotebook = deleteNotebook;
+        window.openSavedNotebookById = function(id) {
+            const notebooks = getSavedNotebooks();
+            const n = notebooks.find(item => item.id === id);
+            if(n) openNotebookDetail(n.title, n.pairs, false);
+        };
+
+        // --- TÍCH HỢP UI CHI TIẾT SỔ TAY (DÙNG CHUNG) ---
+        function openNotebookDetail(title, pairs, fromTranslationScreen = false) {
+            resultSection.classList.add('hidden');
+            inputSection.classList.add('hidden');
+            savedListSection.classList.add('hidden');
+            notebookSection.classList.remove('hidden');
+            
+            let html = `
+                <div class="glass-card rounded-[2.5rem] p-8 md:p-12 shadow-xl border-t-8 border-t-amber-400">
+                    <div class="text-center mb-10">
+                        <div class="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="ph-fill ph-notebook text-4xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-extrabold text-slate-800">${title}</h2>
+                        <p class="text-slate-500 font-medium mt-2">Tổng hợp nội dung song ngữ</p>
+                    </div>
+
+                    <div class="space-y-6 mb-10">
+            `;
+
+            pairs.forEach((pair, idx) => {
+                const viText = pair.sourceLang === 'vi' ? pair.source : pair.target;
+                const enText = pair.sourceLang === 'en' ? pair.source : pair.target;
+
+                html += `
+                        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative group">
+                            <h4 class="font-bold text-slate-800 mb-4 flex gap-2">
+                                <span class="text-amber-500">Đoạn ${idx + 1}</span>
+                            </h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                    <span class="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-2">Tiếng Việt</span>
+                                    <p class="text-slate-600 italic text-[15px]">${viText}</p>
+                                </div>
+                                <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                                    <span class="text-[11px] font-black text-blue-400 uppercase tracking-widest block mb-2">Tiếng Anh (Click để tra từ)</span>
+                                    <p class="text-slate-800 font-medium text-[15px] leading-relaxed">${wrapWordsForEnglish(enText)}</p>
+                                </div>
+                            </div>
+                        </div>
+                `;
+            });
+
+            html += `
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <button id="closeNotebookBtn" class="flex-1 py-4 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-all border border-slate-200 flex items-center justify-center gap-2">
+                            <i class="ph ph-arrow-left text-xl"></i> ${fromTranslationScreen ? 'Quay lại bản dịch' : 'Quay lại thư viện'}
+                        </button>
+                        <button id="copyNotebookFullBtn" class="flex-[2] py-4 rounded-xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 text-white bg-amber-600 hover:bg-amber-700">
+                            <i class="ph ph-copy text-xl"></i> Copy toàn bộ Sổ tay
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            notebookSection.innerHTML = html;
+
+            // Gắn sự kiện cho các nút trong Sổ tay
+            document.getElementById('closeNotebookBtn').addEventListener('click', () => {
+                notebookSection.classList.add('hidden');
+                if(fromTranslationScreen) {
+                    resultSection.classList.remove('hidden');
+                    inputSection.classList.remove('hidden');
+                } else {
+                    savedListSection.classList.remove('hidden');
+                }
+            });
+
+            document.getElementById('copyNotebookFullBtn').addEventListener('click', () => {
+                let textToCopy = `📚 SỔ TAY ÔN TẬP: ${title}\n================================\n\n`;
+                pairs.forEach((pair, idx) => {
+                    const viText = pair.sourceLang === 'vi' ? pair.source : pair.target;
+                    const enText = pair.sourceLang === 'en' ? pair.source : pair.target;
+                    textToCopy += `Đoạn ${idx + 1}:\n`;
+                    textToCopy += `📝 Tiếng Việt: ${viText}\n`;
+                    textToCopy += `🗣️ Tiếng Anh: ${enText}\n`;
+                    textToCopy += `--------------------------------\n\n`;
+                });
+                
+                copyTextToClipboard(textToCopy, 'Đã copy thành công Sổ tay!');
+                
+                const btn = document.getElementById('copyNotebookFullBtn');
+                btn.innerHTML = `<i class="ph ph-check text-xl"></i> Đã copy thành công!`;
+                btn.classList.replace('bg-amber-600', 'bg-green-600');
+                btn.classList.replace('hover:bg-amber-700', 'hover:bg-green-700');
+                
+                setTimeout(() => {
+                    btn.innerHTML = `<i class="ph ph-copy text-xl"></i> Copy toàn bộ Sổ tay`;
+                    btn.classList.replace('bg-green-600', 'bg-amber-600');
+                    btn.classList.replace('hover:bg-green-700', 'hover:bg-amber-700');
+                }, 2500);
+            });
+        }
+
+
+        // --- CÁC HÀM XỬ LÝ NÚT COPY Ở KẾT QUẢ DỊCH ---
         document.getElementById('copyAllBtn').addEventListener('click', () => {
             const rows = document.getElementById('outputArea').querySelectorAll('.grid');
             if (rows.length === 0) return;
