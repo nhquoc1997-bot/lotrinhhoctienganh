@@ -2,618 +2,658 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Dictation, Shadowing & Speaking</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Luyện Đọc Tiếng Anh Chuyên Nghiệp</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
     <style>
-        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
-        .slide-up { animation: slideUp 0.4s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         
-        textarea::-webkit-scrollbar { width: 8px; }
-        textarea::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 8px; }
-        textarea::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
-        textarea::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Screen Transitions */
+        .screen {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.4s ease-in-out, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            transform: translateY(10px);
+        }
+        .screen.active {
+            display: flex;
+            opacity: 1;
+            transform: translateY(0);
+        }
 
-        .ping-bg { animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite; }
-        @keyframes ping { 75%, 100% { transform: scale(1.5); opacity: 0; } }
+        /* Clickable Words for TTS */
+        .clickable-word {
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 2px 4px;
+            margin: 0 1px;
+            border-radius: 6px;
+            display: inline-block;
+            border-bottom: 2px dashed #cbd5e1;
+        }
+        .clickable-word:hover { 
+            background-color: #dbeafe; 
+            color: #1d4ed8; 
+            border-bottom-color: transparent; 
+            transform: translateY(-2px);
+        }
+        .clickable-word:active { 
+            transform: scale(0.95); 
+            background-color: #bfdbfe; 
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Toast Animation - Top Center for Mobile Visibility */
+        .toast-enter { transform: translate(-50%, 0) !important; opacity: 1 !important; }
+        .assessment-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
-<body class="min-h-screen bg-slate-50 font-sans text-slate-800 pb-20 selection:bg-indigo-200 selection:text-indigo-900">
+<body class="bg-slate-50 h-[100dvh] text-slate-800 overflow-hidden flex flex-col">
 
-    <header class="max-w-4xl w-full mx-auto p-4 md:px-8 md:py-5 bg-white shadow-sm border-b border-slate-200 rounded-b-3xl flex items-center justify-between sticky top-0 z-40">
-        <div class="flex items-center gap-3">
-            <div class="bg-indigo-600 p-2 md:p-2.5 rounded-xl shadow-md">
-                <i class="fa-solid fa-volume-high text-white text-lg"></i>
+    <!-- Navbar -->
+    <nav class="bg-white/80 backdrop-blur-md shadow-sm shrink-0 z-40 border-b border-slate-200 sticky top-0">
+        <div class="max-w-6xl mx-auto px-4 h-14 md:h-16 flex items-center justify-between">
+            <div class="font-extrabold text-lg md:text-xl text-blue-600 flex items-center tracking-tight">
+                <i class="fa-solid fa-graduation-cap mr-2 md:mr-2.5 text-xl md:text-2xl"></i> EnglishPro
             </div>
-            <div>
-                <h1 class="text-lg md:text-xl font-bold text-slate-800">Smart English Practice</h1>
-                <p class="text-xs font-medium text-slate-500 hidden sm:block">Nghe, Chép Chính Tả & Lặp Lại</p>
+            <div class="flex space-x-2 md:space-x-8 text-[11px] md:text-sm font-semibold">
+                <div id="step1" class="flex items-center text-blue-600 transition-colors duration-300">
+                    <span class="w-6 h-6 md:w-7 md:h-7 rounded-full bg-blue-100 flex items-center justify-center mr-1.5 md:mr-2 shadow-inner">1</span>
+                    <span class="hidden sm:inline">Nhập Text</span>
+                </div>
+                <i class="fa-solid fa-chevron-right text-slate-300 flex items-center text-[10px]"></i>
+                <div id="step2" class="flex items-center text-slate-400 transition-colors duration-300">
+                    <span class="w-6 h-6 md:w-7 md:h-7 rounded-full bg-slate-100 flex items-center justify-center mr-1.5 md:mr-2">2</span>
+                    <span class="hidden sm:inline">Luyện Đọc</span>
+                </div>
             </div>
         </div>
-        <div>
-            <span class="text-xs font-bold bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg border border-indigo-100">
-                <i class="fa-solid fa-ear-listen mr-1"></i> Blind Shadowing
-            </span>
-        </div>
-    </header>
+    </nav>
 
-    <main class="w-full px-4 mt-8 max-w-3xl mx-auto">
+    <!-- Top Center Toast for Translations -->
+    <div id="toastNotification" class="fixed top-4 left-1/2 -translate-x-1/2 -translate-y-[120%] opacity-0 text-white px-5 py-3 rounded-2xl shadow-2xl transition-all duration-300 z-50 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none">
+        <i id="toastIcon" class="fa-solid fa-language text-2xl text-blue-400"></i>
+        <div class="flex flex-col">
+            <span id="toastWord" class="font-bold text-blue-200 text-sm"></span>
+            <span id="toastMessage" class="font-medium text-base"></span>
+        </div>
+    </div>
+
+    <main class="flex-grow w-full max-w-6xl mx-auto p-3 md:p-6 relative flex flex-col overflow-hidden">
         
-        <div id="screen-input" class="bg-white p-6 md:p-8 rounded-3xl shadow-xl border border-slate-200 fade-in">
-            <h2 class="text-2xl md:text-3xl font-bold text-indigo-600 mb-3"><i class="fa-solid fa-keyboard mr-2"></i>Nhập Đoạn Văn</h2>
-            <p class="text-slate-600 mb-6 font-medium">Dán văn bản vào đây. Bạn sẽ trải qua 2 bước: Nghe chép chính tả và Nghe lặp lại (Shadowing).</p>
-            
-            <div id="input-error" class="hidden mb-4 p-3 bg-red-50 text-red-600 border border-red-200 rounded-xl font-medium text-sm flex items-center gap-2">
-                <i class="fa-solid fa-triangle-exclamation"></i> Vui lòng nhập văn bản hợp lệ.
-            </div>
-
-            <textarea id="raw-text" class="w-full h-56 p-5 border-2 border-indigo-100 rounded-2xl focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 resize-none text-lg text-slate-700 outline-none transition-all shadow-inner" placeholder="Paste your English text here...">I started learning English eight years ago because I wanted a better job. I hope this system helps everyone improve their listening skills and communication.</textarea>
-
-            <div class="mt-6">
-                <div class="bg-blue-50 border border-blue-100 p-4 rounded-xl mb-6 text-sm text-blue-800 flex items-start gap-3">
-                    <i class="fa-solid fa-lightbulb text-blue-500 mt-1"></i>
-                    <p><strong>Mẹo:</strong> Nhấn phím Enter để buộc hệ thống ngắt thành một câu mới. Nhấn <code>Ctrl + Space</code> để nghe lại/tạm dừng audio.</p>
-                </div>
-
-                <button onclick="app.startPractice()" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white text-lg font-bold rounded-2xl transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 transform hover:scale-[1.01]">
-                    Bắt đầu luyện tập <i class="fa-solid fa-arrow-right"></i>
-                </button>
-            </div>
-        </div>
-
-        <div id="screen-practice" class="hidden bg-white p-4 md:p-8 rounded-3xl shadow-xl border border-slate-200 fade-in relative">
-            <button onclick="app.goHome()" class="mb-5 flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-bold transition-colors w-fit px-3 py-1.5 rounded-lg hover:bg-slate-100">
-                <i class="fa-solid fa-arrow-left"></i> Quay lại
-            </button>
-
-            <!-- Progress Bar -->
-            <div class="mb-6 md:mb-8">
-                <div class="flex justify-between text-sm font-bold text-slate-500 mb-2">
-                    <span id="progress-text">Câu 1 / 10</span>
-                    <span id="progress-percent" class="text-indigo-600">0%</span>
-                </div>
-                <div class="w-full bg-slate-100 rounded-full h-2.5">
-                    <div id="progress-bar" class="bg-gradient-to-r from-indigo-500 to-purple-500 h-2.5 rounded-full transition-all duration-500 shadow-sm" style="width: 0%"></div>
-                </div>
-            </div>
-
-            <!-- Audio Player -->
-            <div class="bg-indigo-50/50 border border-indigo-100 p-5 md:p-6 rounded-3xl mb-8 relative overflow-hidden">
-                <div class="flex justify-center mb-6 relative z-10">
-                    <div class="flex items-center bg-white border border-indigo-200 rounded-xl p-1 shadow-sm">
-                        <button onclick="app.setSpeed(0.7)" id="speed-0.7" class="speed-btn px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-bold transition-colors">0.7x</button>
-                        <button onclick="app.setSpeed(0.8)" id="speed-0.8" class="speed-btn px-3 py-1.5 rounded-lg text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors">0.8x</button>
-                        <button onclick="app.setSpeed(0.9)" id="speed-0.9" class="speed-btn px-3 py-1.5 rounded-lg text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors">0.9x</button>
-                        <button onclick="app.setSpeed(1.0)" id="speed-1.0" class="speed-btn px-3 py-1.5 rounded-lg text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors">1.0x</button>
-                    </div>
-                </div>
-                
-                <div class="flex flex-col items-center justify-center relative z-10">
-                    <button id="play-btn" onclick="app.togglePlayPause('dictation')" class="w-20 h-20 md:w-24 md:h-24 flex items-center justify-center rounded-full text-white bg-indigo-600 hover:bg-indigo-700 hover:scale-105 shadow-xl shadow-indigo-300/50 transition-all duration-300">
-                        <i id="play-icon" class="fa-solid fa-play text-3xl md:text-4xl ml-2"></i>
-                    </button>
-                    <p id="play-instruction" class="mt-4 text-sm text-indigo-500 font-bold tracking-wide uppercase">Bấm để nghe audio</p>
-                </div>
-            </div>
-
-            <div id="step-dictation" class="slide-up">
-                <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
-                    <span class="text-base font-bold text-slate-700"><i class="fa-solid fa-pen-to-square text-orange-500 mr-2"></i>Gõ lại những gì bạn nghe được:</span>
-                    <div class="flex gap-2">
-                        <button onclick="app.showHint('start')" class="px-3 py-1.5 text-xs font-bold bg-orange-50 border border-orange-200 text-orange-600 rounded-lg hover:bg-orange-100 transition-colors">Đầu câu</button>
-                        <button onclick="app.showHint('end')" class="px-3 py-1.5 text-xs font-bold bg-orange-50 border border-orange-200 text-orange-600 rounded-lg hover:bg-orange-100 transition-colors">Cuối câu</button>
-                    </div>
-                </div>
-                <div id="hint-box" class="hidden mb-4 p-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-lg font-mono tracking-wide shadow-inner"></div>
-                <textarea id="user-input" class="w-full p-4 md:p-5 text-lg border-2 border-slate-200 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all outline-none resize-none bg-slate-50 focus:bg-white mb-6" rows="4" placeholder="Nhập câu tiếng Anh..."></textarea>
-                <button onclick="app.checkAnswer()" class="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white text-lg font-black rounded-2xl transition-all shadow-lg shadow-emerald-200 flex justify-center items-center gap-2">
-                    Kiểm tra đáp án <i class="fa-solid fa-check"></i>
-                </button>
-            </div>
-
-            <div id="step-feedback" class="hidden slide-up">
-                <div id="feedback-box" class="p-5 md:p-6 rounded-2xl border-2 mb-6 shadow-sm">
-                    <h3 id="feedback-title" class="text-xl font-black mb-4 flex items-center gap-2"></h3>
-                    <div id="feedback-result" class="text-lg md:text-xl leading-loose font-medium text-slate-800 break-words mb-6"></div>
-                    <div id="correct-sentence-box" class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Câu gốc đúng:</p>
-                        <p id="correct-sentence-text" class="text-slate-800 text-lg font-medium break-words"></p>
-                    </div>
-                </div>
-                <div class="flex flex-col sm:flex-row gap-4">
-                    <button onclick="app.retryDictation()" class="flex-1 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl transition-colors flex items-center justify-center gap-2 border border-slate-200">
-                        <i class="fa-solid fa-rotate-right"></i> Nhập lại
-                    </button>
-                    <button onclick="app.nextSentence()" class="flex-1 py-4 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-2xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-200">
-                        <span id="feedback-next-btn-text">Câu tiếp theo</span> <i class="fa-solid fa-arrow-right"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <div id="screen-echo" class="hidden bg-white p-6 md:p-8 rounded-3xl shadow-xl border border-slate-200 fade-in relative max-w-3xl mx-auto">
-            <div class="text-center mb-6">
-                <span class="inline-block px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-bold uppercase tracking-wider mb-3">Giai đoạn 2</span>
-                <h2 class="text-2xl md:text-3xl font-black text-slate-800"><i class="fa-solid fa-ear-listen text-orange-500 mr-2"></i> Nghe & Đọc Lại</h2>
-                <p class="text-slate-500 mt-2 font-medium">Lắng nghe audio và đọc lại. Văn bản đã được ẩn để rèn luyện trí nhớ!</p>
-            </div>
-
-            <!-- Progress -->
-            <div class="mb-6 md:mb-8">
-                <div class="flex justify-between text-sm font-bold text-slate-500 mb-2">
-                    <span id="echo-progress-text">Câu 1 / 10</span>
-                    <span id="echo-progress-percent" class="text-orange-600">0%</span>
-                </div>
-                <div class="w-full bg-slate-100 rounded-full h-2.5">
-                    <div id="echo-progress-bar" class="bg-gradient-to-r from-orange-400 to-red-400 h-2.5 rounded-full transition-all duration-500 shadow-sm" style="width: 0%"></div>
-                </div>
-            </div>
-
-            <!-- Audio Controls -->
-            <div class="flex flex-col items-center justify-center mb-8 bg-orange-50/50 border border-orange-100 rounded-3xl p-6">
-                <button id="echo-play-btn" onclick="app.togglePlayPause('echo')" class="w-20 h-20 md:w-24 md:h-24 flex items-center justify-center rounded-full text-white bg-orange-500 hover:bg-orange-600 hover:scale-105 shadow-xl shadow-orange-300/50 transition-all duration-300">
-                    <i id="echo-play-icon" class="fa-solid fa-play text-3xl md:text-4xl ml-2"></i>
-                </button>
-                <p id="echo-play-instruction" class="mt-4 text-sm text-orange-500 font-bold tracking-wide uppercase">Bấm để nghe audio</p>
-                
-                <div class="relative mt-6 pt-6 border-t border-orange-200 w-full flex flex-col items-center">
-                    <div id="echo-mic-ping" class="hidden absolute top-6 bg-red-400 rounded-full ping-bg opacity-75 w-20 h-20"></div>
-                    <button id="echo-mic-btn" onclick="app.startSpeechRecognition()" class="relative z-10 w-20 h-20 flex items-center justify-center rounded-full text-white bg-indigo-600 hover:bg-indigo-700 hover:scale-105 shadow-xl shadow-indigo-300 transition-all duration-300">
-                        <i class="fa-solid fa-microphone text-3xl"></i>
-                    </button>
-                    <p class="text-xs font-bold text-slate-400 uppercase mt-3">Bấm để ghi âm</p>
-                </div>
+        <!-- MÀN HÌNH 1: NHẬP VĂN BẢN -->
+        <div id="screen-input" class="screen active flex-col h-full w-full max-w-3xl mx-auto pt-2 md:pt-10">
+            <div class="text-center mb-4 md:mb-8 shrink-0">
+                <h1 class="text-2xl md:text-5xl font-extrabold mb-2 md:mb-4 text-slate-900 tracking-tight">Nhập đoạn văn của bạn</h1>
+                <p class="text-slate-500 text-xs md:text-lg max-w-xl mx-auto leading-relaxed px-4">Dán đoạn tiếng Anh bạn muốn luyện tập vào đây. Hệ thống sẽ tự động chia nhỏ để bạn dễ dàng luyện đọc.</p>
             </div>
             
-            <div id="echo-long-sentence-tip" class="hidden mb-4 p-4 bg-blue-50 border border-blue-200 rounded-xl text-blue-800 text-sm shadow-sm">
-                <div class="flex items-start gap-3">
-                    <i class="fa-solid fa-lightbulb text-blue-500 mt-1"></i>
-                    <div>
-                        <p class="font-medium"><b>Câu này khá dài!</b> Bạn có thể xem từ khóa gợi ý bên dưới.</p>
-                        <button onclick="app.showEchoHint()" class="mt-3 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors text-xs flex items-center gap-2 shadow-md">
-                            <i class="fa-solid fa-wand-magic-sparkles"></i> Hiện từ khóa
-                        </button>
-                    </div>
+            <div class="flex-grow flex flex-col bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden mb-2 md:mb-10 transition-all focus-within:ring-4 focus-within:ring-blue-100 focus-within:border-blue-400">
+                <textarea id="inputText" class="w-full flex-grow p-5 md:p-8 text-base md:text-xl resize-none focus:outline-none focus:ring-0 text-slate-700 leading-relaxed placeholder-slate-300" placeholder="Hello! I am learning English today. I want to improve my pronunciation..."></textarea>
+                <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+                    <button id="btnProcess" class="w-full md:w-auto px-6 py-3 md:py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold shadow-lg shadow-blue-600/30 transition-all active:scale-95 flex items-center justify-center text-base md:text-lg gap-2">
+                        Bắt đầu luyện tập <i class="fa-solid fa-arrow-right"></i>
+                    </button>
                 </div>
-            </div>
-
-            <div id="echo-hint-box" class="hidden mb-6 p-5 bg-white border-2 border-indigo-100 rounded-2xl text-indigo-800 text-lg md:text-xl font-mono tracking-wide shadow-sm text-center leading-relaxed"></div>
-
-            <div id="echo-hidden-box" class="bg-slate-100 border-2 border-dashed border-slate-300 rounded-2xl p-8 mb-6 text-center shadow-inner">
-                <i class="fa-solid fa-eye-slash text-4xl text-slate-300 mb-3"></i>
-                <p class="text-slate-500 font-bold text-lg">Văn bản đang bị ẩn</p>
-            </div>
-
-            <!-- Result Box with NEW Retry Button -->
-            <div id="echo-result-box" class="hidden p-5 bg-white rounded-2xl shadow-sm border border-orange-200 text-left mb-6 slide-up">
-                <div id="echo-score" class="mb-4 p-3 rounded-xl border flex items-center gap-2 text-lg font-bold"></div>
-                
-                <p class="text-xs font-black text-slate-400 uppercase tracking-wider mb-2">Hệ thống nghe được:</p>
-                <p id="echo-transcript" class="font-medium text-slate-800 text-lg mb-4 italic border-l-4 border-orange-400 pl-3"></p>
-                
-                <p class="text-xs font-black text-slate-400 uppercase tracking-wider mb-2">Câu gốc đúng:</p>
-                <p id="echo-original" class="font-medium text-emerald-600 text-lg mb-6"></p>
-
-                <!-- NEW: Retry Current Sentence Button -->
-                <button onclick="app.retryEcho()" class="w-full py-3 mb-4 bg-orange-50 hover:bg-orange-100 text-orange-600 font-bold rounded-xl transition-all border border-orange-200 flex justify-center items-center gap-2">
-                    <i class="fa-solid fa-rotate-right"></i> Thử lại câu này (Đọc lại)
-                </button>
-            </div>
-
-            <div class="border-t border-slate-100 pt-6">
-                <button onclick="app.nextEcho()" class="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-lg rounded-2xl transition-all shadow-lg shadow-emerald-200 flex justify-center items-center gap-2">
-                    <span id="echo-next-btn-text">Câu tiếp theo</span> <i class="fa-solid fa-arrow-right"></i>
-                </button>
             </div>
         </div>
 
-        <div id="screen-results" class="hidden max-w-xl mx-auto w-full p-8 md:p-12 bg-white rounded-3xl shadow-xl border border-slate-200 text-center fade-in">
-            <div class="w-28 h-28 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner border border-emerald-200">
-                <i class="fa-solid fa-trophy text-5xl"></i>
+        <!-- MÀN HÌNH 2: KHÔNG GIAN THỰC HÀNH -->
+        <div id="screen-workspace" class="screen flex-col h-full w-full pb-20 md:pb-28">
+            
+            <div class="flex justify-between items-center mb-3 md:mb-6 shrink-0 px-1">
+                <button id="btnBackToInput" class="px-3 py-2 text-slate-600 hover:text-blue-700 hover:bg-blue-50 rounded-xl font-bold transition-colors flex items-center text-xs md:text-base border border-transparent hover:border-blue-100">
+                    <i class="fa-solid fa-arrow-left mr-1.5 md:mr-2"></i> Quay lại
+                </button>
+                <div id="chunkProgress" class="font-extrabold text-blue-700 bg-blue-100 px-4 py-1.5 md:py-2 rounded-full text-xs md:text-sm shadow-sm border border-blue-200">Phần 1/1</div>
             </div>
-            <h2 class="text-3xl md:text-4xl font-black text-slate-800 mb-4">Xuất sắc!</h2>
-            <p class="text-slate-500 mb-10 text-lg font-medium">Bạn đã hoàn thành bài luyện tập.</p>
-            <button onclick="app.resetApp()" class="py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-lg rounded-2xl transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 w-full">
-                <i class="fa-solid fa-rotate-right"></i> Luyện tập đoạn văn mới
-            </button>
+
+            <div class="flex flex-col gap-3 md:gap-6 flex-grow overflow-hidden h-full">
+                
+                <!-- Ô Trên: Đoạn cần đọc -->
+                <div class="flex-[3] bg-white rounded-[1.2rem] md:rounded-[2rem] shadow-lg shadow-slate-200/50 border border-slate-200 p-4 md:p-8 flex flex-col overflow-hidden min-h-0 relative group">
+                    <div class="shrink-0 mb-2 md:mb-4 flex items-center justify-between">
+                        <div class="text-[10px] md:text-sm font-black text-blue-500 uppercase tracking-widest flex items-center">
+                            <i class="fa-solid fa-book-open mr-1.5 md:mr-2 text-sm md:text-base"></i> Đoạn cần đọc
+                        </div>
+                        <div class="text-[9px] md:text-xs font-medium text-slate-400 bg-slate-100 px-2 py-1 md:px-2.5 rounded-lg flex items-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
+                            <i class="fa-solid fa-hand-pointer"></i> <span>Chạm vào từ để nghe & dịch</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Font size reduced slightly for better mobile viewing -->
+                    <div id="targetDisplay" class="flex-1 min-h-0 overflow-y-auto text-lg sm:text-xl md:text-3xl lg:text-4xl leading-[1.6] font-bold text-slate-800 pr-1 md:pr-2">
+                        <!-- JS injects span tags here -->
+                    </div>
+                </div>
+
+                <!-- Ô Dưới: Máy nhận diện HOẶC Bảng chấm điểm -->
+                <div class="flex-[2] bg-slate-900 rounded-[1.2rem] md:rounded-[2rem] shadow-xl border border-slate-800 p-4 md:p-8 flex flex-col relative overflow-hidden min-h-0">
+                    
+                    <!-- CHẾ ĐỘ 1: ĐANG GHI ÂM (Hiển thị Live Text) -->
+                    <div id="recordModeDisplay" class="flex flex-col h-full">
+                        <div class="shrink-0 mb-2 md:mb-5 flex justify-between items-center">
+                            <span class="text-[10px] md:text-xs font-black text-slate-400 uppercase tracking-widest flex items-center">
+                                <i class="fa-solid fa-ear-listen mr-1.5 md:mr-2 text-sm md:text-base text-blue-400"></i> Máy nghe được
+                            </span>
+                            
+                            <div class="flex gap-2 md:gap-4 text-[9px] md:text-xs font-bold bg-slate-800/50 px-2 py-1 md:py-1.5 rounded-xl border border-slate-700">
+                                <span class="text-white flex items-center"><span class="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-emerald-400 mr-1 md:mr-1.5 shadow-[0_0_8px_rgba(52,211,153,0.5)]"></span>Tốt</span>
+                                <span class="text-amber-400 flex items-center"><span class="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-amber-400 mr-1 md:mr-1.5 shadow-[0_0_8px_rgba(251,191,36,0.5)]"></span>Chưa rõ</span>
+                            </div>
+                        </div>
+                        
+                        <div id="recordDisplay" class="flex-1 min-h-0 overflow-y-auto pb-10 md:pb-12 text-base sm:text-lg md:text-2xl lg:text-3xl leading-relaxed text-slate-100 focus:outline-none relative pr-1 md:pr-2 font-medium">
+                            <span id="finalText"></span>
+                            <span id="interimText" class="text-slate-500 font-light italic"></span>
+                            
+                            <div id="placeholderText" class="text-slate-500 font-light absolute top-0 left-0 transition-opacity duration-300 pointer-events-none flex items-center gap-2 text-xs md:text-base">
+                                <i class="fa-solid fa-microphone-lines animate-pulse text-blue-500/50"></i> Bấm "Bắt đầu đọc"...
+                            </div>
+                        </div>
+
+                        <div id="recordingStatus" class="absolute bottom-3 md:bottom-5 left-3 md:left-8 flex items-center opacity-0 transition-opacity duration-300 bg-rose-500/10 backdrop-blur-md border border-rose-500/20 px-3 py-1.5 rounded-full">
+                            <div class="relative w-1.5 h-1.5 md:w-2 md:h-2 mr-2">
+                                <span class="absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75 animate-ping"></span>
+                                <span class="relative inline-flex rounded-full w-1.5 h-1.5 md:w-2 md:h-2 bg-rose-500"></span>
+                            </div>
+                            <span class="text-[9px] md:text-xs font-bold text-rose-500 uppercase tracking-widest">Đang ghi âm</span>
+                        </div>
+                    </div>
+
+                    <!-- CHẾ ĐỘ 2: ĐÁNH GIÁ KẾT QUẢ (Sau khi bấm Dừng) -->
+                    <div id="assessmentModeDisplay" class="hidden flex-col h-full assessment-fade-in">
+                        <div class="flex items-center gap-3 md:gap-4 mb-3 md:mb-5 shrink-0 bg-slate-800/80 p-3 md:p-4 rounded-2xl border border-slate-700">
+                            <div id="scoreCircle" class="w-12 h-12 md:w-16 md:h-16 rounded-full flex items-center justify-center text-sm md:text-xl font-black border-4 bg-slate-900">
+                                0%
+                            </div>
+                            <div>
+                                <h4 class="text-white font-bold text-sm md:text-lg">Đánh giá phát âm</h4>
+                                <div class="flex gap-3 mt-1 text-[9px] md:text-xs">
+                                    <span class="text-emerald-400 flex items-center"><i class="fa-solid fa-check mr-1"></i> Đúng</span>
+                                    <span class="text-rose-400 flex items-center"><i class="fa-solid fa-xmark mr-1"></i> Sai / Bỏ sót</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="detailedFeedback" class="flex-1 overflow-y-auto text-base sm:text-lg md:text-2xl lg:text-3xl leading-relaxed text-slate-300 pr-1 md:pr-2 pb-6 font-medium">
+                            <!-- Chữ được bôi màu đánh giá -->
+                        </div>
+                    </div>
+
+                    <div id="errorMessage" class="absolute bottom-3 md:bottom-5 left-3 md:left-5 right-3 md:right-5 text-rose-200 bg-rose-900/90 backdrop-blur-md border border-rose-700 px-3 py-2 rounded-xl text-[10px] md:text-sm hidden font-medium text-center z-20 shadow-2xl"></div>
+                </div>
+            </div>
         </div>
     </main>
 
+    <!-- Thanh Toolbar Ghi Âm -->
+    <div id="bottomToolbar" class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-200 p-2 md:p-5 flex justify-center z-50 transform translate-y-full transition-transform duration-500 ease-out shadow-[0_-20px_40px_rgba(0,0,0,0.08)] pb-safe">
+        <div class="max-w-5xl w-full flex justify-between items-center px-1 md:px-4">
+            
+            <button id="btnPrev" class="px-3 md:px-6 py-3 md:py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl md:rounded-2xl font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center shadow-sm border border-slate-200 active:scale-95 text-xs md:text-base">
+                <i class="fa-solid fa-chevron-left md:mr-2"></i> <span class="hidden sm:inline">Câu trước</span>
+            </button>
+
+            <div class="flex gap-2 md:gap-4 items-center">
+                <button id="btnStartRecord" class="px-6 md:px-14 py-3 md:py-5 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-black shadow-xl shadow-blue-600/30 transform active:scale-95 transition-all flex items-center text-sm md:text-xl border-[3px] md:border-4 border-blue-100 hover:border-blue-200">
+                    <i class="fa-solid fa-microphone mr-1.5 md:mr-2.5"></i> Bắt đầu đọc
+                </button>
+                <button id="btnStopRecord" class="hidden px-6 md:px-14 py-3 md:py-5 bg-rose-500 hover:bg-rose-600 text-white rounded-full font-black shadow-xl shadow-rose-500/30 transform active:scale-95 transition-all flex items-center text-sm md:text-xl border-[3px] md:border-4 border-rose-100 hover:border-rose-200">
+                    <i class="fa-solid fa-stop mr-1.5 md:mr-2.5"></i> Dừng lại
+                </button>
+                <button id="btnTryAgain" class="hidden px-6 md:px-14 py-3 md:py-5 bg-amber-500 hover:bg-amber-600 text-white rounded-full font-black shadow-xl shadow-amber-500/30 transform active:scale-95 transition-all flex items-center text-sm md:text-xl border-[3px] md:border-4 border-amber-100 hover:border-amber-200">
+                    <i class="fa-solid fa-rotate-right mr-1.5 md:mr-2.5"></i> Đọc lại
+                </button>
+            </div>
+
+            <button id="btnNext" class="px-3 md:px-6 py-3 md:py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl md:rounded-2xl font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center shadow-sm border border-slate-200 active:scale-95 text-xs md:text-base">
+                <span class="hidden sm:inline">Câu tiếp</span> <i class="fa-solid fa-chevron-right md:ml-2"></i>
+            </button>
+
+        </div>
+    </div>
+
     <script>
-        const app = window.app = {
-            data: {
-                sentences: [],
-                currentIdx: 0,
-                speed: 0.7, 
-                isPlaying: false,
-                isPaused: false,
-                isRecording: false,
-                utterance: null,
-                currentEchoIdx: 0,
-                rawText: "",
-                currentMode: 'dictation'
-            },
+        const screens = {
+            input: document.getElementById('screen-input'),
+            workspace: document.getElementById('screen-workspace')
+        };
+        const steps = {
+            step1: document.getElementById('step1'),
+            step2: document.getElementById('step2')
+        };
+        const bottomToolbar = document.getElementById('bottomToolbar');
+        const toastNotification = document.getElementById('toastNotification');
+        const toastWord = document.getElementById('toastWord');
+        const toastMessage = document.getElementById('toastMessage');
 
-            init() {
-                this.initVoices();
-                document.addEventListener('keydown', (e) => {
-                    if ((e.ctrlKey || e.metaKey) && e.code === 'Space') {
-                        e.preventDefault(); 
-                        if (!document.getElementById('screen-practice').classList.contains('hidden') && !this.data.isRecording) {
-                            this.togglePlayPause('dictation');
-                        } else if (!document.getElementById('screen-echo').classList.contains('hidden') && !this.data.isRecording) {
-                            this.togglePlayPause('echo');
-                        }
-                    }
-                });
-            },
+        // ==== UI CONTROLS ====
+        function showToast(word, translatedText) {
+            toastWord.innerHTML = word;
+            toastMessage.innerHTML = translatedText;
+            
+            toastNotification.className = "fixed top-4 left-1/2 -translate-x-1/2 text-white px-5 py-3 rounded-2xl shadow-2xl transition-all duration-300 z-50 flex items-center gap-4 w-[90%] max-w-sm pointer-events-none bg-slate-800 border border-slate-700";
+            
+            // Animation Trigger
+            toastNotification.classList.remove('-translate-y-[120%]', 'opacity-0');
+            toastNotification.classList.add('translate-y-0', 'opacity-100');
+            
+            setTimeout(() => {
+                toastNotification.classList.remove('translate-y-0', 'opacity-100');
+                toastNotification.classList.add('-translate-y-[120%]', 'opacity-0');
+            }, 4000); // Tồn tại 4 giây
+        }
 
-            goHome() {
-                this.stopAudio(this.data.currentMode);
-                this.showScreen('screen-input');
-            },
+        function switchScreen(screenName) {
+            Object.values(screens).forEach(s => {
+                s.classList.remove('active');
+                setTimeout(() => s.style.display = 'none', 400); 
+            });
 
-            cleanText(text) {
-                return text.replace(/[^\w\s]|_/g, "").replace(/\s+/g, " ").toLowerCase().trim();
-            },
-
-            splitIntoSentences(text) {
-                const lines = text.split('\n');
-                let sentences = [];
-                lines.forEach(line => {
-                    let trimmed = line.trim();
-                    if (!trimmed) return;
-                    let matches = trimmed.match(/[^.!?]+[.!?]+/g);
-                    if (matches) {
-                        sentences.push(...matches.map(s => s.trim()));
-                        let joinedMatches = matches.join("").trim();
-                        if (joinedMatches.length < trimmed.length) {
-                            let leftover = trimmed.substring(joinedMatches.length).trim();
-                            if (leftover) sentences.push(leftover);
-                        }
-                    } else {
-                        sentences.push(trimmed);
-                    }
-                });
-                return sentences;
-            },
-
-            compareSentences(target, input) {
-                const targetWords = this.cleanText(target).split(" ").filter(w => w.length > 0);
-                const inputWords = this.cleanText(input).split(" ").filter(w => w.length > 0);
-                const n = targetWords.length;
-                const m = inputWords.length;
-                const dp = Array(n + 1).fill(null).map(() => Array(m + 1).fill(0));
-                for (let i = 0; i <= n; i++) dp[i][0] = i;
-                for (let j = 0; j <= m; j++) dp[0][j] = j;
-                for (let i = 1; i <= n; i++) {
-                    for (let j = 1; j <= m; j++) {
-                        if (targetWords[i - 1] === inputWords[j - 1]) dp[i][j] = dp[i - 1][j - 1]; 
-                        else dp[i][j] = Math.min(dp[i - 1][j - 1] + 1, dp[i][j - 1] + 1, dp[i - 1][j] + 1);
-                    }
-                }
-                let i = n, j = m, result = [], correctCount = 0;
-                while (i > 0 || j > 0) {
-                    if (i > 0 && j > 0 && targetWords[i - 1] === inputWords[j - 1]) {
-                        result.unshift({ type: 'match', target: targetWords[i - 1], input: inputWords[j - 1] });
-                        correctCount++;
-                        i--; j--;
-                    } else if (i > 0 && j > 0 && dp[i][j] === dp[i - 1][j - 1] + 1) {
-                        result.unshift({ type: 'sub', target: targetWords[i - 1], input: inputWords[j - 1] });
-                        i--; j--;
-                    } else if (j > 0 && (i === 0 || dp[i][j] === dp[i][j - 1] + 1)) {
-                        result.unshift({ type: 'ins', target: '', input: inputWords[j - 1] });
-                        j--;
-                    } else if (i > 0 && (j === 0 || dp[i][j] === dp[i - 1][j] + 1)) {
-                        result.unshift({ type: 'del', target: targetWords[i - 1], input: '' });
-                        i--;
-                    }
-                }
-                const accuracy = n > 0 ? Math.round((correctCount / n) * 100) : 0;
-                return { result, accuracy };
-            },
-
-            initVoices() {
-                if ('speechSynthesis' in window) {
-                    window.speechSynthesis.getVoices();
-                    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
-                }
-            },
-
-            setSpeed(s) {
-                this.data.speed = s;
-                ['0.7', '0.8', '0.9', '1.0'].forEach(val => {
-                    const btn = document.getElementById(`speed-${val}`);
-                    if (btn) {
-                        btn.className = parseFloat(val) === s ? 
-                            "speed-btn px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-bold transition-colors" : 
-                            "speed-btn px-3 py-1.5 rounded-lg text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors";
-                    }
-                });
-                if(this.data.isPlaying) {
-                    this.stopAudio(this.data.currentMode);
-                    if (this.data.currentMode === 'dictation') this.playCurrentSentence();
-                    else this.playEchoSentence();
-                }
-            },
-
-            togglePlayPause(mode = 'dictation') {
-                this.data.currentMode = mode;
-                if (!('speechSynthesis' in window)) return;
-                if (window.speechSynthesis.speaking) {
-                    if (window.speechSynthesis.paused) {
-                        window.speechSynthesis.resume();
-                        this.data.isPaused = false;
-                        this.data.isPlaying = true;
-                        this.updatePlayUI(true, mode);
-                    } else {
-                        window.speechSynthesis.pause();
-                        this.data.isPaused = true;
-                        this.data.isPlaying = true;
-                        this.updatePlayUI(false, mode);
-                    }
+            setTimeout(() => {
+                screens[screenName].style.display = 'flex';
+                void screens[screenName].offsetWidth;
+                screens[screenName].classList.add('active');
+                
+                if(screenName === 'workspace') {
+                    bottomToolbar.classList.remove('translate-y-full');
                 } else {
-                    if (mode === 'dictation') this.playCurrentSentence();
-                    else this.playEchoSentence();
+                    bottomToolbar.classList.add('translate-y-full');
                 }
-            },
+            }, 410);
 
-            updatePlayUI(isPlayingAndNotPaused, mode = 'dictation') {
-                const playBtn = document.getElementById(mode === 'dictation' ? 'play-btn' : 'echo-play-btn');
-                const playIcon = document.getElementById(mode === 'dictation' ? 'play-icon' : 'echo-play-icon');
-                const instruction = document.getElementById(mode === 'dictation' ? 'play-instruction' : 'echo-play-instruction');
-                if (!playBtn || !playIcon) return;
-                if (isPlayingAndNotPaused) {
-                    playBtn.classList.add(mode === 'dictation' ? 'bg-indigo-400' : 'bg-orange-400', 'scale-105');
-                    playBtn.classList.remove(mode === 'dictation' ? 'bg-indigo-600' : 'bg-orange-500');
-                    playIcon.className = "fa-solid fa-pause text-3xl md:text-4xl";
-                    if(instruction) instruction.innerText = "Đang phát...";
-                } else {
-                    playBtn.classList.remove(mode === 'dictation' ? 'bg-indigo-400' : 'bg-orange-400', 'scale-105');
-                    playBtn.classList.add(mode === 'dictation' ? 'bg-indigo-600' : 'bg-orange-500');
-                    playIcon.className = "fa-solid fa-play text-3xl md:text-4xl ml-2";
-                    if(instruction) instruction.innerText = "Bấm để nghe audio";
-                }
-            },
+            Object.values(steps).forEach(s => {
+                s.classList.remove('text-blue-600');
+                s.classList.add('text-slate-400');
+                s.querySelector('span').classList.remove('bg-blue-100', 'text-blue-600', 'shadow-inner');
+                s.querySelector('span').classList.add('bg-slate-100', 'text-slate-500');
+            });
 
-            playCurrentSentence() {
-                this.playText(this.data.sentences[this.data.currentIdx], this.data.speed, true, 'dictation');
-            },
+            let activeStep = screenName === 'input' ? steps.step1 : steps.step2;
+            activeStep.classList.remove('text-slate-400');
+            activeStep.classList.add('text-blue-600');
+            activeStep.querySelector('span').classList.remove('bg-slate-100', 'text-slate-500');
+            activeStep.querySelector('span').classList.add('bg-blue-100', 'text-blue-600', 'shadow-inner');
+            
+            window.speechSynthesis.cancel();
+            if (recognition && !isUserStopped) document.getElementById('btnStopRecord').click();
+        }
 
-            playEchoSentence() {
-                this.playText(this.data.sentences[this.data.currentEchoIdx], this.data.speed, true, 'echo');
-            },
+        // ==== TEXT-TO-SPEECH (TTS) VOICES ====
+        const synth = window.speechSynthesis;
+        let bestEnglishVoice = null;
 
-            playText(text, rate = 1.0, updateUI = false, mode = 'dictation') {
-                if (!text || !('speechSynthesis' in window)) return;
-                window.speechSynthesis.resume();
-                window.speechSynthesis.cancel(); 
-                this.data.isPlaying = true;
-                this.data.isPaused = false;
-                this.data.utterance = new SpeechSynthesisUtterance(text.trim()); 
-                const utterance = this.data.utterance;
-                utterance.lang = 'en-US'; 
-                utterance.rate = rate;
-                const voices = window.speechSynthesis.getVoices();
-                const premiumVoice = voices.find(v => v.name.includes('Google US English') || v.name.includes('Natural') || v.name.includes('Premium'));
-                if (premiumVoice) utterance.voice = premiumVoice;
-                if (updateUI) {
-                    utterance.onstart = () => { this.updatePlayUI(true, mode); };
-                    utterance.onend = () => { 
-                        this.data.isPlaying = false; 
-                        this.updatePlayUI(false, mode); 
-                    };
-                    utterance.onerror = () => { utterance.onend(); };
-                }
-                setTimeout(() => { window.speechSynthesis.speak(utterance); }, 50);
-            },
+        function findBestVoice() {
+            let voices = synth.getVoices();
+            if (voices.length === 0) return;
 
-            stopAudio(mode = 'dictation') {
-                if(window.speechSynthesis) {
-                    window.speechSynthesis.resume();
-                    window.speechSynthesis.cancel();
-                }
-                this.data.isPlaying = false;
-                this.updatePlayUI(false, mode);
-            },
+            let engVoices = voices.filter(v => v.lang.toLowerCase().includes('en'));
+            
+            // Ưu tiên các giọng tự nhiên nhất tùy hệ điều hành
+            const premiumKeywords = ['Natural', 'Online', 'Samantha', 'Siri', 'Premium'];
+            bestEnglishVoice = engVoices.find(v => premiumKeywords.some(kw => v.name.includes(kw))) || 
+                               engVoices.find(v => v.name.includes('Google') && v.name.includes('US')) ||
+                               engVoices.find(v => v.lang === 'en-US') ||
+                               engVoices[0];
+        }
 
-            showScreen(screenId) {
-                ['screen-input', 'screen-practice', 'screen-echo', 'screen-results'].forEach(id => {
-                    document.getElementById(id).classList.add('hidden');
-                });
-                document.getElementById(screenId).classList.remove('hidden');
-            },
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = findBestVoice;
+        }
 
-            showStep(stepId) {
-                ['step-dictation', 'step-feedback'].forEach(id => {
-                    document.getElementById(id).classList.add('hidden');
-                });
-                document.getElementById(stepId).classList.remove('hidden');
-            },
+        function unlockAudioOnMobile() {
+            const utter = new SpeechSynthesisUtterance("");
+            utter.volume = 0;
+            synth.speak(utter);
+        }
 
-            startPractice() {
-                const rawText = document.getElementById('raw-text').value;
-                if (!rawText || rawText.trim() === '') return;
-                const parsed = this.splitIntoSentences(rawText).filter(s => s.length > 0);
-                if (parsed.length === 0) return;
-                this.data.sentences = parsed;
-                this.data.currentIdx = 0;
-                this.loadSentence(true);
-                this.showScreen('screen-practice');
-            },
+        // ==== LOGIC XỬ LÝ VĂN BẢN ====
+        let chunks = [];
+        let currentChunkIndex = 0;
 
-            loadSentence(autoplay = false) {
-                const total = this.data.sentences.length;
-                const idx = this.data.currentIdx;
-                const percent = Math.round((idx / total) * 100);
-                document.getElementById('progress-text').innerText = `Câu ${idx + 1} / ${total}`;
-                document.getElementById('progress-percent').innerText = `${percent}%`;
-                document.getElementById('progress-bar').style.width = `${percent}%`;
-                document.getElementById('user-input').value = "";
-                document.getElementById('hint-box').classList.add('hidden');
-                this.showStep('step-dictation');
-                if(autoplay) this.playCurrentSentence();
-            },
-
-            showHint(type) {
-                const words = this.data.sentences[this.data.currentIdx].split(" ");
-                const len = words.length;
-                let hintWords = [...words];
-                if (type === 'start') {
-                    for (let i = Math.floor(len/3); i < len; i++) hintWords[i] = "___";
-                } else if (type === 'end') {
-                    for (let i = 0; i < Math.floor(len*2/3); i++) hintWords[i] = "___";
-                }
-                const hintBox = document.getElementById('hint-box');
-                hintBox.innerText = hintWords.join(" ");
-                hintBox.classList.remove('hidden');
-            },
-
-            checkAnswer() {
-                const input = document.getElementById('user-input').value;
-                if (!input.trim()) return;
-                const target = this.data.sentences[this.data.currentIdx];
-                const { result, accuracy } = this.compareSentences(target, input);
-                this.renderFeedback(result, accuracy, target);
-                this.showStep('step-feedback');
-            },
-
-            renderFeedback(result, accuracy, target) {
-                const box = document.getElementById('feedback-box');
-                const title = document.getElementById('feedback-title');
-                const resultDiv = document.getElementById('feedback-result');
-                const correctText = document.getElementById('correct-sentence-text');
-                box.className = `p-5 md:p-6 rounded-2xl border-2 mb-6 shadow-sm ${accuracy === 100 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`;
-                title.className = `text-lg md:text-xl font-black mb-3 flex items-center gap-2 ${accuracy === 100 ? 'text-emerald-600' : 'text-red-600'}`;
-                title.innerHTML = `${accuracy === 100 ? '<i class="fa-solid fa-circle-check"></i>' : '<i class="fa-solid fa-circle-xmark"></i>'} Độ chính xác: ${accuracy}%`;
-                let html = "";
-                result.forEach(item => {
-                    if (item.type === 'match') html += `<span class="inline-block mr-1.5 mb-2 px-2 py-1 bg-emerald-100 text-emerald-800 font-bold border border-emerald-200 rounded">${item.target}</span>`;
-                    else if (item.type === 'sub') html += `<span class="inline-flex items-center gap-1.5 mr-1.5 mb-2 px-2 py-1 rounded bg-red-50 border border-red-200 shadow-sm"><del class="text-red-400 text-sm font-medium">${item.input}</del><i class="fa-solid fa-arrow-right text-slate-400 text-xs"></i><span class="text-emerald-600 font-bold">${item.target}</span></span>`;
-                    else if (item.type === 'del') html += `<span class="inline-flex items-center gap-1.5 mr-1.5 mb-2 px-2 py-1 rounded bg-orange-50 border border-orange-200 shadow-sm"><span class="text-[10px] uppercase font-black text-orange-500">Thiếu</span><span class="font-bold text-orange-600">${item.target}</span></span>`;
-                    else if (item.type === 'ins') html += `<span class="inline-flex items-center gap-1.5 mr-1.5 mb-2 px-2 py-1 rounded bg-slate-100 border border-slate-300 shadow-sm"><del class="text-slate-500 font-medium">${item.input}</del><span class="text-[10px] font-black text-slate-500">Thừa</span></span>`;
-                });
-                resultDiv.innerHTML = html;
-                correctText.innerText = target;
-                document.getElementById('feedback-next-btn-text').innerText = this.data.currentIdx < this.data.sentences.length - 1 ? "Câu tiếp theo" : "Chuyển sang Shadowing";
-            },
-
-            retryDictation() {
-                document.getElementById('user-input').value = "";
-                this.showStep('step-dictation');
-                this.playCurrentSentence(); 
-            },
-
-            startSpeechRecognition() {
-                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                if (!SpeechRecognition) return;
-                const recognition = new SpeechRecognition();
-                recognition.lang = 'en-US';
-                recognition.onstart = () => {
-                    this.data.isRecording = true;
-                    this.stopAudio('echo');
-                    document.getElementById('echo-mic-btn').classList.add('bg-red-500', 'scale-110');
-                    document.getElementById('echo-mic-ping').classList.remove('hidden');
-                };
-                recognition.onresult = (event) => {
-                    const transcript = event.results[0][0].transcript;
-                    const target = this.data.sentences[this.data.currentEchoIdx];
-                    const { accuracy } = this.compareSentences(target, transcript);
-                    document.getElementById('echo-transcript').innerText = `"${transcript}"`;
-                    document.getElementById('echo-original').innerText = target;
-                    const scoreBox = document.getElementById('echo-score');
-                    scoreBox.className = `mb-4 p-3 rounded-xl border flex items-center gap-2 text-lg font-bold ${accuracy >= 80 ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-orange-50 text-orange-600 border-orange-200'}`;
-                    scoreBox.innerHTML = `<i class="fa-solid ${accuracy >= 80 ? 'fa-circle-check' : 'fa-circle-exclamation'}"></i> Điểm phát âm: ${accuracy}%`;
-                    document.getElementById('echo-hidden-box').classList.add('hidden');
-                    document.getElementById('echo-result-box').classList.remove('hidden');
-                };
-                recognition.onend = () => {
-                    this.data.isRecording = false;
-                    document.getElementById('echo-mic-btn').classList.remove('bg-red-500', 'scale-110');
-                    document.getElementById('echo-mic-ping').classList.add('hidden');
-                };
-                recognition.start();
-            },
-
-            // NEW FUNCTION: Allow retrying the current sentence in Shadowing mode
-            retryEcho() {
-                // Quay lại trạng thái chờ ghi âm cho câu hiện tại
-                document.getElementById('echo-hidden-box').classList.remove('hidden');
-                document.getElementById('echo-result-box').classList.add('hidden');
-                // Tự động phát lại audio để người dùng nghe rõ trước khi đọc lại
-                this.playEchoSentence();
-            },
-
-            nextSentence() {
-                if (this.data.currentIdx < this.data.sentences.length - 1) {
-                    this.data.currentIdx++;
-                    this.loadSentence(true); 
-                } else {
-                    this.stopAudio('dictation');
-                    this.startEcho();
-                }
-            },
-
-            startEcho() {
-                this.data.currentEchoIdx = 0;
-                this.showScreen('screen-echo');
-                this.loadEchoUI(true);
-            },
-
-            loadEchoUI(autoplay = false) {
-                const total = this.data.sentences.length;
-                const idx = this.data.currentEchoIdx;
-                const percent = Math.round((idx / total) * 100);
-                document.getElementById('echo-progress-text').innerText = `Câu ${idx + 1} / ${total}`;
-                document.getElementById('echo-progress-percent').innerText = `${percent}%`;
-                document.getElementById('echo-progress-bar').style.width = `${percent}%`;
-                document.getElementById('echo-hidden-box').classList.remove('hidden');
-                document.getElementById('echo-result-box').classList.add('hidden');
-                document.getElementById('echo-hint-box').classList.add('hidden');
-                const wordCount = this.data.sentences[idx].split(/\s+/).length;
-                if (wordCount >= 8) document.getElementById('echo-long-sentence-tip').classList.remove('hidden');
-                else document.getElementById('echo-long-sentence-tip').classList.add('hidden');
-                document.getElementById('echo-next-btn-text').innerText = idx < total - 1 ? "Câu tiếp theo" : "Hoàn thành bài học";
-                if(autoplay) setTimeout(() => { this.playEchoSentence(); }, 500);
-            },
-
-            showEchoHint() {
-                const words = this.data.sentences[this.data.currentEchoIdx].trim().split(/\s+/);
-                const hintWords = words.map((w, i) => (i === 0 || w.length > 4) ? `<span class="text-indigo-600 font-bold">${w}</span>` : `<span class="text-slate-300">___</span>`);
-                const hintBox = document.getElementById('echo-hint-box');
-                hintBox.innerHTML = hintWords.join(" ");
-                hintBox.classList.remove('hidden');
-            },
-
-            nextEcho() {
-                this.stopAudio('echo');
-                if (this.data.currentEchoIdx < this.data.sentences.length - 1) {
-                    this.data.currentEchoIdx++;
-                    this.loadEchoUI(true);
-                } else {
-                    this.showScreen('screen-results');
-                }
-            },
-
-            resetApp() {
-                this.data.sentences = [];
-                this.data.currentIdx = 0;
-                this.data.currentEchoIdx = 0;
-                this.showScreen('screen-input');
+        document.getElementById('btnProcess').addEventListener('click', () => {
+            const text = document.getElementById('inputText').value.trim();
+            if (!text) {
+                alert("Vui lòng dán văn bản tiếng Anh!");
+                return;
             }
-        };
+            
+            unlockAudioOnMobile();
+            findBestVoice(); 
 
-        window.onload = () => {
-            app.init();
-            const unlock = () => {
-                if ('speechSynthesis' in window) window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
-                document.removeEventListener('click', unlock);
+            const sentenceRegex = /[^.!?\n]+[.!?\n]*/g; 
+            let extractedSentences = text.match(sentenceRegex);
+            
+            if (!extractedSentences) extractedSentences = [text];
+            
+            chunks = [];
+            for (let i = 0; i < extractedSentences.length; i += 2) {
+                let chunk = extractedSentences[i].trim();
+                if (i + 1 < extractedSentences.length) {
+                    chunk += " " + extractedSentences[i + 1].trim();
+                }
+                if (chunk.length > 0) chunks.push(chunk);
+            }
+            
+            if(chunks.length === 0) chunks = [text];
+            
+            currentChunkIndex = 0;
+            renderCurrentChunk();
+            switchScreen('workspace');
+        });
+
+        document.getElementById('btnBackToInput').addEventListener('click', () => switchScreen('input'));
+
+        const targetDisplay = document.getElementById('targetDisplay');
+        const chunkProgress = document.getElementById('chunkProgress');
+        const btnPrev = document.getElementById('btnPrev');
+        const btnNext = document.getElementById('btnNext');
+
+        function renderCurrentChunk() {
+            resetRecordingState();
+
+            targetDisplay.innerHTML = '';
+            chunkProgress.innerText = `Phần ${currentChunkIndex + 1} / ${chunks.length}`;
+            
+            btnPrev.disabled = currentChunkIndex === 0;
+            btnNext.disabled = currentChunkIndex === chunks.length - 1;
+
+            const currentText = chunks[currentChunkIndex];
+            const words = currentText.split(/(\s+)/); 
+            
+            words.forEach(word => {
+                if (word.trim().length > 0) {
+                    const wordSpan = document.createElement('span');
+                    wordSpan.textContent = word;
+                    wordSpan.className = 'clickable-word';
+                    
+                    wordSpan.addEventListener('click', function() {
+                        translateAndSpeak(word);
+                    });
+                    
+                    targetDisplay.appendChild(wordSpan);
+                } else {
+                    targetDisplay.appendChild(document.createTextNode(word));
+                }
+            });
+            targetDisplay.scrollTop = 0;
+        }
+
+        async function translateAndSpeak(word) {
+            synth.cancel(); 
+            const cleanWord = word.replace(/[.,!?";:()]/g, '');
+            if (!cleanWord) return;
+
+            // Đọc
+            const utterance = new SpeechSynthesisUtterance(cleanWord);
+            if (bestEnglishVoice) utterance.voice = bestEnglishVoice;
+            utterance.rate = 0.85; 
+            utterance.lang = 'en-US';
+            synth.speak(utterance);
+
+            // Dịch
+            try {
+                const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=vi&dt=t&q=${encodeURIComponent(cleanWord)}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                const translatedText = data[0][0][0];
+
+                showToast(cleanWord, translatedText);
+            } catch (e) {
+                console.error("Lỗi khi dịch:", e);
+                showToast(cleanWord, "Lỗi khi dịch từ này.");
+            }
+        }
+
+        btnPrev.addEventListener('click', () => {
+            if(currentChunkIndex > 0) {
+                currentChunkIndex--;
+                renderCurrentChunk();
+            }
+        });
+
+        btnNext.addEventListener('click', () => {
+            if(currentChunkIndex < chunks.length - 1) {
+                currentChunkIndex++;
+                renderCurrentChunk();
+            }
+        });
+
+        // ==== THU ÂM & ĐÁNH GIÁ (SPEECH RECOGNITION + DIFFING) ====
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = null;
+        let isUserStopped = true;
+        let finalTranscriptStr = '';
+        let finalTranscriptRawForEval = ''; // Chuỗi thô dùng để đánh giá
+
+        const btnStartRecord = document.getElementById('btnStartRecord');
+        const btnStopRecord = document.getElementById('btnStopRecord');
+        const btnTryAgain = document.getElementById('btnTryAgain');
+        
+        const recordModeDisplay = document.getElementById('recordModeDisplay');
+        const assessmentModeDisplay = document.getElementById('assessmentModeDisplay');
+        
+        const finalTextSpan = document.getElementById('finalText');
+        const interimTextSpan = document.getElementById('interimText');
+        const placeholderText = document.getElementById('placeholderText');
+        const recordingStatus = document.getElementById('recordingStatus');
+        const recordError = document.getElementById('errorMessage');
+        const recordDisplay = document.getElementById('recordDisplay');
+
+        // Hàm Đặt lại trạng thái khi chuyển câu hoặc đọc lại
+        function resetRecordingState() {
+            finalTranscriptStr = '';
+            finalTranscriptRawForEval = '';
+            finalTextSpan.innerHTML = '';
+            interimTextSpan.innerHTML = '';
+            placeholderText.style.opacity = '1';
+            
+            recordModeDisplay.style.display = 'flex';
+            assessmentModeDisplay.style.display = 'none';
+            
+            btnStartRecord.classList.remove('hidden');
+            btnStopRecord.classList.add('hidden');
+            btnTryAgain.classList.add('hidden');
+        }
+
+        btnTryAgain.addEventListener('click', resetRecordingState);
+
+        if (!SpeechRecognition) {
+            recordError.innerHTML = "Trình duyệt không hỗ trợ chấm điểm. Hãy dùng Chrome, Safari, Edge.";
+            recordError.classList.remove('hidden');
+            btnStartRecord.disabled = true;
+            btnStartRecord.classList.add('opacity-50', 'cursor-not-allowed');
+        } else {
+            recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.continuous = true;
+            recognition.interimResults = true;
+
+            function setRecordUI(isRecording) {
+                if (isRecording) {
+                    btnStartRecord.classList.add('hidden');
+                    btnStopRecord.classList.remove('hidden');
+                    btnTryAgain.classList.add('hidden');
+                    
+                    recordingStatus.classList.remove('opacity-0');
+                    placeholderText.style.opacity = '0'; 
+                    recordError.classList.add('hidden');
+                    
+                    recordModeDisplay.style.display = 'flex';
+                    assessmentModeDisplay.style.display = 'none';
+                } else {
+                    recordingStatus.classList.add('opacity-0');
+                    if(finalTranscriptStr === '') placeholderText.style.opacity = '1';
+                }
+            }
+
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                let tempFinalRaw = '';
+
+                for (let i = 0; i < event.results.length; i++) {
+                    const result = event.results[i];
+                    const transcript = result[0].transcript;
+                    const confidence = result[0].confidence;
+
+                    if (result.isFinal) {
+                        tempFinalRaw += transcript + ' ';
+                        
+                        if (i >= finalTranscriptStr.split('</span>').length - 1) {
+                            let colorClass = 'text-white'; 
+                            if (confidence > 0 && confidence < 0.80) {
+                                colorClass = 'text-rose-400 underline decoration-rose-500/50 decoration-wavy underline-offset-[6px]'; 
+                            } else if (confidence >= 0.80 && confidence < 0.90) {
+                                colorClass = 'text-amber-400 underline decoration-amber-500/50 decoration-wavy underline-offset-[6px]';
+                            } else {
+                                colorClass = 'text-emerald-400';
+                            }
+                            finalTranscriptStr += `<span class="${colorClass}">${transcript}</span> `;
+                        }
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+                
+                finalTranscriptRawForEval = tempFinalRaw;
+                finalTextSpan.innerHTML = finalTranscriptStr.replace(/\n/g, '<br>');
+                interimTextSpan.innerHTML = interimTranscript;
+                recordDisplay.scrollTop = recordDisplay.scrollHeight;
             };
-            document.addEventListener('click', unlock);
-        };
+
+            btnStartRecord.addEventListener('click', () => {
+                isUserStopped = false;
+                try {
+                    recognition.start();
+                    setRecordUI(true);
+                } catch (e) { console.error("Lỗi Mic:", e); }
+            });
+
+            btnStopRecord.addEventListener('click', () => {
+                isUserStopped = true;
+                recognition.stop();
+                setRecordUI(false);
+                
+                // Tráo đổi UI và Chấm điểm
+                setTimeout(() => evaluatePronunciation(), 300);
+            });
+
+            recognition.onend = () => {
+                if (!isUserStopped) {
+                    try { recognition.start(); } 
+                    catch (error) {
+                        isUserStopped = true;
+                        setRecordUI(false);
+                        evaluatePronunciation();
+                    }
+                }
+            };
+
+            recognition.onerror = (event) => {
+                if (event.error === 'not-allowed') {
+                    isUserStopped = true;
+                    setRecordUI(false);
+                    recordError.innerText = "Lỗi: Chưa cấp quyền Micro.";
+                    recordError.classList.remove('hidden');
+                }
+            };
+        }
+
+        // ==== THUẬT TOÁN ĐÁNH GIÁ PHÁT ÂM ====
+        function evaluatePronunciation() {
+            // Hiển thị UI kết quả
+            recordModeDisplay.style.display = 'none';
+            assessmentModeDisplay.style.display = 'flex';
+            
+            btnStopRecord.classList.add('hidden');
+            btnTryAgain.classList.remove('hidden');
+
+            const targetText = chunks[currentChunkIndex];
+            const originalWords = targetText.split(/(\s+)/).filter(w => w.trim().length > 0);
+            
+            const cleanTargetWords = originalWords.map(w => w.toLowerCase().replace(/[.,!?;:()"]/g, ''));
+            const cleanTranscript = finalTranscriptRawForEval.toLowerCase().replace(/[.,!?;:()"]/g, '').split(/\s+/).filter(w=>w);
+            
+            let correctCount = 0;
+            let matchedIndices = new Set();
+            let transcriptPointer = 0;
+
+            // Diffing algorithm đơn giản
+            for (let i = 0; i < cleanTargetWords.length; i++) {
+                let tWord = cleanTargetWords[i];
+                if (!tWord) {
+                    // Dấu câu đơn thuần được tính là đúng
+                    matchedIndices.add(i); 
+                    correctCount++;
+                    continue; 
+                }
+                
+                let found = false;
+                // Tìm kiếm từ trong khoảng 4 từ tiếp theo của transcript (Cho phép nói lắp/nói thừa)
+                for (let j = transcriptPointer; j < Math.min(transcriptPointer + 4, cleanTranscript.length); j++) {
+                    if (cleanTranscript[j] === tWord) {
+                        correctCount++;
+                        matchedIndices.add(i);
+                        transcriptPointer = j + 1; // Nhảy qua từ đã match
+                        found = true;
+                        break;
+                    }
+                }
+            }
+
+            let totalWords = cleanTargetWords.filter(w => w).length || 1;
+            let accuracy = Math.round((correctCount / totalWords) * 100);
+            if (accuracy > 100) accuracy = 100;
+            if (cleanTranscript.length === 0) accuracy = 0;
+
+            // Hiển thị Điểm
+            const scoreCircle = document.getElementById('scoreCircle');
+            scoreCircle.innerText = accuracy + '%';
+            
+            scoreCircle.className = "w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center text-base md:text-xl font-black border-4 bg-slate-900 shadow-[0_0_15px_rgba(0,0,0,0.3)] transition-colors";
+            
+            if (accuracy >= 80) {
+                scoreCircle.classList.add('border-emerald-500', 'text-emerald-400');
+            } else if (accuracy >= 50) {
+                scoreCircle.classList.add('border-amber-500', 'text-amber-400');
+            } else {
+                scoreCircle.classList.add('border-rose-500', 'text-rose-400');
+            }
+
+            // Hiển thị Chi tiết từ đúng/sai
+            let resultHTML = '';
+            for (let i = 0; i < originalWords.length; i++) {
+                if (matchedIndices.has(i)) {
+                    resultHTML += `<span class="text-emerald-400">${originalWords[i]}</span> `;
+                } else {
+                    // Bị thiếu hoặc đọc sai (Gạch ngang mờ)
+                    resultHTML += `<span class="text-rose-400 opacity-60 line-through decoration-rose-500/50">${originalWords[i]}</span> `;
+                }
+            }
+            
+            if (cleanTranscript.length === 0) {
+                resultHTML = '<span class="text-slate-500 italic text-base">Hệ thống chưa nghe được giọng của bạn. Vui lòng thử lại!</span>';
+            }
+
+            document.getElementById('detailedFeedback').innerHTML = resultHTML;
+        }
+
     </script>
 </body>
 </html>
