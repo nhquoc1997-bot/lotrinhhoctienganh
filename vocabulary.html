@@ -13,6 +13,7 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
@@ -54,9 +55,13 @@
             const [isEvaluating, setIsEvaluating] = useState(false);
             const [feedback, setFeedback] = useState(null);
 
-            // Hints States (New Feature)
+            // Hints States
             const [isLoadingHints, setIsLoadingHints] = useState(false);
             const [hintsData, setHintsData] = useState(null);
+
+            // GIÁO VIÊN CHỈ CẦN DÁN API KEY VÀO ĐÂY (NẾU CÓ). 
+            // Nếu để trống, hệ thống sẽ chạy bằng chế độ Offline Giả Lập. Học viên không bao giờ phải nhập.
+            const GEMINI_API_KEY = ""; 
 
             // Refs
             const recognitionRef = useRef(null);
@@ -88,19 +93,20 @@
 
                     recognition.onerror = (e) => {
                         setIsRecording(false);
-                        setRecognitionError(e.error === 'not-allowed' ? "Vui lòng cấp quyền Micro." : "Lỗi thu âm: " + e.error);
+                        setRecognitionError(e.error === 'not-allowed' ? "Vui lòng cấp quyền Micro trên trình duyệt để luyện nói." : "Lỗi thu âm: " + e.error);
                     };
 
                     recognition.onend = () => setIsRecording(false);
                     recognitionRef.current = recognition;
                 } else {
-                    setRecognitionError("Trình duyệt của bạn không hỗ trợ nhận diện giọng nói.");
+                    setRecognitionError("Trình duyệt của bạn không hỗ trợ nhận diện giọng nói. Hãy dùng Google Chrome để có trải nghiệm tốt nhất.");
                 }
             }, []);
 
             const handleStartProcessing = () => {
                 if (!inputText.trim()) return;
                 
+                // Tách câu và chia thành từng cụm (2 câu 1 cụm)
                 const sentences = inputText.match(/[^.?!]+[.?!]+(?=\s|$)|[^.?!]+$/g);
                 if (!sentences) {
                     setChunks([inputText]);
@@ -119,7 +125,7 @@
                 setUserQuestion("");
                 transcriptRef.current = "";
                 setFeedback(null);
-                setHintsData(null); // Clear hints on new turn
+                setHintsData(null);
                 setRecognitionError("");
                 if (isRecording) {
                     recognitionRef.current?.stop();
@@ -143,64 +149,114 @@
                 setIsLoadingHints(true);
                 setRecognitionError("");
 
-                const currentContext = chunks[currentIndex];
-                const apiKey = ""; 
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+                // CHẾ ĐỘ GIẢ LẬP OFFLINE (Không có API Key)
+                if (!GEMINI_API_KEY || GEMINI_API_KEY.includes("DÁN_API_KEY")) {
+                    try {
+                        const currentContext = chunks[currentIndex];
+                        
+                        // Dịch thử sang Tiếng Việt trước để lấy chuẩn ngữ cảnh phân tích
+                        const urlVi = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=vi&dt=t&q=${encodeURIComponent(currentContext)}`;
+                        const resVi = await fetch(urlVi);
+                        const dataVi = await resVi.json();
+                        
+                        const viText = dataVi[0].map(item => item[0]).join(''); // Luôn là văn bản Tiếng Việt
+                        const detectedLang = dataVi[2]; // Trả về 'vi' hoặc 'en'...
 
-                const prompt = `
-Bạn là một giáo viên tiếng Anh hỗ trợ học viên mất gốc.
-Đoạn văn học viên đang đọc: "${currentContext}"
+                        let displayTranslation = viText;
 
-Nhiệm vụ:
-1. Dịch đoạn văn trên. (Nếu đoạn gốc là tiếng Việt thì dịch sang tiếng Anh, nếu là tiếng Anh thì dịch sang tiếng Việt) để học viên tham khảo từ vựng.
-2. Đưa ra 3 ý tưởng để học viên tự đặt câu hỏi 5W1H (What, Where, When, Who, Why, How, How much...) dựa vào nội dung. 
-LƯU Ý QUAN TRỌNG: Ở phần ý tưởng, CHỈ được đưa ra "Từ để hỏi tiếng Anh" và "Gợi ý bằng tiếng Việt". TUYỆT ĐỐI KHÔNG viết ra câu hỏi tiếng Anh hoàn chỉnh để học viên phải tự suy nghĩ.
-
-Trả về định dạng JSON chính xác sau:
-{
-    "translation": "(Bản dịch của đoạn văn)",
-    "suggestions": [
-        { "wh_word": "When", "idea_vi": "Hỏi về thời gian diễn ra sự kiện" },
-        { "wh_word": "Where", "idea_vi": "Hỏi về địa điểm" }
-    ]
-}`;
-
-                const payload = {
-                    contents: [{ parts: [{ text: prompt }] }],
-                    generationConfig: {
-                        responseMimeType: "application/json",
-                        responseSchema: {
-                            type: "OBJECT",
-                            properties: {
-                                "translation": { type: "STRING" },
-                                "suggestions": {
-                                    type: "ARRAY",
-                                    items: {
-                                        type: "OBJECT",
-                                        properties: {
-                                            "wh_word": { type: "STRING" },
-                                            "idea_vi": { type: "STRING" }
-                                        }
-                                    }
-                                }
-                            },
-                            required: ["translation", "suggestions"]
+                        // Nếu văn bản gốc đã là Tiếng Việt, thì bản dịch hiển thị cho học viên sẽ là Tiếng Anh
+                        if (detectedLang === 'vi') {
+                            const urlEn = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=vi&tl=en&dt=t&q=${encodeURIComponent(currentContext)}`;
+                            const resEn = await fetch(urlEn);
+                            const dataEn = await resEn.json();
+                            displayTranslation = dataEn[0].map(item => item[0]).join('');
                         }
+
+                        const extractContextHints = (text) => {
+                            let suggestions = [];
+                            const lower = text.toLowerCase();
+
+                            // Tìm thời gian
+                            const timeMatch = text.match(/(vào năm \d{4}|năm \d{4}|tháng \d+|ngày \d+|lúc \d+ giờ|sáng nay|tối nay|hôm nay|ngày mai|hôm qua)/i);
+                            if (timeMatch) suggestions.push({ wh_word: "When", idea_vi: `Hỏi về thời gian: "${timeMatch[0]}"` });
+
+                            // Tìm địa điểm
+                            const placeMatch = text.match(/(tại|ở|đến|từ) (\S+ \S+)/i);
+                            if (placeMatch) suggestions.push({ wh_word: "Where", idea_vi: `Hỏi về địa điểm: "${placeMatch[0]}..."` });
+
+                            // Tìm đối tượng / người
+                            const whoMatch = lower.match(/(tôi|chúng tôi|bạn|anh ấy|cô ấy|họ|người|khách hàng|giám đốc|nhân viên|công ty)/);
+                            if (whoMatch) suggestions.push({ wh_word: "Who", idea_vi: `Hỏi về đối tượng: "${whoMatch[0]}"` });
+
+                            // Tìm số lượng
+                            const qtyMatch = text.match(/(\d+)\s*(người|cái|chiếc|đồng|usd|vnđ|giờ|phút|ngày|tháng|năm)/i);
+                            if (qtyMatch && (!timeMatch || !timeMatch[0].includes(qtyMatch[1]))) {
+                                suggestions.push({ wh_word: "How many", idea_vi: `Hỏi về số lượng/con số: "${qtyMatch[0]}"` });
+                            }
+
+                            // Tìm lý do
+                            const whyMatch = text.match(/(vì|bởi vì|do|để) (\S+ \S+)/i);
+                            if (whyMatch) suggestions.push({ wh_word: "Why", idea_vi: `Hỏi về lý do: "${whyMatch[0]}..."` });
+
+                            // Tìm hành động
+                            const whatMatch = text.match(/(muốn|thích|làm|có|là|cần|mua|bán) (\S+ \S+)/i);
+                            if (whatMatch) suggestions.push({ wh_word: "What", idea_vi: `Hỏi chi tiết việc: "${whatMatch[0]}..."` });
+
+                            // Lọc trùng lặp & chèn mặc định nếu thiếu
+                            const unique = [];
+                            const seen = new Set();
+                            for (const item of suggestions) {
+                                if (!seen.has(item.wh_word)) { seen.add(item.wh_word); unique.push(item); }
+                            }
+                            
+                            if (!seen.has("What")) unique.push({ wh_word: "What", idea_vi: "Hỏi về thông tin hoặc sự việc chính trong câu" });
+                            if (unique.length < 3 && !seen.has("How")) unique.push({ wh_word: "How", idea_vi: "Hỏi về tính chất hoặc cách thức diễn ra" });
+                            if (unique.length < 3 && !seen.has("Who")) unique.push({ wh_word: "Who", idea_vi: "Hỏi về người tham gia hoặc liên quan" });
+
+                            return unique.slice(0, 3);
+                        };
+
+                        setHintsData({
+                            translation: displayTranslation,
+                            suggestions: extractContextHints(viText)
+                        });
+                    } catch (error) {
+                        setHintsData({
+                            translation: "(Lỗi mạng: Không thể tải bản dịch tự động lúc này).",
+                            suggestions: [
+                                { wh_word: "What", idea_vi: "Hỏi thông tin hoặc sự việc chính" },
+                                { wh_word: "Where", idea_vi: "Hỏi về địa điểm diễn ra" },
+                                { wh_word: "Who", idea_vi: "Hỏi về người được nhắc tới" }
+                            ]
+                        });
+                    } finally {
+                        setIsLoadingHints(false);
                     }
-                };
+                    return;
+                }
+
+                // CHẾ ĐỘ AI THẬT
+                const currentContext = chunks[currentIndex];
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${GEMINI_API_KEY}`;
+                const prompt = `Bạn là giáo viên tiếng Anh. Học viên đang đọc: "${currentContext}". Trả về JSON: 1. "translation": Dịch đoạn trên. 2. "suggestions": Mảng chứa 3 object { "wh_word": "Từ để hỏi VD: When", "idea_vi": "Gợi ý tiếng Việt ngắn gọn" }. Không viết câu tiếng Anh hoàn chỉnh.`;
 
                 try {
                     const response = await fetch(apiUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: prompt }] }],
+                            generationConfig: {
+                                responseMimeType: "application/json"
+                            }
+                        })
                     });
                     const result = await response.json();
-                    if (result.candidates && result.candidates[0].content.parts[0].text) {
+                    if (result.candidates) {
                         setHintsData(JSON.parse(result.candidates[0].content.parts[0].text));
                     }
                 } catch (error) {
-                    setRecognitionError("Không thể tải gợi ý lúc này. Vui lòng thử lại.");
+                    setRecognitionError("Không thể tải gợi ý. Vui lòng thử lại.");
                 } finally {
                     setIsLoadingHints(false);
                 }
@@ -208,10 +264,10 @@ Trả về định dạng JSON chính xác sau:
 
             const evaluateWithAI = async () => {
                 if (!userQuestion.trim()) {
-                    setRecognitionError("Vui lòng nhập hoặc nói câu hỏi của bạn.");
+                    setRecognitionError("Bạn chưa nhập câu hỏi nào cả!");
                     return;
                 }
-                
+
                 if (isRecording) {
                     recognitionRef.current?.stop();
                     setIsRecording(false);
@@ -220,47 +276,109 @@ Trả về định dạng JSON chính xác sau:
                 setIsEvaluating(true);
                 setRecognitionError("");
 
-                const currentContext = chunks[currentIndex];
-                const apiKey = "";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+                // CHẾ ĐỘ GIẢ LẬP OFFLINE VỚI GOOGLE DỊCH MIỄN PHÍ
+                if (!GEMINI_API_KEY || GEMINI_API_KEY.includes("DÁN_API_KEY")) {
+                    try {
+                        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=vi&dt=t&q=${encodeURIComponent(userQuestion)}`;
+                        const res = await fetch(url);
+                        const data = await res.json();
+                        const translatedQuestion = data[0].map(item => item[0]).join('');
 
-                const prompt = `
-Bạn là giáo viên giao tiếp tiếng Anh cơ bản.
-Ngữ cảnh: "${currentContext}"
-Câu hỏi học viên đặt ra (Tiếng Anh): "${userQuestion}"
+                        const lowerQ = userQuestion.toLowerCase();
+                        // Kiểm tra xem câu có chứa từ để hỏi cơ bản không
+                        const whWords = ['what', 'where', 'when', 'who', 'why', 'how', 'is', 'are', 'do', 'does', 'did', 'can', 'could', 'will', 'would'];
+                        const hasWh = whWords.some(w => lowerQ.startsWith(w) || lowerQ.includes(` ${w} `));
+                        
+                        let score = 0;
+                        let feedbackMsg = "";
 
-Nhiệm vụ: Đánh giá câu hỏi trên phương diện GIAO TIẾP. Bỏ qua các lỗi ngữ pháp nhỏ, chỉ cần đúng từ để hỏi (5W1H) và người nghe hiểu được ý là đạt.
-
-Hãy trả về dưới định dạng JSON:
-{
-    "score": (số nguyên 0-100),
-    "feedback_vi": (Nhận xét tiếng Việt: Khen ngợi, thân thiện. Chỉ ra lỗi sai thật nhẹ nhàng nếu có.),
-    "suggested_questions": [
-        (Mảng 2-3 câu hỏi mẫu tiếng Anh cực kỳ cơ bản, ngắn gọn nhất có thể)
-    ]
-}`;
-
-                const payload = {
-                    contents: [{ parts: [{ text: prompt }] }],
-                    generationConfig: {
-                        responseMimeType: "application/json",
-                        responseSchema: {
-                            type: "OBJECT",
-                            properties: {
-                                "score": { type: "INTEGER" },
-                                "feedback_vi": { type: "STRING" },
-                                "suggested_questions": { type: "ARRAY", items: { type: "STRING" } }
-                            },
-                            required: ["score", "feedback_vi", "suggested_questions"]
+                        if (hasWh) {
+                            score = 85;
+                            feedbackMsg = `Tốt lắm! Câu hỏi của bạn có nghĩa là: "${translatedQuestion}". Bạn đã làm rất tốt việc sử dụng từ để hỏi.`;
+                        } else {
+                            score = 50;
+                            feedbackMsg = `Câu của bạn dịch ra là: "${translatedQuestion}". Tuy nhiên nó có vẻ chưa giống một câu hỏi lắm. Hãy thử bắt đầu bằng: What, Where, Who, How... nhé!`;
                         }
+
+                        // Lấy lại ngữ cảnh tiếng Việt để tạo câu hỏi sát với đoạn văn
+                        const urlContext = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=vi&dt=t&q=${encodeURIComponent(chunks[currentIndex])}`;
+                        const resContext = await fetch(urlContext);
+                        const dataContext = await resContext.json();
+                        const viContextText = dataContext[0].map(item => item[0]).join('');
+
+                        const getContextQuestions = (text) => {
+                            let qs = [];
+                            const lower = text.toLowerCase();
+                            
+                            // Tìm thời gian
+                            const timeMatch = text.match(/(vào năm \d{4}|năm \d{4}|tháng \d+|ngày \d+|lúc \d+ giờ|sáng nay|tối nay|hôm nay|ngày mai|hôm qua)/i);
+                            if (timeMatch) qs.push({ en: "When did it happen?", vi: `Hỏi về thời gian (${timeMatch[0]}): Khi nào sự việc xảy ra?` });
+
+                            // Tìm địa điểm
+                            const placeMatch = text.match(/(tại|ở|đến|từ) (\S+ \S+)/i);
+                            if (placeMatch) qs.push({ en: "Where did it happen?", vi: `Hỏi về địa điểm (${placeMatch[0]}...): Diễn ra ở đâu?` });
+
+                            // Tìm đối tượng
+                            const whoMatch = lower.match(/(tôi|chúng tôi|bạn|anh ấy|cô ấy|họ|người|khách hàng|giám đốc|nhân viên|công ty)/);
+                            if (whoMatch) qs.push({ en: "Who is involved?", vi: `Hỏi về người/tổ chức (${whoMatch[0]}): Ai tham gia ở đây?` });
+
+                            // Tìm số lượng
+                            const qtyMatch = text.match(/(\d+)\s*(người|cái|chiếc|đồng|usd|vnđ|giờ|phút|ngày|tháng|năm)/i);
+                            if (qtyMatch && (!timeMatch || !timeMatch[0].includes(qtyMatch[1]))) {
+                                if(qtyMatch[2].toLowerCase().match(/(đồng|usd|vnđ)/)) {
+                                    qs.push({ en: "How much does it cost?", vi: `Hỏi về mức giá (${qtyMatch[0]}): Giá bao nhiêu tiền?` });
+                                } else {
+                                    qs.push({ en: "How many are there?", vi: `Hỏi về số lượng (${qtyMatch[0]}): Có bao nhiêu?` });
+                                }
+                            }
+
+                            // Tìm lý do
+                            const whyMatch = text.match(/(vì|bởi vì|do|để) (\S+ \S+)/i);
+                            if (whyMatch) qs.push({ en: "Why is that?", vi: `Hỏi về lý do (${whyMatch[0]}...): Tại sao lại như vậy?` });
+                            
+                            // Mặc định nếu đoạn văn quá ngắn không bóc tách được
+                            if (qs.length === 0) {
+                                qs.push({ en: "What is the main point?", vi: "Hỏi thông tin chính: Vấn đề quan trọng ở đây là gì?" });
+                                qs.push({ en: "Can you explain this?", vi: "Hỏi giải thích: Bạn có thể kể chi tiết thêm không?" });
+                            } else if (qs.length === 1) {
+                                qs.push({ en: "What else happened?", vi: "Còn điều gì xảy ra nữa không?" });
+                            }
+                            return qs.slice(0, 2);
+                        };
+
+                        setFeedback({
+                            score: score,
+                            feedback_vi: feedbackMsg,
+                            suggested_questions: getContextQuestions(viContextText)
+                        });
+                    } catch (error) {
+                        setFeedback({
+                            score: 50,
+                            feedback_vi: "Hệ thống đang lỗi mạng không thể dịch được câu của bạn. Lời khuyên: Hãy đảm bảo câu hỏi bắt đầu bằng What, Where, When, Who, Why hoặc How.",
+                            suggested_questions: [
+                                { en: "What is this about?", vi: "Cái này nói về vấn đề gì?" },
+                                { en: "Who is involved?", vi: "Ai có liên quan ở đây?" }
+                            ]
+                        });
+                    } finally {
+                        setIsEvaluating(false);
                     }
-                };
+                    return;
+                }
+
+                // CHẾ ĐỘ AI THẬT
+                const currentContext = chunks[currentIndex];
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${GEMINI_API_KEY}`;
+                const prompt = `Ngữ cảnh: "${currentContext}". Câu hỏi học viên: "${userQuestion}". Đánh giá giao tiếp. JSON cần trả về: { "score": số 0-100, "feedback_vi": "Nhận xét thân thiện", "suggested_questions": [{"en": "Câu hỏi tiếng Anh số 1", "vi": "Dịch nghĩa tiếng Việt"}, {"en": "Câu hỏi tiếng Anh số 2", "vi": "Dịch nghĩa tiếng Việt"}] }`;
 
                 try {
                     const response = await fetch(apiUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: prompt }] }],
+                            generationConfig: { responseMimeType: "application/json" }
+                        })
                     });
                     const result = await response.json();
                     setFeedback(JSON.parse(result.candidates[0].content.parts[0].text));
@@ -289,26 +407,26 @@ Hãy trả về dưới định dạng JSON:
                             <p className="text-blue-100 text-lg opacity-90">Phát triển phản xạ hỏi đáp tự nhiên như người bản xứ</p>
                         </div>
                         
-                        <div className="flex-1 p-8 flex flex-col bg-white">
+                        <div className="flex-1 p-8 flex flex-col bg-white overflow-y-auto">
                             <h2 className="text-xl text-gray-800 font-bold mb-3 flex items-center">
                                 <i data-lucide="file-text" className="w-6 h-6 mr-2 text-indigo-600"></i>
                                 Nhập tài liệu học tập
                             </h2>
                             <p className="text-gray-500 mb-6 text-lg">
-                                Hãy dán một đoạn văn bản (Tiếng Việt hoặc Tiếng Anh) vào đây. Máy sẽ chia nhỏ để bạn tập đặt câu hỏi khai thác thông tin.
+                                Hãy dán một đoạn văn bản (Tiếng Việt hoặc Tiếng Anh) vào đây. Ứng dụng sẽ chia nhỏ để bạn tập đặt câu hỏi khai thác thông tin.
                             </p>
                             
                             <textarea 
                                 value={inputText}
                                 onChange={(e) => setInputText(e.target.value)}
                                 placeholder="Ví dụ: Công ty chúng tôi được thành lập vào năm 2010 tại Hà Nội..."
-                                className="w-full flex-1 p-5 border-2 border-gray-200 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 outline-none resize-none transition-all text-gray-700 bg-gray-50 text-lg"
+                                className="w-full flex-1 min-h-[150px] p-5 border-2 border-gray-200 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 outline-none resize-none transition-all text-gray-700 bg-gray-50 text-lg"
                             ></textarea>
                             
                             <button 
                                 onClick={handleStartProcessing}
                                 disabled={!inputText.trim()}
-                                className="mt-6 w-full md:w-1/2 mx-auto py-4 bg-indigo-600 text-white rounded-2xl font-bold text-xl shadow-lg hover:bg-indigo-700 transform hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                                className="mt-6 w-full md:w-1/2 mx-auto py-4 bg-indigo-600 text-white rounded-2xl font-bold text-xl shadow-lg hover:bg-indigo-700 transform hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shrink-0"
                             >
                                 <i data-lucide="play-circle" className="w-6 h-6 mr-2"></i> Bắt đầu Luyện tập
                             </button>
@@ -319,7 +437,6 @@ Hãy trả về dưới định dạng JSON:
 
             return (
                 <div className="w-full h-full bg-white sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-gray-100">
-                    {/* Header */}
                     <div className="bg-white px-6 py-4 shadow-sm z-20 border-b border-gray-200 flex items-center justify-between shrink-0">
                         <div>
                             <span className="text-sm font-black text-gray-400 uppercase tracking-wider">Tiến trình học</span>
@@ -330,48 +447,44 @@ Hãy trả về dưới định dạng JSON:
                         </button>
                     </div>
 
-                    {/* 2-Column Layout */}
                     <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
                         
-                        {/* COLUMN 1: Context & Hints (Left side on desktop, Top on mobile) */}
+                        {/* COLUMN 1: Context & Hints */}
                         <div className="w-full md:w-1/2 flex flex-col border-b md:border-b-0 md:border-r border-gray-200 bg-slate-50 overflow-y-auto shrink-0 md:shrink">
                             <div className="p-6 md:p-8 flex flex-col gap-6">
-                                
-                                {/* Info Box */}
                                 <div>
                                     <h3 className="text-sm font-bold text-indigo-500 uppercase tracking-wider mb-3 flex items-center">
-                                        <i data-lucide="book-open" className="w-4 h-4 mr-2"></i> Đoạn văn bản
+                                        <i data-lucide="book-open" className="w-4 h-4 mr-2"></i> Thông tin bạn đang đọc
                                     </h3>
                                     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 text-gray-800 text-lg font-medium leading-relaxed">
                                         {chunks[currentIndex]}
                                     </div>
                                 </div>
 
-                                {/* Hints Section */}
                                 {!hintsData && !isLoadingHints && (
                                     <button 
                                         onClick={fetchHints}
                                         className="w-full py-4 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-2xl font-bold flex items-center justify-center transition border border-amber-200 shadow-sm"
                                     >
-                                        <i data-lucide="lightbulb" className="w-5 h-5 mr-2"></i> Cần gợi ý & Bản dịch?
+                                        <i data-lucide="lightbulb" className="w-5 h-5 mr-2"></i> Xem Dịch & Gợi ý đặt câu
                                     </button>
                                 )}
 
                                 {isLoadingHints && (
                                     <div className="w-full py-4 text-amber-600 font-bold flex items-center justify-center animate-pulse">
-                                        <i data-lucide="loader-2" className="w-5 h-5 mr-2 animate-spin"></i> AI đang phân tích gợi ý...
+                                        <i data-lucide="loader-2" className="w-5 h-5 mr-2 animate-spin"></i> Đang tải gợi ý...
                                     </div>
                                 )}
 
                                 {hintsData && (
                                     <div className="animate-in fade-in zoom-in-95 duration-300 flex flex-col gap-4">
-                                        {/* Translation */}
                                         <div className="bg-white rounded-2xl p-5 border border-indigo-100 shadow-sm">
-                                            <h4 className="text-xs font-bold text-gray-400 uppercase mb-2">Bản dịch tham khảo:</h4>
+                                            <h4 className="text-xs font-bold text-gray-400 uppercase mb-2 flex items-center">
+                                                <i data-lucide="languages" className="w-4 h-4 mr-1"></i> Bản dịch tham khảo:
+                                            </h4>
                                             <p className="text-gray-700 italic">{hintsData.translation}</p>
                                         </div>
                                         
-                                        {/* Suggestions */}
                                         <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-5 border border-amber-200 shadow-sm">
                                             <h4 className="font-bold text-amber-800 mb-3 flex items-center">
                                                 <i data-lucide="target" className="w-5 h-5 mr-2"></i> Ý tưởng đặt câu:
@@ -387,7 +500,7 @@ Hãy trả về dưới định dạng JSON:
                                                 ))}
                                             </ul>
                                             <p className="text-xs text-amber-600 mt-4 italic text-center">
-                                                * Dựa vào gợi ý trên, bạn hãy tự lắp ghép thành câu tiếng Anh nhé!
+                                                * Dựa vào gợi ý, bạn hãy tự đọc/viết câu tiếng Anh hoàn chỉnh nhé.
                                             </p>
                                         </div>
                                     </div>
@@ -395,27 +508,25 @@ Hãy trả về dưới định dạng JSON:
                             </div>
                         </div>
 
-                        {/* COLUMN 2: Interaction & Feedback (Right side on desktop, Bottom on mobile) */}
+                        {/* COLUMN 2: Interaction & Feedback */}
                         <div className="w-full md:w-1/2 flex flex-col bg-white overflow-y-auto shrink-0 md:shrink">
                             <div className="p-6 md:p-8 flex flex-col gap-6 flex-1">
                                 
-                                {/* Instruction */}
                                 {!feedback && (
                                     <div className="text-center animate-in fade-in duration-500 pt-2">
                                         <span className="inline-block bg-indigo-100 text-indigo-800 text-sm font-bold px-4 py-1.5 rounded-full mb-3">
                                             Nhiệm vụ của bạn
                                         </span>
-                                        <h3 className="text-gray-700 text-lg font-medium">Dựa vào thông tin bên trái, hãy đặt 1 câu hỏi tiếng Anh.</h3>
+                                        <h3 className="text-gray-700 text-lg font-medium">Bạn hãy đặt 1 câu hỏi tiếng Anh về thông tin trên.</h3>
                                     </div>
                                 )}
 
-                                {/* Input Area */}
                                 {!feedback && (
                                     <div className="bg-gray-50 rounded-3xl p-3 shadow-inner border border-gray-200 focus-within:border-indigo-400 focus-within:ring-4 focus-within:ring-indigo-500/10 transition-all flex-1 md:flex-none flex flex-col min-h-[250px]">
                                         <textarea
                                             value={userQuestion}
                                             onChange={(e) => setUserQuestion(e.target.value)}
-                                            placeholder="Gõ câu hỏi tiếng Anh của bạn vào đây..."
+                                            placeholder="Gõ hoặc đọc câu hỏi tiếng Anh của bạn vào đây..."
                                             className="w-full p-4 flex-1 outline-none resize-none text-gray-800 bg-transparent text-xl font-medium"
                                         ></textarea>
                                         
@@ -428,7 +539,7 @@ Hãy trả về dưới định dạng JSON:
                                                     ${isRecording ? 'bg-red-100 text-red-600 pulse-recording' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100 shadow-sm'}`}
                                             >
                                                 <i data-lucide={isRecording ? "square" : "mic"} className="w-5 h-5 mr-2"></i>
-                                                {isRecording ? "Đang nghe..." : "Nói bằng Micro"}
+                                                {isRecording ? "Đang lắng nghe..." : "Dùng Micro"}
                                             </button>
                                             
                                             <button 
@@ -446,7 +557,6 @@ Hãy trả về dưới định dạng JSON:
                                     </div>
                                 )}
 
-                                {/* Feedback Area */}
                                 {feedback && (
                                     <div className="animate-in slide-in-from-bottom-4 duration-500 flex flex-col gap-5 pb-6">
                                         <div className="bg-gray-50 rounded-2xl p-5 border border-gray-200">
@@ -460,7 +570,7 @@ Hãy trả về dưới định dạng JSON:
                                                     ${feedback.score >= 80 ? 'bg-green-500' : feedback.score >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}>
                                                     {feedback.score}
                                                 </div>
-                                                <h3 className="font-bold text-gray-800 text-xl">Nhận xét từ Giáo viên AI</h3>
+                                                <h3 className="font-bold text-gray-800 text-xl">Nhận xét</h3>
                                             </div>
                                             <p className="text-gray-600 text-lg leading-relaxed">{feedback.feedback_vi}</p>
                                         </div>
@@ -468,13 +578,20 @@ Hãy trả về dưới định dạng JSON:
                                         <div className="bg-indigo-50 rounded-2xl p-6 border border-indigo-100">
                                             <h3 className="font-bold text-indigo-800 mb-4 flex items-center text-lg">
                                                 <i data-lucide="sparkles" className="w-6 h-6 mr-2 text-indigo-600"></i>
-                                                Câu hỏi mẫu (Ngắn gọn & Tự nhiên):
+                                                Gợi ý hỏi đơn giản & Tự nhiên:
                                             </h3>
                                             <ul className="space-y-3">
                                                 {feedback.suggested_questions.map((q, idx) => (
-                                                    <li key={idx} className="bg-white p-4 rounded-xl border border-indigo-200 shadow-sm flex items-start text-lg">
-                                                        <i data-lucide="check-circle-2" className="w-6 h-6 mr-3 text-indigo-500 shrink-0 mt-0.5"></i>
-                                                        <span className="font-bold text-gray-800">{q}</span>
+                                                    <li key={idx} className="bg-white p-4 rounded-xl border border-indigo-200 shadow-sm flex flex-col text-lg">
+                                                        <div className="flex items-start">
+                                                            <i data-lucide="check-circle-2" className="w-6 h-6 mr-3 text-indigo-500 shrink-0 mt-0.5"></i>
+                                                            <span className="font-bold text-gray-800">{q.en ? q.en : q}</span>
+                                                        </div>
+                                                        {q.vi && (
+                                                            <div className="ml-9 mt-1 text-base text-gray-500 italic">
+                                                                Nghĩa là: {q.vi}
+                                                            </div>
+                                                        )}
                                                     </li>
                                                 ))}
                                             </ul>
@@ -483,7 +600,6 @@ Hãy trả về dưới định dạng JSON:
                                 )}
                             </div>
 
-                            {/* Footer Actions (Next Button) */}
                             {feedback && (
                                 <div className="mt-auto bg-gray-50 p-5 border-t border-gray-200 flex gap-4 shrink-0 z-10">
                                     <button 
@@ -496,7 +612,7 @@ Hãy trả về dưới định dạng JSON:
                                         onClick={nextChunk}
                                         className="flex-1 py-4 bg-indigo-600 text-white font-bold text-lg rounded-2xl shadow-lg hover:bg-indigo-700 transition flex items-center justify-center"
                                     >
-                                        {currentIndex < chunks.length - 1 ? "Phần tiếp theo" : "Hoàn thành"}
+                                        {currentIndex < chunks.length - 1 ? "Đoạn tiếp theo" : "Hoàn thành"}
                                         <i data-lucide="arrow-right" className="w-6 h-6 ml-2"></i>
                                     </button>
                                 </div>
