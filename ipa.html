@@ -2,224 +2,290 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trang học Tiếng Anh - Phong cách Elsa</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>English Coach - Professional Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f0fdf4; }
-        .card { transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer; }
-        .card:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
-        .speak-icon { cursor: pointer; color: #3b82f6; transition: all 0.2s ease; }
-        .speak-icon svg { width: 1.75rem; height: 1.75rem; }
-        .speak-icon:hover { color: #1d4ed8; transform: scale(1.1); }
-        .speak-icon.loading { animation: pulse 1s infinite; color: #9ca3af; pointer-events: none; }
-        
-        .phoneme-btn { transition: all 0.2s ease; position: relative; }
-        .phoneme-btn.active { background-color: #3b82f6; color: white; transform: scale(1.05); box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.5); border-color: #3b82f6; }
-        
-        /* Mic Animation */
-        .mic-btn { transition: all 0.3s ease; }
-        .mic-btn.recording { 
-            animation: pulse-red 1.5s infinite; 
-            background-color: #ef4444; 
-            color: white; 
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f8fafc; /* Nền Slate-50 sang trọng */
+            -webkit-tap-highlight-color: transparent;
         }
-        @keyframes pulse-red {
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Card Effects */
+        .card { 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            cursor: pointer; 
+        }
+        .card:hover { 
+            transform: translateY(-4px) scale(1.01); 
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.05), 0 8px 10px -6px rgb(0 0 0 / 0.01); 
+        }
+
+        /* Interactive Elements */
+        .speak-icon { cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .speak-icon:hover { transform: scale(1.05); }
+        .speak-icon:active { transform: scale(0.95); }
+        .speak-icon.loading { animation: pulse-blue 1.5s infinite; color: #94a3b8; pointer-events: none; }
+        
+        .phoneme-btn { 
+            transition: all 0.2s ease; 
+            position: relative; 
+            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        }
+        .phoneme-btn.active { 
+            background: linear-gradient(135deg, #3b82f6 0%, #4f46e5 100%); 
+            color: white; 
+            transform: translateY(-2px); 
+            box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3); 
+            border-color: transparent; 
+        }
+        .phoneme-btn:active { transform: scale(0.95); }
+
+        /* Modern Mic Animation */
+        .mic-btn { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; }
+        .mic-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); }
+        .mic-btn:active { transform: scale(0.95); }
+        .mic-btn.recording { 
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); 
+            color: white; 
+            animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+
+        @keyframes pulse-ring {
             0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-            70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+            70% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
             100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
+        @keyframes pulse-blue {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(0.95); }
+            100% { opacity: 1; transform: scale(1); }
         }
 
-        /* Modal styling */
-        #practice-modal { display: none; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 50; }
-        #practice-modal.active { display: flex; animation: fadeIn 0.2s ease-out; }
+        /* Modal styling - App Like */
+        #practice-modal { 
+            display: none; 
+            background: rgba(15, 23, 42, 0.75); 
+            backdrop-filter: blur(8px); 
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 50; 
+        }
+        #practice-modal.active { display: flex; animation: modalFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         
-        @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(20px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
         }
 
-        /* Interactive Sentence Word */
-        .interactive-word { cursor: pointer; transition: all 0.2s; border-bottom: 2px solid transparent; }
-        .interactive-word:hover { color: #3b82f6; border-bottom: 2px dashed #3b82f6; transform: translateY(-1px); }
+        /* Text Interactions */
+        .interactive-word { cursor: pointer; transition: all 0.2s; border-bottom: 2px solid transparent; padding-bottom: 2px;}
+        .interactive-word:hover { color: #4f46e5; border-bottom: 2px dotted #4f46e5; transform: translateY(-1px); }
 
-        /* Diff Highlight Styles */
+        /* Diff Highlight Styles - Modernized */
         .diff-char { display: inline-block; padding: 0 1px; }
-        .char-correct { color: #16a34a; } /* Green */
-        .char-missing { color: #dc2626; text-decoration: underline; text-decoration-style: wavy; font-weight: bold; background-color: #fee2e2; border-radius: 4px;} /* Red */
-        .char-extra { color: #ea580c; text-decoration: line-through; font-size: 0.8em; opacity: 0.8;} /* Orange */
+        .char-correct { color: #10b981; } /* Emerald */
+        .char-missing { color: #ef4444; font-weight: 700; background-color: #fef2f2; border-bottom: 2px solid #ef4444; border-radius: 2px; padding: 0 2px;} 
+        .char-extra { color: #f59e0b; text-decoration: line-through; font-size: 0.85em; opacity: 0.8;} 
         
-        .word-correct { color: #16a34a; }
-        .word-missing { color: #dc2626; text-decoration: line-through; font-weight: bold; background-color: #fee2e2; padding: 0 4px; border-radius: 4px;}
-        .word-extra { color: #ea580c; text-decoration: line-through; font-size: 0.8em; background-color: #ffedd5; padding: 0 4px; border-radius: 4px;}
+        .word-correct { color: #10b981; }
+        .word-missing { color: #ef4444; font-weight: 700; background-color: #fef2f2; border-bottom: 2px solid #ef4444; padding: 0 4px; border-radius: 4px;}
+        .word-extra { color: #f59e0b; text-decoration: line-through; font-size: 0.85em; background-color: #fffbeb; padding: 0 4px; border-radius: 4px;}
         
-        .badge-pop { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .badge-pop { animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
         @keyframes popIn {
             0% { transform: scale(0); opacity: 0; }
             100% { transform: scale(1); opacity: 1; }
         }
+
+        /* Glassmorphism utils */
+        .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.5); }
     </style>
 </head>
-<body class="text-gray-800">
+<body class="text-slate-800 antialiased selection:bg-indigo-100 selection:text-indigo-900">
 
-    <!-- Main Content -->
-    <div id="main-content">
-        <header class="bg-white shadow-sm border-b sticky top-0 z-40">
-            <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                    <div class="bg-blue-600 text-white p-2 rounded-lg">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+    <div id="main-content" class="min-h-screen flex flex-col">
+        <!-- Sticky Header -->
+        <header class="glass sticky top-0 z-40 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+            <div class="container mx-auto px-4 md:px-6 py-4 flex justify-between items-center max-w-6xl">
+                <!-- Branding -->
+                <div class="flex items-center gap-3 md:gap-4 group cursor-pointer">
+                    <div class="bg-gradient-to-br from-blue-500 to-indigo-600 text-white p-2.5 rounded-xl shadow-lg shadow-indigo-200 group-hover:scale-105 transition-transform">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
                     </div>
                     <div>
-                        <h1 class="text-xl font-black text-gray-800 tracking-tight">English Coach</h1>
-                        <p id="welcome-message" class="text-xs text-gray-500 font-medium">Sẵn sàng luyện tập!</p>
+                        <h1 class="text-xl md:text-2xl font-black text-slate-900 tracking-tight">English<span class="text-indigo-600">Coach</span></h1>
+                        <p id="welcome-message" class="text-xs md:text-sm text-slate-500 font-medium">Luyện phát âm chuẩn AI</p>
                     </div>
                 </div>
                 
+                <!-- Progress UI -->
                 <div class="flex items-center gap-4">
-                    <!-- Theo dõi tiến độ học tập -->
-                    <div class="flex items-center gap-3 border-gray-200">
+                    <div class="flex items-center gap-3">
                         <div class="text-right hidden sm:block">
-                            <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Tiến độ</p>
-                            <p id="progress-text" class="text-sm font-extrabold text-blue-600">0 / 0 từ</p>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Tiến trình</p>
+                            <p id="progress-text" class="text-sm font-black text-indigo-600">0 / 0 từ</p>
                         </div>
-                        <div class="w-16 sm:w-24 h-2.5 bg-gray-100 rounded-full overflow-hidden border border-gray-200 shadow-inner">
-                            <div id="progress-bar" class="h-full bg-blue-500 transition-all duration-700 ease-out" style="width: 0%"></div>
+                        <!-- Progress Bar -->
+                        <div class="w-20 sm:w-32 h-3 bg-slate-100 rounded-full overflow-hidden shadow-inner relative">
+                            <div id="progress-bar" class="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-1000 ease-out" style="width: 0%">
+                                <!-- Shine effect -->
+                                <div class="absolute top-0 left-0 w-full h-full bg-white opacity-20" style="transform: skewX(-45deg) translateX(-100%); animation: shine 2s infinite;"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+            <style>
+                @keyframes shine { 100% { transform: skewX(-45deg) translateX(200%); } }
+            </style>
         </header>
 
-        <main class="container mx-auto px-4 py-8 max-w-5xl">
+        <main class="container mx-auto px-4 sm:px-6 py-8 max-w-6xl flex-grow">
             
+            <!-- Welcome Banner (New) -->
+            <div class="mb-8 bg-gradient-to-r from-indigo-900 to-slate-800 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+                <div class="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 bg-indigo-500 rounded-full opacity-20 blur-3xl"></div>
+                <div class="absolute bottom-0 left-0 -ml-20 -mb-20 w-48 h-48 bg-blue-500 rounded-full opacity-20 blur-3xl"></div>
+                <div class="relative z-10 max-w-2xl">
+                    <h2 class="text-3xl sm:text-4xl font-black mb-3 leading-tight">Làm chủ <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300">44 Âm Tiếng Anh</span></h2>
+                    <p class="text-slate-300 text-sm sm:text-base leading-relaxed mb-6">Luyện tập phát âm chuẩn bản xứ với công nghệ nhận diện giọng nói AI. Nhấn vào bất kỳ âm nào dưới đây để bắt đầu.</p>
+                </div>
+            </div>
+
             <!-- Phoneme Selector -->
-            <section class="mb-8 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                 <div class="flex justify-between items-center mb-4">
-                     <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
-                         <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                         Chọn âm cần luyện tập
-                     </h2>
+            <section class="mb-10">
+                 <div class="flex items-center gap-3 mb-5 px-1">
+                     <div class="p-2 bg-indigo-100 rounded-lg text-indigo-600">
+                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                     </div>
+                     <h2 class="text-xl font-bold text-slate-800">Bảng Âm IPA</h2>
                  </div>
-                 <div id="phoneme-navigation" class="space-y-6"></div>
+                 <div id="phoneme-navigation" class="space-y-8 bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-100"></div>
             </section>
 
             <!-- Word List Area -->
-            <section id="phoneme-content-display" class="mb-12">
-                <!-- Nội dung danh sách từ sẽ hiển thị ở đây -->
-            </section>
+            <section id="phoneme-content-display" class="mb-12 animate-fade-in"></section>
 
         </main>
     </div>
 
-    <!-- Practice Modal (Elsa Style) -->
-    <div id="practice-modal" class="fixed inset-0 flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden relative flex flex-col max-h-[95vh]">
+    <div id="practice-modal" class="fixed inset-0 items-center justify-center p-4 sm:p-6">
+        <div class="bg-white w-full max-w-3xl rounded-[2rem] shadow-2xl overflow-hidden relative flex flex-col max-h-[90vh] ring-1 ring-slate-900/5">
             
             <!-- Review Navigation -->
-            <div id="review-nav" class="hidden bg-blue-600 text-white px-4 py-3 flex justify-between items-center shadow-md z-20">
-                <button id="review-prev" class="px-3 py-1 bg-blue-700 hover:bg-blue-800 rounded-lg flex items-center gap-1 transition text-sm font-medium">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg> Trước
+            <div id="review-nav" class="hidden bg-slate-900 text-white px-6 py-4 flex justify-between items-center z-20">
+                <button id="review-prev" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl flex items-center gap-2 transition-colors text-sm font-semibold">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg> Trước
                 </button>
-                <div class="font-bold tracking-widest text-sm bg-blue-800/50 px-3 py-1 rounded-full" id="review-counter">1/8</div>
-                <button id="review-next" class="px-3 py-1 bg-blue-700 hover:bg-blue-800 rounded-lg flex items-center gap-1 transition text-sm font-medium">
-                    Tiếp <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                <div class="font-bold tracking-widest text-sm bg-slate-800 px-4 py-1.5 rounded-full border border-slate-700" id="review-counter">1/8</div>
+                <button id="review-next" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl flex items-center gap-2 transition-colors text-sm font-semibold shadow-lg shadow-indigo-600/20">
+                    Tiếp <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
                 </button>
             </div>
 
             <!-- Close btn -->
-            <button id="close-modal" class="absolute top-4 right-4 text-gray-400 hover:text-red-500 bg-gray-100 hover:bg-red-50 rounded-full p-2 z-30 transition-colors">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            <button id="close-modal" class="absolute top-5 right-5 text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full p-2.5 z-30 transition-all hover:rotate-90">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
 
-            <div class="p-6 md:p-8 overflow-y-auto" id="modal-scroll-area">
-                <div class="text-center mb-6 mt-2">
-                    <span id="modal-phoneme-badge" class="inline-block bg-blue-100 text-blue-800 font-mono font-bold px-3 py-1 rounded-full text-sm mb-2 shadow-sm border border-blue-200">/i:/</span>
-                    <h2 id="modal-word" class="text-5xl font-black text-gray-800 mb-2 tracking-tight">sheep</h2>
-                    <p id="modal-transcription" class="text-xl text-gray-500 font-mono mb-1">/ʃiːp/</p>
-                    <p id="modal-meaning" class="text-md text-blue-600 font-medium">con cừu</p>
+            <!-- Modal Content Scroll Area -->
+            <div class="p-6 sm:p-10 overflow-y-auto custom-scrollbar" id="modal-scroll-area">
+                
+                <!-- Word Header -->
+                <div class="text-center mb-8 pt-4">
+                    <span id="modal-phoneme-badge" class="inline-block bg-indigo-50 text-indigo-600 font-mono font-bold px-4 py-1.5 rounded-xl text-sm mb-4 border border-indigo-100 shadow-sm">/i:/</span>
+                    <h2 id="modal-word" class="text-5xl sm:text-6xl font-black text-slate-900 mb-3 tracking-tight">sheep</h2>
+                    <p id="modal-transcription" class="text-xl sm:text-2xl text-slate-500 font-mono mb-2">/ʃiːp/</p>
+                    <p id="modal-meaning" class="text-lg text-indigo-500 font-semibold">con cừu</p>
                 </div>
 
-                <!-- Theory Box -->
-                <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-8 shadow-sm">
-                    <h4 class="text-amber-800 font-bold mb-1 text-sm flex items-center gap-2 uppercase tracking-wider">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <!-- Theory Box (Tip) -->
+                <div class="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100/50 rounded-2xl p-5 mb-10 shadow-sm relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-amber-400"></div>
+                    <h4 class="text-amber-800 font-bold mb-2 text-sm flex items-center gap-2 uppercase tracking-wider">
+                        <span class="bg-amber-100 p-1.5 rounded-lg"><svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></span>
                         Mẹo phát âm
                     </h4>
-                    <p id="modal-theory" class="text-amber-900 text-sm leading-relaxed">Hướng dẫn phát âm chi tiết sẽ ở đây.</p>
+                    <p id="modal-theory" class="text-amber-900 text-sm sm:text-base leading-relaxed pl-9">Hướng dẫn phát âm chi tiết sẽ ở đây.</p>
                 </div>
 
-                <!-- Word Practice Section -->
-                <div class="bg-gray-50 rounded-3xl p-6 mb-6 border border-gray-100 text-center relative shadow-sm">
-                    <h3 class="text-xs font-black text-gray-400 uppercase tracking-wider mb-4 absolute top-4 left-6">Bước 1: Luyện Từ</h3>
+                <div class="grid grid-cols-1 gap-8">
                     
-                    <div class="flex justify-center items-center gap-6 mt-6">
-                        <button id="listen-word-btn" class="speak-icon flex items-center justify-center bg-white p-4 rounded-full shadow border hover:border-blue-500 hover:shadow-md" title="Nghe mẫu">
-                            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 0 0 1.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.66 1.905H6.44l4.5 4.5c.945.945 2.56.276 2.56-1.06V4.06ZM18.584 5.106a.75.75 0 0 1 1.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 0 1-1.06-1.06 8.25 8.25 0 0 0 0-11.668.75.75 0 0 1 0-1.06Z" /><path d="M15.932 7.757a.75.75 0 0 1 1.061 0 6 6 0 0 1 0 8.486.75.75 0 0 1-1.06-1.061 4.5 4.5 0 0 0 0-6.364.75.75 0 0 1 0-1.06Z" /></svg>
-                        </button>
+                    <!-- Word Practice Section -->
+                    <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 text-center relative shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
+                        <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-md">Bước 1: Từ vựng</div>
+                        
+                        <div class="flex justify-center items-center gap-6 mt-6">
+                            <button id="listen-word-btn" class="speak-icon flex items-center justify-center bg-slate-50 p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600" title="Nghe mẫu">
+                                <svg class="w-6 h-6 sm:w-8 sm:h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 0 0 1.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.66 1.905H6.44l4.5 4.5c.945.945 2.56.276 2.56-1.06V4.06ZM18.584 5.106a.75.75 0 0 1 1.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 0 1-1.06-1.06 8.25 8.25 0 0 0 0-11.668.75.75 0 0 1 0-1.06Z" /><path d="M15.932 7.757a.75.75 0 0 1 1.061 0 6 6 0 0 1 0 8.486.75.75 0 0 1-1.06-1.061 4.5 4.5 0 0 0 0-6.364.75.75 0 0 1 0-1.06Z" /></svg>
+                            </button>
 
-                        <button id="record-word-btn" class="mic-btn bg-gray-800 hover:bg-gray-900 text-white p-6 rounded-full shadow-lg" title="Nhấn để đọc">
-                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
-                        </button>
-                    </div>
-
-                    <!-- Result Area Word -->
-                    <div id="word-result-area" class="mt-8 hidden flex-col items-center w-full bg-white p-4 rounded-2xl border">
-                        <div class="inline-flex items-center justify-center w-20 h-20 rounded-full border-4 border-gray-200 mb-3 relative shadow-inner bg-white">
-                            <span id="word-score" class="text-2xl font-black">0%</span>
+                            <button id="record-word-btn" class="mic-btn bg-slate-900 text-white p-6 sm:p-8 rounded-full shadow-xl shadow-slate-900/20" title="Nhấn để đọc">
+                                <svg class="w-8 h-8 sm:w-10 sm:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                            </button>
                         </div>
-                        <p class="text-xs text-gray-400 mb-1 uppercase tracking-wider font-bold">Phân tích âm thanh</p>
-                        <div id="word-detailed-feedback" class="text-4xl mb-2 tracking-widest font-black font-mono"></div>
-                        <div id="word-analysis-box" class="w-full mt-2 text-sm text-gray-600 text-left"></div>
-                    </div>
-                </div>
 
-                <!-- Sentence Practice Section -->
-                <div class="bg-blue-50/50 rounded-3xl p-6 border border-blue-100 text-center relative shadow-sm">
-                    <h3 class="text-xs font-black text-blue-400 uppercase tracking-wider mb-4 absolute top-4 left-6">Bước 2: Luyện Câu</h3>
-                    
-                    <div class="mt-8 mb-6">
-                        <p id="modal-sentence" class="text-2xl font-semibold text-gray-800 mb-2 leading-relaxed"></p>
-                        <p id="modal-sentence-meaning" class="text-sm text-gray-500 mt-2"></p>
-                    </div>
-
-                    <div class="flex justify-center items-center gap-6">
-                        <button id="listen-sentence-btn" class="speak-icon flex items-center justify-center bg-white p-4 rounded-full shadow border border-blue-100 hover:border-blue-500 text-blue-600" title="Nghe cả câu">
-                            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 0 0 1.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.66 1.905H6.44l4.5 4.5c.945.945 2.56.276 2.56-1.06V4.06ZM18.584 5.106a.75.75 0 0 1 1.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 0 1-1.06-1.06 8.25 8.25 0 0 0 0-11.668.75.75 0 0 1 0-1.06Z" /><path d="M15.932 7.757a.75.75 0 0 1 1.061 0 6 6 0 0 1 0 8.486.75.75 0 0 1-1.06-1.061 4.5 4.5 0 0 0 0-6.364.75.75 0 0 1 0-1.06Z" /></svg>
-                        </button>
-
-                        <button id="record-sentence-btn" class="mic-btn bg-blue-600 hover:bg-blue-700 text-white p-6 rounded-full shadow-lg" title="Ghi âm cả câu">
-                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
-                        </button>
-                    </div>
-
-                    <!-- Result Area Sentence -->
-                    <div id="sentence-result-area" class="mt-8 hidden flex-col items-center w-full bg-white p-4 rounded-2xl border border-blue-100">
-                        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full border-4 border-gray-200 mb-3 bg-white">
-                            <span id="sentence-score" class="text-xl font-black">0%</span>
+                        <!-- Result Area Word -->
+                        <div id="word-result-area" class="mt-8 hidden flex-col items-center w-full animate-fade-in">
+                            <div class="h-px w-full bg-slate-100 mb-8"></div>
+                            <div class="inline-flex items-center justify-center w-24 h-24 rounded-full border-[6px] mb-4 relative shadow-inner bg-white" id="word-score-container">
+                                <span id="word-score" class="text-3xl font-black">0%</span>
+                            </div>
+                            <p class="text-[11px] text-slate-400 mb-3 uppercase tracking-widest font-bold">Phân tích AI</p>
+                            <div id="word-detailed-feedback" class="text-4xl sm:text-5xl mb-4 tracking-wider font-black font-mono"></div>
+                            <div id="word-analysis-box" class="w-full text-left"></div>
                         </div>
-                        <p class="text-xs text-gray-400 mb-2 uppercase tracking-wider font-bold">Phân tích câu</p>
-                        <div id="sentence-detailed-feedback" class="text-xl mb-2 tracking-wide font-medium leading-relaxed bg-gray-50 p-4 rounded-xl border border-gray-100 w-full"></div>
-                        <div id="sentence-analysis-box" class="w-full mt-2 text-sm text-left"></div>
                     </div>
-                </div>
 
+                    <!-- Sentence Practice Section -->
+                    <div class="bg-indigo-50/50 rounded-3xl p-6 sm:p-8 border border-indigo-100/50 text-center relative shadow-[0_4px_20px_-4px_rgba(79,70,229,0.05)]">
+                        <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-md shadow-indigo-600/30">Bước 2: Câu hoàn chỉnh</div>
+                        
+                        <div class="mt-8 mb-8">
+                            <p id="modal-sentence" class="text-2xl sm:text-3xl font-bold text-slate-800 mb-3 leading-relaxed"></p>
+                            <p id="modal-sentence-meaning" class="text-sm sm:text-base text-slate-500 font-medium"></p>
+                        </div>
+
+                        <div class="flex justify-center items-center gap-6">
+                            <button id="listen-sentence-btn" class="speak-icon flex items-center justify-center bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-indigo-100 hover:border-indigo-400 text-indigo-600 hover:bg-indigo-50" title="Nghe mẫu">
+                                <svg class="w-6 h-6 sm:w-8 sm:h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 0 0 1.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.66 1.905H6.44l4.5 4.5c.945.945 2.56.276 2.56-1.06V4.06ZM18.584 5.106a.75.75 0 0 1 1.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 0 1-1.06-1.06 8.25 8.25 0 0 0 0-11.668.75.75 0 0 1 0-1.06Z" /><path d="M15.932 7.757a.75.75 0 0 1 1.061 0 6 6 0 0 1 0 8.486.75.75 0 0 1-1.06-1.061 4.5 4.5 0 0 0 0-6.364.75.75 0 0 1 0-1.06Z" /></svg>
+                            </button>
+
+                            <button id="record-sentence-btn" class="mic-btn bg-indigo-600 text-white p-6 sm:p-8 rounded-full shadow-xl shadow-indigo-600/30" title="Nhấn để đọc">
+                                <svg class="w-8 h-8 sm:w-10 sm:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                            </button>
+                        </div>
+
+                        <!-- Result Area Sentence -->
+                        <div id="sentence-result-area" class="mt-8 hidden flex-col items-center w-full animate-fade-in">
+                            <div class="h-px w-full bg-indigo-100 mb-8"></div>
+                            <div class="inline-flex items-center justify-center w-20 h-20 rounded-full border-[5px] mb-3 bg-white shadow-inner" id="sentence-score-container">
+                                <span id="sentence-score" class="text-2xl font-black">0%</span>
+                            </div>
+                            <p class="text-[11px] text-slate-400 mb-3 uppercase tracking-widest font-bold">Phân tích độ lưu loát</p>
+                            <div id="sentence-detailed-feedback" class="text-xl sm:text-2xl mb-4 tracking-wide font-semibold leading-relaxed bg-white p-5 rounded-2xl border border-indigo-50 shadow-sm w-full"></div>
+                            <div id="sentence-analysis-box" class="w-full text-sm text-left"></div>
+                        </div>
+                    </div>
+
+                </div>
             </div>
         </div>
     </div>
 
 <script type="module">
-        // --- Core App Logic ---
         function initializeAppContent() {
-            // Dữ liệu nâng cao ĐẦY ĐỦ 44 ÂM
+            // Dữ liệu nâng cao ĐẦY ĐỦ 44 ÂM (GIỮ NGUYÊN 100%)
             const phoneticsData = {
                 "Nguyên âm đơn (Monophthongs)": {
                     '/i:/': {
@@ -801,27 +867,22 @@
                 }
             };
 
-            // --- TRẠNG THÁI LƯU TRỮ ĐIỂM (CẬP NHẬT MỚI) ---
-            // Chúng ta không dùng mảng chuỗi nữa, mà dùng Object lưu điểm: { "sheep": 95, "eat": 80 }
             let savedWordScores = JSON.parse(localStorage.getItem('elsa_word_scores') || '{}');
             
-            // Migrate (Chuyển đổi) dữ liệu cũ nếu trước đó user dùng phiên bản cũ
             const oldCompletedWords = JSON.parse(localStorage.getItem('elsa_completed_words') || '[]');
             if (Array.isArray(oldCompletedWords) && oldCompletedWords.length > 0) {
                 oldCompletedWords.forEach(word => {
-                    if (!savedWordScores[word]) savedWordScores[word] = 70; // Set điểm mặc định 70% cho từ cũ
+                    if (!savedWordScores[word]) savedWordScores[word] = 70;
                 });
                 localStorage.setItem('elsa_word_scores', JSON.stringify(savedWordScores));
-                localStorage.removeItem('elsa_completed_words'); // Xóa cache cũ đi
+                localStorage.removeItem('elsa_completed_words');
             }
 
-            // State toàn cục
             let currentWordData = null;
             let currentPhonemeContext = null;
             let expectedText = "";
             let currentCategoryContext = null;
 
-            // State cho chức năng Ôn tập (Review Mode)
             let isReviewMode = false;
             let reviewWords = [];
             let currentReviewIndex = 0;
@@ -836,7 +897,6 @@
             function updateProgressUI() {
                 const progressText = document.getElementById('progress-text');
                 const progressBar = document.getElementById('progress-bar');
-                // Tính số từ đạt yêu cầu (>=70đ)
                 const learnedCount = Object.values(savedWordScores).filter(score => score >= 70).length;
 
                 if (progressText && progressBar) {
@@ -847,26 +907,19 @@
             }
             updateProgressUI();
 
-            // Kích hoạt tải giọng nói ngầm để chuẩn bị sẵn cho máy tính Windows/Android
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.getVoices();
                 window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
             }
 
-            // --- THUẬT TOÁN TÍNH TRUNG BÌNH THEO ÂM ---
             function getPhonemeAverageScore(category, phoneme) {
                 const words = phoneticsData[category][phoneme].words;
                 if (!words || words.length === 0) return 0;
-                
                 let totalScore = 0;
-                words.forEach(w => {
-                    totalScore += (savedWordScores[w.word] || 0); // Nếu chưa học thì tính 0 điểm
-                });
-                
+                words.forEach(w => { totalScore += (savedWordScores[w.word] || 0); });
                 return Math.round(totalScore / words.length);
             }
 
-            // --- HỆ THỐNG AUDIO NATIVE CẢI TIẾN ---
             window.playUnifiedAudio = function(text, buttonElement = null) {
                 const word = text.trim(); 
                 if ('speechSynthesis' in window) {
@@ -879,7 +932,7 @@
                         const premiumVoice = voices.find(v => v.name.includes('Google US English') || v.name.includes('Natural'));
                         if (premiumVoice) utterance.voice = premiumVoice;
                     }
-                    utterance.rate = word.includes(' ') ? 1.0 : 0.8; 
+                    utterance.rate = word.includes(' ') ? 1.0 : 0.85; 
                     if(buttonElement) {
                         buttonElement.classList.add('loading');
                         utterance.onend = () => buttonElement.classList.remove('loading');
@@ -889,7 +942,6 @@
                 }
             };
 
-            // --- WEB SPEECH API (NHẬN DIỆN GIỌNG NÓI) ---
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             let recognition = null;
             let isRecording = false;
@@ -917,7 +969,6 @@
                 };
             }
 
-            // --- THUẬT TOÁN LCS (Longest Common Subsequence) ---
             function getDiff(expectedArr, spokenArr) {
                 const n = expectedArr.length;
                 const m = spokenArr.length;
@@ -950,7 +1001,6 @@
                 return diff;
             }
 
-            // --- PHÂN TÍCH LỖI ---
             function getDetailedFeedback(expected, spoken, type) {
                 const cleanExpected = expected.replace(/[.,!?]/g, "").trim();
                 const cleanSpoken = spoken.replace(/[.,!?]/g, "").trim();
@@ -1012,25 +1062,25 @@
                     score = expectedChars.length > 0 ? Math.round((correctChars / expectedChars.length) * 100) : 0;
                     
                     if (score < 100 && spokenWord.length > 0) {
-                        analysis = `<div class="mb-3 text-sm text-gray-700 font-medium">Hệ thống nhận diện thành: <strong class="text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-100 uppercase tracking-widest">"${spokenWord}"</strong></div>`;
+                        analysis = `<div class="mb-4 text-sm text-slate-500 font-medium text-center">Nhận diện thành: <strong class="text-rose-500 bg-rose-50 px-3 py-1 rounded-full border border-rose-100 uppercase tracking-widest inline-block ml-1">${spokenWord}</strong></div>`;
                         analysis += `<ul class="space-y-3">`;
                         if (initialErrors.length > 0) {
-                            analysis += `<li class="flex items-start gap-3 bg-white p-3 rounded-xl border-l-4 border-red-400 shadow-sm"><span class="text-red-500 mt-0.5 text-lg">🎯</span><div><strong class="text-gray-800 block mb-1">Lỗi Phụ Âm Đầu:</strong> Sai/thiếu âm <strong class="text-red-600 bg-red-50 px-1.5 py-0.5 rounded">"${initialErrors.join('')}"</strong> ở đầu từ.</div></li>`;
+                            analysis += `<li class="flex items-start gap-3 bg-rose-50/50 p-4 rounded-2xl border border-rose-100"><span class="text-rose-500 text-lg">🎯</span><div><strong class="text-rose-800 block mb-1">Lỗi Phụ Âm Đầu</strong>Sai/thiếu âm <strong class="text-rose-600 bg-rose-100 px-2 py-0.5 rounded">"${initialErrors.join('')}"</strong> ở đầu từ.</div></li>`;
                         }
                         if (vowelErrors.length > 0) {
-                            analysis += `<li class="flex items-start gap-3 bg-white p-3 rounded-xl border-l-4 border-orange-400 shadow-sm"><span class="text-orange-500 mt-0.5 text-lg">👄</span><div><strong class="text-gray-800 block mb-1">Lỗi Nguyên Âm:</strong> Khẩu hình của âm <strong class="text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">"${vowelErrors.join('')}"</strong> chưa chuẩn xác.</div></li>`;
+                            analysis += `<li class="flex items-start gap-3 bg-amber-50/50 p-4 rounded-2xl border border-amber-100"><span class="text-amber-500 text-lg">👄</span><div><strong class="text-amber-800 block mb-1">Lỗi Nguyên Âm</strong>Khẩu hình của âm <strong class="text-amber-600 bg-amber-100 px-2 py-0.5 rounded">"${vowelErrors.join('')}"</strong> chưa chuẩn xác.</div></li>`;
                         }
                         if (finalErrors.length > 0) {
-                            analysis += `<li class="flex items-start gap-3 bg-white p-3 rounded-xl border-l-4 border-purple-500 shadow-sm"><span class="text-purple-500 mt-0.5 text-lg">🛑</span><div><strong class="text-gray-800 block mb-1">Lỗi Phụ Âm Cuối:</strong> Quên bật đuôi <strong class="text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded">"${finalErrors.join('')}"</strong>. Cố gắng bật nhẹ ở cuối câu nhé.</div></li>`;
+                            analysis += `<li class="flex items-start gap-3 bg-purple-50/50 p-4 rounded-2xl border border-purple-100"><span class="text-purple-500 text-lg">🛑</span><div><strong class="text-purple-800 block mb-1">Lỗi Phụ Âm Cuối</strong>Quên bật đuôi <strong class="text-purple-600 bg-purple-100 px-2 py-0.5 rounded">"${finalErrors.join('')}"</strong>. Hãy cố gắng bật âm ở cuối nhé.</div></li>`;
                         }
                         if (finalErrors.length === 0 && extraErrors.length > 0 && expIdx > lastVowelIdx) {
-                            analysis += `<li class="flex items-start gap-3 bg-white p-3 rounded-xl border-l-4 border-yellow-400 shadow-sm"><span class="text-yellow-600 mt-0.5 text-lg">💡</span><div><strong class="text-gray-800 block mb-1">Lỗi Dư Âm:</strong> Bạn xì thêm <strong class="text-yellow-600 bg-yellow-50 px-1.5 py-0.5 rounded">"${extraErrors.join('')}"</strong> không cần thiết.</div></li>`;
+                            analysis += `<li class="flex items-start gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200"><span class="text-slate-500 text-lg">💡</span><div><strong class="text-slate-800 block mb-1">Dư Âm</strong>Bạn xì thêm <strong class="text-slate-600 bg-slate-200 px-2 py-0.5 rounded">"${extraErrors.join('')}"</strong> không cần thiết.</div></li>`;
                         }
                         analysis += `</ul>`;
                     } else if (spokenWord === "") {
-                        analysis = "Chưa nghe thấy âm thanh. Vui lòng đọc lớn hơn.";
+                        analysis = '<div class="text-center text-slate-500">Chưa nghe thấy âm thanh. Vui lòng đọc lớn hơn.</div>';
                     } else {
-                        analysis = `<div class="text-green-600 font-bold flex items-center gap-2 mt-2"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Tuyệt vời! Bạn phát âm rất chuẩn xác cả âm đầu, giữa và cuối.</div>`;
+                        analysis = `<div class="bg-emerald-50 text-emerald-700 p-4 rounded-2xl border border-emerald-100 font-bold flex items-center justify-center gap-2"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Tuyệt hảo! Bạn phát âm chuẩn xác như người bản xứ.</div>`;
                     }
 
                 } else {
@@ -1053,11 +1103,11 @@
                     score = expectedWords.length > 0 ? Math.round((correctWords / expectedWords.length) * 100) : 0;
                     
                     if (score < 100 && cleanSpoken.length > 0) {
-                        analysis = `<div class="bg-white p-3 rounded-xl border border-red-100">Hệ thống ghi nhận: <span class="italic text-gray-500">"${cleanSpoken}"</span>.<br/><br/>Bạn đã đọc <strong class="text-red-500">sót từ (gạch đỏ)</strong> hoặc <strong class="text-orange-500">dư từ (màu cam nhỏ)</strong>. Hãy chú ý kỹ phần bị gạch bỏ.</div>`;
+                        analysis = `<div class="bg-rose-50 p-4 rounded-2xl border border-rose-100 text-rose-800">Hệ thống ghi nhận: <span class="italic text-rose-600">"${cleanSpoken}"</span>.<br/><br/>Bạn đã đọc <strong class="bg-rose-200 px-1 rounded">sót từ (gạch đỏ)</strong> hoặc <strong class="bg-amber-100 text-amber-700 px-1 rounded">dư từ (vàng gạch ngang)</strong>. Hãy chú ý kỹ phần bị gạch bỏ.</div>`;
                     } else if (cleanSpoken.length === 0) {
-                        analysis = "Chưa nghe thấy âm thanh. Vui lòng đọc lớn hơn.";
+                        analysis = '<div class="text-center text-slate-500">Chưa nghe thấy âm thanh. Vui lòng đọc lớn hơn.</div>';
                     } else {
-                        analysis = `<div class="text-green-600 font-bold flex items-center gap-2 mt-2"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Độ lưu loát tuyệt vời!</div>`;
+                        analysis = `<div class="bg-emerald-50 text-emerald-700 p-4 rounded-2xl border border-emerald-100 font-bold flex items-center justify-center gap-2"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Độ lưu loát tuyệt vời!</div>`;
                     }
                 }
 
@@ -1066,41 +1116,38 @@
             }
 
             function getScoreColorClass(score) {
-                if (score >= 80) return "border-green-500 text-green-600 bg-green-50";
-                if (score >= 50) return "border-orange-400 text-orange-500 bg-orange-50";
-                return "border-red-500 text-red-600 bg-red-50";
+                if (score >= 80) return "border-emerald-500 text-emerald-600";
+                if (score >= 50) return "border-amber-400 text-amber-500";
+                return "border-rose-500 text-rose-600";
             }
 
             function getBadgeColorClass(score) {
-                if (score >= 80) return "bg-green-500";
-                if (score >= 50) return "bg-yellow-400 text-gray-800";
-                return "bg-red-500";
+                if (score >= 80) return "bg-emerald-500";
+                if (score >= 50) return "bg-amber-400 text-amber-900";
+                return "bg-rose-500";
             }
 
-            // --- UI RENDERING TỪ ĐIỂN ---
             function renderPhonemeNavigation() {
                 const navContainer = document.getElementById('phoneme-navigation');
                 navContainer.innerHTML = '';
                 
                 for (const category in phoneticsData) {
                     let categoryHtml = `<div>
-                        <h3 class="text-xs font-black text-gray-400 uppercase tracking-wider mb-3">${category}</h3>
-                        <div class="flex flex-wrap gap-2 md:gap-3">`;
+                        <h3 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-slate-300"></div> ${category}</h3>
+                        <div class="flex flex-wrap gap-2 md:gap-3 mb-8 last:mb-0">`;
                     
                     for (const phoneme in phoneticsData[category]) {
-                        // Tính điểm trung bình của âm này
                         const avgScore = getPhonemeAverageScore(category, phoneme);
                         let badgeHtml = '';
                         
                         if (avgScore > 0) {
                             const badgeColor = getBadgeColorClass(avgScore);
-                            badgeHtml = `<span class="absolute -top-2 -right-2 ${badgeColor} text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow border border-white badge-pop z-10">${avgScore}%</span>`;
+                            badgeHtml = `<span class="absolute -top-2.5 -right-2.5 ${badgeColor} text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm border border-white badge-pop z-10">${avgScore}%</span>`;
                         }
 
-                        // Kiểm tra xem nút này có đang được chọn không để thêm class active
                         const isActive = (currentCategoryContext === category && currentPhonemeContext === phoneme) ? 'active' : '';
 
-                        categoryHtml += `<button class="phoneme-btn ${isActive} relative font-mono text-lg md:text-xl bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 text-gray-600 font-bold py-2 md:py-3 px-4 md:px-6 rounded-xl" data-category="${category}" data-phoneme="${phoneme}">
+                        categoryHtml += `<button class="phoneme-btn ${isActive} relative font-mono text-lg md:text-xl bg-white hover:bg-slate-50 text-slate-700 font-bold py-2.5 md:py-3.5 px-5 md:px-7 rounded-2xl ring-1 ring-slate-200 hover:ring-indigo-300" data-category="${category}" data-phoneme="${phoneme}">
                             ${phoneme}
                             ${badgeHtml}
                         </button>`;
@@ -1108,8 +1155,6 @@
                     categoryHtml += `</div></div>`;
                     navContainer.innerHTML += categoryHtml;
                 }
-                
-                // Cài đặt lại Events sau khi render
                 addPhonemeNavListeners();
             }
 
@@ -1122,52 +1167,52 @@
 
                 let wordsHtml = data.words.map((item, index) => {
                     const wordScore = savedWordScores[item.word] || 0;
-                    const isCompleted = wordScore >= 70; // Chuẩn 70 điểm là Đã thuộc
+                    const isCompleted = wordScore >= 70; 
                     
                     let statusBadge = '';
                     if (isCompleted) {
-                        statusBadge = `<div class="absolute top-0 right-0 bg-green-500 text-white text-[10px] uppercase font-bold px-2 py-1 rounded-bl-lg rounded-tr-2xl flex items-center gap-1 shadow-sm">
-                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>Đã thuộc (${wordScore}%)
-                           </div><div class="absolute inset-0 border-2 border-green-400 rounded-2xl pointer-events-none opacity-30"></div>`;
+                        statusBadge = `<div class="absolute top-0 right-0 bg-emerald-500 text-white text-[10px] uppercase font-bold px-3 py-1 rounded-bl-xl rounded-tr-3xl flex items-center gap-1 shadow-sm z-20">
+                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>Đã thuộc (${wordScore}%)
+                           </div><div class="absolute inset-0 border-[3px] border-emerald-400/30 rounded-[1.5rem] pointer-events-none z-10"></div>`;
                     } else if (wordScore > 0) {
-                        statusBadge = `<div class="absolute top-0 right-0 bg-orange-400 text-white text-[10px] uppercase font-bold px-2 py-1 rounded-bl-lg rounded-tr-2xl flex items-center gap-1 shadow-sm">
+                        statusBadge = `<div class="absolute top-0 right-0 bg-amber-400 text-amber-900 text-[10px] uppercase font-bold px-3 py-1 rounded-bl-xl rounded-tr-3xl flex items-center gap-1 shadow-sm z-20">
                              Đang học (${wordScore}%)
                            </div>`;
                     }
 
                     return `
-                    <div class="card bg-white p-5 rounded-2xl border ${isCompleted ? 'border-green-200 bg-green-50/30' : 'border-gray-100'} shadow-sm flex items-center justify-between group relative" data-idx="${index}">
+                    <div class="card bg-white p-6 rounded-[1.5rem] border border-slate-100 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] flex items-center justify-between group relative overflow-hidden" data-idx="${index}">
                         ${statusBadge}
                         <div class="relative z-10">
-                            <h4 class="text-2xl font-black ${isCompleted ? 'text-green-800' : 'text-gray-800'} mb-1">${item.word}</h4>
-                            <p class="${isCompleted ? 'text-green-600' : 'text-gray-500'} font-mono text-sm font-medium">${item.transcription}</p>
+                            <h4 class="text-2xl font-black ${isCompleted ? 'text-emerald-900' : 'text-slate-800'} mb-1">${item.word}</h4>
+                            <p class="${isCompleted ? 'text-emerald-600' : 'text-slate-400'} font-mono text-sm font-semibold">${item.transcription}</p>
                         </div>
-                        <div class="${isCompleted ? 'bg-green-100 text-green-700 group-hover:bg-green-600' : 'bg-blue-50 text-blue-600 group-hover:bg-blue-600'} px-4 py-2 rounded-xl font-bold group-hover:text-white transition-colors relative z-10 text-sm">
-                            Luyện tập
+                        <div class="${isCompleted ? 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white' : 'bg-slate-50 text-slate-400 group-hover:bg-indigo-600 group-hover:text-white'} w-12 h-12 flex items-center justify-center rounded-2xl transition-colors relative z-10">
+                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347c-.75.412-1.667-.13-1.667-.986V5.653Z" /></svg>
                         </div>
                     </div>`;
                 }).join('');
 
                 contentContainer.innerHTML = `
-                    <div class="mb-8 bg-blue-600 text-white rounded-3xl p-6 md:p-8 shadow-lg relative overflow-hidden">
-                        <div class="absolute top-0 right-0 -mr-8 -mt-8 w-40 h-40 bg-blue-500 rounded-full opacity-50 blur-2xl"></div>
-                        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div class="mb-8 bg-gradient-to-br from-indigo-600 to-blue-700 text-white rounded-[2rem] p-8 shadow-xl shadow-indigo-600/20 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 -mr-12 -mt-12 w-48 h-48 bg-white opacity-10 rounded-full blur-2xl"></div>
+                        <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
                             <div>
-                                <h3 class="text-4xl font-black mb-2 font-mono flex items-center gap-3">
-                                    <span class="bg-white text-blue-600 px-4 py-1 rounded-2xl shadow-sm">${phoneme}</span>
-                                    <button onclick="window.playUnifiedAudio('${data.words[0].word}')" class="text-white hover:text-blue-100 bg-blue-700/50 p-2 rounded-full cursor-pointer transition-colors backdrop-blur-sm">
-                                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 0 0 1.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.66 1.905H6.44l4.5 4.5c.945.945 2.56.276 2.56-1.06V4.06ZM18.584 5.106a.75.75 0 0 1 1.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 0 1-1.06-1.06 8.25 8.25 0 0 0 0-11.668.75.75 0 0 1 0-1.06Z" /><path d="M15.932 7.757a.75.75 0 0 1 1.061 0 6 6 0 0 1 0 8.486.75.75 0 0 1-1.06-1.061 4.5 4.5 0 0 0 0-6.364.75.75 0 0 1 0-1.06Z" /></svg>
+                                <div class="flex items-center gap-4 mb-3">
+                                    <h3 class="text-5xl font-black font-mono bg-white text-indigo-600 px-5 py-2 rounded-2xl shadow-sm inline-block">${phoneme}</h3>
+                                    <button onclick="window.playUnifiedAudio('${data.words[0].word}')" class="text-white bg-white/20 hover:bg-white/30 p-3 rounded-full cursor-pointer transition-colors backdrop-blur-md">
+                                        <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24"><path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 0 0 1.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.66 1.905H6.44l4.5 4.5c.945.945 2.56.276 2.56-1.06V4.06ZM18.584 5.106a.75.75 0 0 1 1.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 0 1-1.06-1.06 8.25 8.25 0 0 0 0-11.668.75.75 0 0 1 0-1.06Z" /><path d="M15.932 7.757a.75.75 0 0 1 1.061 0 6 6 0 0 1 0 8.486.75.75 0 0 1-1.06-1.061 4.5 4.5 0 0 0 0-6.364.75.75 0 0 1 0-1.06Z" /></svg>
                                     </button>
-                                </h3>
-                                <p class="text-blue-100 text-sm md:text-base font-medium max-w-xl leading-relaxed">${data.description}</p>
+                                </div>
+                                <p class="text-indigo-100 text-base md:text-lg font-medium max-w-2xl leading-relaxed opacity-90">${data.description}</p>
                             </div>
-                            <button id="start-review-btn" class="bg-white text-blue-600 hover:bg-blue-50 px-6 py-3 rounded-xl font-black shadow-md flex items-center justify-center gap-2 transition-transform hover:scale-105 whitespace-nowrap">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                                Ôn tập âm này
+                            <button id="start-review-btn" class="bg-white text-indigo-600 hover:bg-indigo-50 px-8 py-4 rounded-2xl font-black shadow-lg flex items-center justify-center gap-3 transition-transform hover:scale-105 whitespace-nowrap group">
+                                <svg class="w-6 h-6 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                                Bắt đầu Ôn tập
                             </button>
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                         ${wordsHtml}
                     </div>
                 `;
@@ -1184,7 +1229,6 @@
                 });
             }
 
-            // --- Modal Luyện Tập ---
             const modal = document.getElementById('practice-modal');
             let activeRecordType = null;
 
@@ -1223,11 +1267,15 @@
                     
                     const nextBtn = document.getElementById('review-next');
                     if (currentReviewIndex < reviewWords.length - 1) {
-                        nextBtn.style.display = 'flex';
-                        nextBtn.innerHTML = `Tiếp <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>`;
+                        nextBtn.innerHTML = `Tiếp <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>`;
+                        nextBtn.classList.replace('bg-emerald-600', 'bg-indigo-600');
+                        nextBtn.classList.replace('hover:bg-emerald-500', 'hover:bg-indigo-500');
+                        nextBtn.classList.replace('shadow-emerald-600/20', 'shadow-indigo-600/20');
                     } else {
-                        nextBtn.style.display = 'flex';
-                        nextBtn.innerHTML = `Hoàn thành <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+                        nextBtn.innerHTML = `Hoàn thành <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>`;
+                        nextBtn.classList.replace('bg-indigo-600', 'bg-emerald-600');
+                        nextBtn.classList.replace('hover:bg-indigo-500', 'hover:bg-emerald-500');
+                        nextBtn.classList.replace('shadow-indigo-600/20', 'shadow-emerald-600/20');
                     }
                 } else {
                     reviewNav.classList.add('hidden');
@@ -1248,7 +1296,6 @@
                     openPracticeModal(currentPhonemeContext, reviewWords[currentReviewIndex + 1], true, reviewWords, currentReviewIndex + 1);
                 } else {
                     modal.classList.remove('active');
-                    alert(`Tuyệt vời! Bạn đã hoàn thành ôn tập âm ${currentPhonemeContext}`);
                 }
             });
 
@@ -1281,11 +1328,7 @@
                 
                 document.getElementById(`record-${type}-btn`).classList.add('recording');
 
-                try {
-                    recognition.start();
-                } catch(e) {
-                    stopRecordingUI();
-                }
+                try { recognition.start(); } catch(e) { stopRecordingUI(); }
             }
 
             document.getElementById('record-word-btn').addEventListener('click', () => startRecording('word'));
@@ -1296,14 +1339,13 @@
                 document.getElementById('record-sentence-btn').classList.remove('recording');
             }
 
-            // Xử lý và Cập nhật điểm
             function handleRecognitionResult(transcript) {
                 const type = activeRecordType;
                 const feedback = getDetailedFeedback(expectedText, transcript, type);
                 const colorClass = getScoreColorClass(feedback.score);
                 
                 const area = document.getElementById(`${type}-result-area`);
-                const scoreCircle = area.querySelector('div');
+                const scoreContainer = document.getElementById(`${type}-score-container`);
                 const scoreText = document.getElementById(`${type}-score`);
                 const feedbackDisplay = document.getElementById(`${type}-detailed-feedback`);
                 const analysisBox = document.getElementById(`${type}-analysis-box`);
@@ -1311,19 +1353,16 @@
                 area.classList.remove('hidden');
                 area.classList.add('flex');
                 
-                scoreCircle.className = `inline-flex items-center justify-center w-${type==='word'?'20':'16'} h-${type==='word'?'20':'16'} rounded-full border-4 mb-3 relative shadow-inner ${colorClass}`;
+                // Update Score styles based on result
+                scoreContainer.className = `inline-flex items-center justify-center w-${type==='word'?'24':'20'} h-${type==='word'?'24':'20'} rounded-full border-[6px] mb-4 relative shadow-inner bg-white ${colorClass.split(' ')[0]}`;
                 scoreText.textContent = `${feedback.score}%`;
-                scoreText.className = `text-${type==='word'?'2xl':'xl'} font-black ${colorClass.split(' ')[1]}`; 
+                scoreText.className = `text-${type==='word'?'4xl':'2xl'} font-black ${colorClass.split(' ')[1]}`; 
                 
                 feedbackDisplay.innerHTML = feedback.html;
-                
-                if (feedback.analysis) {
-                    analysisBox.innerHTML = feedback.analysis;
-                } else {
-                    analysisBox.innerHTML = '';
-                }
+                if (feedback.analysis) analysisBox.innerHTML = feedback.analysis;
+                else analysisBox.innerHTML = '';
 
-                // CẬP NHẬT ĐIỂM CAO NHẤT LÊN LOCAL STORAGE
+                // Save Highscore
                 if (currentWordData) {
                     const currentSavedScore = savedWordScores[currentWordData.word] || 0;
                     if (feedback.score > currentSavedScore) {
@@ -1331,17 +1370,14 @@
                         localStorage.setItem('elsa_word_scores', JSON.stringify(savedWordScores));
                         
                         updateProgressUI();
-                        
-                        // Cập nhật lại giao diện ngay lập tức
-                        renderPhonemeNavigation(); // Render lại menu âm để cập nhật huy hiệu
+                        renderPhonemeNavigation(); 
                         if (currentCategoryContext && currentPhonemeContext && !isReviewMode) {
-                            displayWordList(currentCategoryContext, currentPhonemeContext); // Render lại list từ
+                            displayWordList(currentCategoryContext, currentPhonemeContext);
                         }
                     }
                 }
             }
 
-            // --- Khởi tạo ứng dụng ---
             function addPhonemeNavListeners() {
                 const buttons = document.querySelectorAll('.phoneme-btn');
                 buttons.forEach(btn => {
@@ -1354,7 +1390,6 @@
             }
             
             renderPhonemeNavigation();
-            
             const firstButton = document.querySelector('.phoneme-btn');
             if(firstButton) firstButton.click();
         }
