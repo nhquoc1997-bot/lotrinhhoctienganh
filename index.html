@@ -310,12 +310,11 @@
             );
         }
 
-        // --- LOGIN COMPONENT (GIAO DIỆN MỚI) ---
+        // --- LOGIN COMPONENT ---
         const LoginScreen = ({ onLogin, error }) => {
             const [u, setU] = useState(''); const [p, setP] = useState('');
             return (
                 <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-slate-900">
-                    {/* Abstract Background Elements */}
                     <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-600/30 rounded-full blur-[120px] pointer-events-none"></div>
                     <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-cyan-600/20 rounded-full blur-[100px] pointer-events-none"></div>
                     
@@ -346,7 +345,7 @@
             );
         };
 
-        // --- STUDENT HUB COMPONENT (GIỮ NGUYÊN LOGIC, NÂNG CẤP UI) ---
+        // --- STUDENT HUB COMPONENT ---
         const StudentHub = ({ user, users, timeData, db, handleLogout }) => {
             const [activeLesson, setActiveLesson] = useState(null);
             const [currentTab, setCurrentTab] = useState('lessons'); 
@@ -663,7 +662,6 @@
                 );
             };
 
-            // Global Navigation Bar - UPDATE: Thêm tabular-nums vào hiển thị giờ
             const GlobalNav = () => (
                 <nav className="glass-nav sticky top-0 z-40 border-b border-slate-200/50 px-4 sm:px-6 h-[72px] flex items-center justify-between sm:rounded-t-[2.5rem] mt-0 sm:mt-2">
                     <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setActiveLesson(null)}>
@@ -678,7 +676,6 @@
                                 <div className={`relative w-2.5 h-2.5 rounded-full shadow-sm ${isIdle ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
                             </div>
                             <Icon name="clock" size={16} className={isIdle ? 'text-amber-500' : 'text-emerald-600'} />
-                            {/* CLASS QUAN TRỌNG: tabular-nums để số đếm không bị giật */}
                             <span className={`font-mono tabular-nums font-black text-base sm:text-lg tracking-widest mt-0.5`}>
                                 {formatTime(localSeconds)}
                             </span>
@@ -720,7 +717,6 @@
                     <EditNameModal />
                     <GlobalNav />
                     
-                    {/* SUPER DASHBOARD WIDGET */}
                     <div className="premium-bg sm:rounded-[2.5rem] p-6 sm:p-10 text-white shadow-2xl relative overflow-hidden flex flex-col gap-8">
                         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start gap-6">
                             <div>
@@ -754,7 +750,6 @@
                                     <div className={`absolute top-0 left-0 w-full h-1.5 ${isIdle ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
                                     <Icon name="sun" size={20} className="text-indigo-300 mx-auto mb-2 opacity-80 group-hover:scale-110 transition-transform" />
                                     <p className="text-[10px] uppercase font-bold text-indigo-200 tracking-widest mb-1.5">Hôm nay</p>
-                                    {/* CLASS QUAN TRỌNG: tabular-nums để số đếm không bị giật */}
                                     <p className="font-mono tabular-nums font-black text-base sm:text-2xl text-white drop-shadow-md">{formatTime(myDailyTotal)}</p>
                                 </div>
                                 <div className="glass-panel p-3 sm:p-5 rounded-2xl flex flex-col justify-center text-center group hover:bg-white/10 transition-colors">
@@ -790,7 +785,6 @@
                         </div>
                     </div>
 
-                    {/* Tabs Navigation */}
                     <div className="flex flex-wrap gap-2 bg-slate-200/50 p-2 rounded-[1.25rem] w-full sm:w-fit mx-4 sm:mx-auto relative z-10 border border-slate-200/50">
                         <button onClick={() => setCurrentTab('lessons')} className={`flex-1 sm:flex-none justify-center px-4 sm:px-6 py-3 rounded-xl text-sm font-bold flex items-center gap-2 transition-all ${currentTab === 'lessons' ? 'bg-white text-indigo-600 shadow-sm border border-slate-100' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}><Icon name="book-open" size={18} /> Kho Bài học</button>
                         <button onClick={() => setCurrentTab('leaderboard_week')} className={`flex-1 sm:flex-none justify-center px-4 sm:px-6 py-3 rounded-xl text-sm font-bold flex items-center gap-2 transition-all ${currentTab === 'leaderboard_week' ? 'bg-white text-amber-500 shadow-sm border border-slate-100' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}><Icon name="trophy" size={18} /> BXH Tuần</button>
@@ -825,7 +819,7 @@
             );
         };
 
-        // --- LEADERBOARD COMPONENT (GIỮ NGUYÊN LOGIC, NÂNG CẤP UI) ---
+        // --- LEADERBOARD COMPONENT ---
         const Leaderboard = ({ title, subtitle, users, timeData, dates, label, currentUser, currentDevice, localSeconds, todayStr, deviceName }) => {
             
             let allProfiles = [];
@@ -922,7 +916,7 @@
             );
         };
 
-        // --- ADMIN PANEL (GIỮ NGUYÊN LOGIC, CHỈNH LẠI GIAO DIỆN) ---
+        // --- ADMIN PANEL (NÂNG CẤP VỚI THÙNG RÁC & SAO LƯU) ---
         const AdminPanel = ({ users, timeData, db, handleLogout }) => {
             const [n, setN] = useState(''); const [u, setU] = useState(''); const [p, setP] = useState('');
             const [addError, setAddError] = useState(''); const [deletingId, setDeletingId] = useState(null);
@@ -932,10 +926,28 @@
             const [resetMode, setResetMode] = useState('data_only'); 
             const [sortBy, setSortBy] = useState('month');
             
+            // TÍNH NĂNG MỚI: Thùng rác & Backup
+            const [adminTab, setAdminTab] = useState('manage'); // 'manage', 'trash', 'backup'
+            const [trashData, setTrashData] = useState([]);
+            const [backupMessage, setBackupMessage] = useState(null);
+            const [isRestoringBackup, setIsRestoringBackup] = useState(false);
+            const fileInputRef = useRef(null);
+
             const todayStr = getTodayStr();
             const weekDates = useMemo(() => getCurrentWeekDates(), []);
             const monthDates = useMemo(() => getCurrentMonthDates(), []);
             
+            // Lắng nghe dữ liệu Thùng rác
+            useEffect(() => {
+                if (!db) return;
+                const unsub = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'bob_trash'), snap => {
+                    const list = [];
+                    snap.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
+                    setTrashData(list.sort((a, b) => b.deletedAt - a.deletedAt));
+                });
+                return () => unsub();
+            }, [db]);
+
             let allLearners = [];
             users.filter(x => x.role === 'student').forEach(s => {
                 const userDevices = timeData[s.id] || {};
@@ -1007,9 +1019,20 @@
                 } catch(err) { setAddError("Lỗi lưu Đám mây."); }
             };
 
+            // LOGIC XÓA MỚI: CHUYỂN VÀO THÙNG RÁC
             const handleDeleteAccount = async (id) => {
                 try {
                     if (db) { 
+                        const userToDel = users.find(x => x.id === id);
+                        const timeToDel = timeData[id] || {};
+                        // Đưa vào thùng rác trước
+                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_trash', id), {
+                            type: 'account',
+                            user: userToDel,
+                            timeData: timeToDel,
+                            deletedAt: Date.now()
+                        });
+                        // Sau đó mới xóa thật
                         await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_users', id)); 
                         await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_timeData', id)); 
                     }
@@ -1020,12 +1043,46 @@
             const handleDeleteProfile = async (accountId, devIds) => {
                 try {
                     if (db) {
+                        const timeDocData = timeData[accountId] || {};
+                        const profileData = {};
+                        devIds.forEach(id => { if(timeDocData[id]) profileData[id] = timeDocData[id]; });
+                        const trashId = `${accountId}_${Date.now()}`;
+                        // Đưa vào thùng rác
+                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_trash', trashId), {
+                            type: 'profile',
+                            accountId: accountId,
+                            profileData: profileData,
+                            deletedAt: Date.now()
+                        });
+
                         const timeRef = doc(db, 'artifacts', appId, 'public', 'data', 'bob_timeData', accountId);
                         const updates = {};
                         devIds.forEach(id => { updates[id] = deleteField(); });
                         await updateDoc(timeRef, updates);
                     }
                     setDeletingId(null);
+                } catch(err) { console.error(err); }
+            };
+
+            // LOGIC KHÔI PHỤC TỪ THÙNG RÁC
+            const handleRestoreFromTrash = async (item) => {
+                try {
+                    if (db) {
+                        if (item.type === 'account') {
+                            if (item.user) await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_users', item.id), item.user);
+                            if (item.timeData) await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_timeData', item.id), item.timeData);
+                        } else if (item.type === 'profile') {
+                            const timeRef = doc(db, 'artifacts', appId, 'public', 'data', 'bob_timeData', item.accountId);
+                            await setDoc(timeRef, item.profileData, { merge: true });
+                        }
+                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_trash', item.id));
+                    }
+                } catch(err) { console.error(err); }
+            };
+
+            const handlePermanentDelete = async (id) => {
+                try {
+                    if (db) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_trash', id));
                 } catch(err) { console.error(err); }
             };
 
@@ -1057,20 +1114,75 @@
                 setIsResetting(false);
             };
 
+            // LOGIC XUẤT/NHẬP FILE JSON SAO LƯU
+            const handleExportData = () => {
+                const data = { users, timeData };
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `BobEnglish_Backup_${getTodayStr()}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            };
+
+            const handleImportData = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    try {
+                        const data = JSON.parse(event.target.result);
+                        if (data.users && data.timeData && db) {
+                            setIsRestoringBackup(true);
+                            setBackupMessage({ type: 'success', text: 'Đang tiến hành khôi phục...' });
+                            
+                            for (const u of data.users) {
+                                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_users', u.id), u);
+                            }
+                            for (const [uid, tData] of Object.entries(data.timeData)) {
+                                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bob_timeData', uid), tData);
+                            }
+                            
+                            setBackupMessage({ type: 'success', text: 'Khôi phục dữ liệu từ file thành công!' });
+                            setIsRestoringBackup(false);
+                        } else {
+                            setBackupMessage({ type: 'error', text: 'File không đúng định dạng sao lưu của BobEnglish.' });
+                        }
+                    } catch (err) {
+                        setBackupMessage({ type: 'error', text: 'File không hợp lệ hoặc có lỗi xảy ra!' });
+                        setIsRestoringBackup(false);
+                    }
+                };
+                reader.readAsText(file);
+                e.target.value = ''; // Reset input để có thể upload lại file giống
+            };
+
             return (
                 <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 animate-fade-in max-w-7xl mx-auto">
                     
-                    <div className="xl:col-span-12 bg-slate-900 sticky top-0 z-40 px-6 h-20 flex items-center justify-between rounded-[2rem] shadow-xl mb-4">
+                    {/* ADMIN HEADER & NAVIGATION */}
+                    <div className="xl:col-span-12 bg-slate-900 sticky top-0 z-40 px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between rounded-[1.5rem] sm:rounded-[2rem] shadow-xl mb-4 gap-4">
                         <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-white border border-white/20"><Icon name="shield-check" size={24} /></div>
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/10 rounded-2xl flex items-center justify-center text-white border border-white/20"><Icon name="shield-check" size={20} /></div>
                             <div>
-                                <span className="text-xl font-black text-white tracking-tight hidden sm:block leading-none">Admin Center</span>
-                                <span className="text-xs text-indigo-300 font-bold hidden sm:block mt-1 uppercase tracking-widest">Quản lý hệ thống</span>
+                                <span className="text-lg sm:text-xl font-black text-white tracking-tight leading-none">Admin Center</span>
+                                <span className="text-[10px] sm:text-xs text-indigo-300 font-bold block mt-0.5 sm:mt-1 uppercase tracking-widest">Quản lý hệ thống</span>
                             </div>
                         </div>
-                        <button onClick={handleLogout} className="flex items-center gap-2 text-sm font-bold text-white bg-red-500 hover:bg-red-600 px-5 py-3 rounded-2xl transition-all shadow-lg active:scale-95"><Icon name="log-out" size={18} /> Đăng xuất</button>
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+                            <button onClick={() => setAdminTab('manage')} className={`text-xs sm:text-sm font-bold px-3 py-2 rounded-xl transition-all ${adminTab === 'manage' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-white/10'}`}>Quản lý</button>
+                            <button onClick={() => setAdminTab('trash')} className={`text-xs sm:text-sm font-bold px-3 py-2 rounded-xl transition-all flex items-center gap-1.5 ${adminTab === 'trash' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-white/10'}`}>
+                                <Icon name="trash" size={14} className="sm:w-4 sm:h-4"/> Thùng rác {trashData.length > 0 && <span className="bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-md ml-0.5">{trashData.length}</span>}
+                            </button>
+                            <button onClick={() => setAdminTab('backup')} className={`text-xs sm:text-sm font-bold px-3 py-2 rounded-xl transition-all flex items-center gap-1.5 ${adminTab === 'backup' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-white/10'}`}>
+                                <Icon name="download-cloud" size={14} className="sm:w-4 sm:h-4"/> Sao lưu
+                            </button>
+                            <button onClick={handleLogout} className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white bg-red-500 hover:bg-red-600 px-3 sm:px-5 py-2 sm:py-3 rounded-xl sm:rounded-2xl transition-all shadow-lg active:scale-95 ml-auto sm:ml-0"><Icon name="log-out" size={14} className="sm:w-[18px] sm:h-[18px]" /> Đăng xuất</button>
+                        </div>
                     </div>
 
+                    {/* MODAL RESET */}
                     {showResetModal && (
                         <div className="fixed inset-0 z-[99999] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
                             <div className="bg-white p-8 rounded-[2.5rem] max-w-md w-full shadow-2xl animate-fade-up border-t-[6px] border-red-500">
@@ -1107,122 +1219,218 @@
                         </div>
                     )}
 
-                    <div className="xl:col-span-3 order-2 xl:order-1">
-                        <div className="bg-white p-6 sm:p-8 rounded-[2rem] border border-slate-200/60 shadow-sm sticky top-28">
-                            <h3 className="font-black text-xl mb-6 flex items-center gap-3 tracking-tight text-slate-800"><div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl"><Icon name="user-plus" size={20} /></div>Thêm Học Viên</h3>
-                            <form onSubmit={handleAdd} className="space-y-5">
-                                {addError && <div className="p-3 bg-red-50 text-red-600 text-xs font-bold rounded-xl border border-red-100">{addError}</div>}
-                                <div className="space-y-1.5"><label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Tên nhóm / học viên</label><input placeholder="Nhập tên hiển thị..." value={n} onChange={e=>setN(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white transition-colors text-sm font-medium" required /></div>
-                                <div className="space-y-1.5"><label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Tài khoản (Username)</label><input placeholder="Nhập tên đăng nhập..." value={u} onChange={e=>setU(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white transition-colors text-sm font-medium" required /></div>
-                                <div className="space-y-1.5"><label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Mật khẩu</label><input placeholder="Nhập mật khẩu..." value={p} onChange={e=>setP(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white transition-colors text-sm font-medium" required /></div>
-                                <button className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 active:scale-[0.98] transition-all text-sm shadow-lg mt-4 uppercase tracking-wider">Tạo tài khoản</button>
-                            </form>
-                        </div>
-                    </div>
+                    {/* TAB: QUẢN LÝ (TRANG CHỦ ADMIN) */}
+                    {adminTab === 'manage' && (
+                        <>
+                            <div className="xl:col-span-3 order-2 xl:order-1">
+                                <div className="bg-white p-6 sm:p-8 rounded-[2rem] border border-slate-200/60 shadow-sm sticky top-28">
+                                    <h3 className="font-black text-xl mb-6 flex items-center gap-3 tracking-tight text-slate-800"><div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl"><Icon name="user-plus" size={20} /></div>Thêm Học Viên</h3>
+                                    <form onSubmit={handleAdd} className="space-y-5">
+                                        {addError && <div className="p-3 bg-red-50 text-red-600 text-xs font-bold rounded-xl border border-red-100">{addError}</div>}
+                                        <div className="space-y-1.5"><label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Tên nhóm / học viên</label><input placeholder="Nhập tên hiển thị..." value={n} onChange={e=>setN(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white transition-colors text-sm font-medium" required /></div>
+                                        <div className="space-y-1.5"><label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Tài khoản (Username)</label><input placeholder="Nhập tên đăng nhập..." value={u} onChange={e=>setU(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white transition-colors text-sm font-medium" required /></div>
+                                        <div className="space-y-1.5"><label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Mật khẩu</label><input placeholder="Nhập mật khẩu..." value={p} onChange={e=>setP(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white transition-colors text-sm font-medium" required /></div>
+                                        <button className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 active:scale-[0.98] transition-all text-sm shadow-lg mt-4 uppercase tracking-wider">Tạo tài khoản</button>
+                                    </form>
+                                </div>
+                            </div>
 
-                    <div className="xl:col-span-9 order-1 xl:order-2">
-                        <div className="bg-white rounded-[2rem] border border-slate-200/60 shadow-sm overflow-hidden flex flex-col h-[850px]">
-                            <div className="p-5 sm:p-6 bg-slate-50/80 border-b flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                                <div className="flex items-center gap-4 w-full sm:w-auto">
-                                    <div className="w-12 h-12 bg-white text-indigo-600 rounded-2xl flex items-center justify-center shrink-0 shadow-sm border border-slate-100"><Icon name="activity" size={24} /></div>
-                                    <div className="flex-1">
-                                        <h2 className="font-black text-xl text-slate-800 tracking-tight">Thống kê Học tập</h2>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Lọc theo:</span>
-                                            <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="text-xs border border-slate-200 bg-white rounded-lg px-2 py-1 outline-none font-bold text-indigo-600 cursor-pointer shadow-sm hover:border-indigo-300 transition-colors">
-                                                <option value="month">Thời gian Tháng</option>
-                                                <option value="week">Thời gian Tuần</option>
-                                                <option value="today">Thời gian Hôm nay</option>
-                                            </select>
+                            <div className="xl:col-span-9 order-1 xl:order-2">
+                                <div className="bg-white rounded-[2rem] border border-slate-200/60 shadow-sm overflow-hidden flex flex-col h-[850px]">
+                                    <div className="p-5 sm:p-6 bg-slate-50/80 border-b flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                        <div className="flex items-center gap-4 w-full sm:w-auto">
+                                            <div className="w-12 h-12 bg-white text-indigo-600 rounded-2xl flex items-center justify-center shrink-0 shadow-sm border border-slate-100"><Icon name="activity" size={24} /></div>
+                                            <div className="flex-1">
+                                                <h2 className="font-black text-xl text-slate-800 tracking-tight">Thống kê Học tập</h2>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Lọc theo:</span>
+                                                    <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="text-xs border border-slate-200 bg-white rounded-lg px-2 py-1 outline-none font-bold text-indigo-600 cursor-pointer shadow-sm hover:border-indigo-300 transition-colors">
+                                                        <option value="month">Thời gian Tháng</option>
+                                                        <option value="week">Thời gian Tuần</option>
+                                                        <option value="today">Thời gian Hôm nay</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center justify-between w-full sm:w-auto gap-3">
+                                            <span className="bg-indigo-50 text-indigo-700 px-4 py-2 rounded-xl text-sm font-black border border-indigo-100 shrink-0">{allLearners.length} Hồ sơ</span>
+                                            <button onClick={() => setShowResetModal(true)} className="bg-white text-red-600 px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-red-50 transition-colors border border-red-200 shadow-sm shrink-0"><Icon name="rotate-ccw" size={16} /> Reset Data</button>
                                         </div>
                                     </div>
+                                    
+                                    <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 space-y-4 bg-slate-50/30">
+                                        {allLearners.length === 0 ? <div className="h-full flex flex-col items-center justify-center opacity-40"><Icon name="users" size={64} className="mb-4 text-slate-300" /><p className="font-bold text-lg text-slate-500">Chưa có dữ liệu học viên</p></div> 
+                                        : allLearners.map((l, index) => {
+                                            const isOnline = l.lastActive && (Date.now() - l.lastActive < 120000);
+                                            
+                                            return (
+                                            <div key={l.uniqueId} className="p-5 flex flex-col lg:flex-row gap-5 justify-between items-start lg:items-center bg-white border border-slate-200 rounded-[1.5rem] hover:border-indigo-300 hover:shadow-md transition-all">
+                                                <div className="flex items-start sm:items-center gap-4 w-full lg:w-auto flex-1 min-w-0">
+                                                    <div className="w-12 h-12 bg-slate-50 text-slate-500 rounded-2xl flex items-center justify-center font-black text-lg shrink-0 border border-slate-200 relative">
+                                                        {index + 1}
+                                                        {isOnline && <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full animate-pulse shadow-sm"></div>}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2.5">
+                                                            <p className="font-black text-base text-slate-800 truncate tracking-tight">{l.deviceName}</p>
+                                                            <span className={`text-[10px] px-2 py-1 rounded-lg flex items-center gap-1.5 border shrink-0 font-bold ${isOnline ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+                                                                <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></span>
+                                                                {isOnline ? 'Đang học' : (l.lastActive > 0 ? `Offline ${getTimeAgo(l.lastActive)}` : 'Chưa online')}
+                                                            </span>
+                                                        </div>
+                                                        
+                                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5 w-fit">
+                                                            <p className="text-[11px] font-medium text-slate-500 truncate">
+                                                                Nhóm/TK: <span className="font-bold text-slate-700">{l.accountName}</span> <span className="mx-1 text-slate-300">|</span> User: <span className="font-bold text-indigo-600">{l.username}</span> <span className="mx-1 text-slate-300">|</span> Pass: <span className="font-bold text-slate-700">{l.password}</span>
+                                                            </p>
+                                                        </div>
+
+                                                        {(() => {
+                                                            const accountDevices = timeData[l.accountId] || {};
+                                                            const hasMultipleNames = Object.values(accountDevices).some(dev => dev.name && dev.name.trim().toLowerCase() !== l.deviceName.trim().toLowerCase());
+                                                            if (hasMultipleNames) {
+                                                                return (
+                                                                    <button onClick={() => handleForceSyncName(l.accountId, l.deviceName)} className="mt-2.5 flex items-center gap-1.5 text-[10px] font-bold bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors w-fit border border-indigo-100">
+                                                                        <Icon name="link" size={12} /> Gộp mọi máy trong TK về tên này
+                                                                    </button>
+                                                                );
+                                                            }
+                                                            return null;
+                                                        })()}
+                                                        
+                                                        {l.topLesson && (
+                                                            <div className="mt-2.5 flex items-center gap-1.5 text-[11px] font-bold text-amber-600 bg-amber-50 w-fit max-w-full px-2.5 py-1 rounded-lg border border-amber-100/50 truncate">
+                                                                <Icon name="star" size={12} className="shrink-0 text-amber-500" />
+                                                                <span className="truncate">Yêu thích: {getLessonTitle(l.topLesson.path)} ({l.topLesson.percent}%)</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between lg:justify-end gap-4 w-full lg:w-auto mt-3 lg:mt-0 pt-4 lg:pt-0 border-t border-slate-100 lg:border-none">
+                                                    <div className="flex flex-col gap-1.5 bg-slate-50 p-3 rounded-xl border border-slate-200 w-full sm:w-auto shrink-0">
+                                                        <div className="flex justify-between items-center sm:justify-start sm:gap-8 min-w-0 sm:min-w-[160px]">
+                                                            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Hôm nay</span>
+                                                            <span className="font-mono tabular-nums font-bold text-sm text-slate-700">{formatTime(l.totalToday)}</span>
+                                                        </div>
+                                                        <div className="flex justify-between items-center sm:justify-start sm:gap-8">
+                                                            <span className="text-[10px] uppercase font-bold text-amber-500 tracking-widest">Tuần</span>
+                                                            <span className="font-mono tabular-nums font-bold text-sm text-amber-600">{formatTime(l.weeklyTotal)}</span>
+                                                        </div>
+                                                        <div className="flex justify-between items-center sm:justify-start sm:gap-8">
+                                                            <span className="text-[10px] uppercase font-bold text-emerald-500 tracking-widest">Tháng</span>
+                                                            <span className="font-mono tabular-nums font-black text-sm text-emerald-600">{formatTime(l.monthlyTotal)}</span>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    {deletingId === l.uniqueId ? (
+                                                        <div className="flex flex-row sm:flex-col gap-2 shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
+                                                            {l.isDeviceRow && <button onClick={() => handleDeleteProfile(l.accountId, l.devIds)} className="flex-1 sm:flex-none text-[10px] font-black bg-orange-100 text-orange-600 px-3 py-2 rounded-xl hover:bg-orange-200 active:scale-95 uppercase text-center transition-colors" title="Chỉ xóa hồ sơ học viên này vào Thùng Rác">Xóa Tên</button>}
+                                                            <button onClick={() => handleDeleteAccount(l.accountId)} className="flex-1 sm:flex-none text-[10px] font-black bg-red-100 text-red-600 px-3 py-2 rounded-xl hover:bg-red-200 active:scale-95 uppercase text-center transition-colors" title="Xóa hoàn toàn tài khoản gốc chứa học viên này vào Thùng Rác">Xóa TK Gốc</button>
+                                                            <button onClick={() => setDeletingId(null)} className="flex-1 sm:flex-none text-[10px] font-black bg-slate-200 text-slate-600 px-3 py-2 rounded-xl hover:bg-slate-300 active:scale-95 uppercase text-center transition-colors">Hủy</button>
+                                                        </div>
+                                                    ) : (
+                                                        <button onClick={() => setDeletingId(l.uniqueId)} className="w-full sm:w-10 h-10 flex items-center justify-center text-slate-400 bg-white border border-slate-200 hover:text-red-500 hover:bg-red-50 hover:border-red-200 rounded-xl transition-colors shrink-0 sm:ml-2 mt-2 sm:mt-0"><Icon name="trash-2" size={18} /><span className="sm:hidden ml-2 text-sm font-bold">Xóa dữ liệu</span></button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )})}
+                                    </div>
                                 </div>
-                                <div className="flex items-center justify-between w-full sm:w-auto gap-3">
-                                    <span className="bg-indigo-50 text-indigo-700 px-4 py-2 rounded-xl text-sm font-black border border-indigo-100 shrink-0">{allLearners.length} Hồ sơ</span>
-                                    <button onClick={() => setShowResetModal(true)} className="bg-white text-red-600 px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-red-50 transition-colors border border-red-200 shadow-sm shrink-0"><Icon name="rotate-ccw" size={16} /> Reset Data</button>
-                                </div>
+                            </div>
+                        </>
+                    )}
+
+                    {/* TAB: THÙNG RÁC */}
+                    {adminTab === 'trash' && (
+                        <div className="xl:col-span-12 bg-white rounded-[2rem] border border-slate-200/60 shadow-sm p-6 sm:p-8 animate-fade-in">
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="font-black text-xl flex items-center gap-3 tracking-tight text-slate-800"><div className="p-2.5 bg-red-50 text-red-600 rounded-xl"><Icon name="trash" size={20} /></div>Thùng rác (Đã xóa)</h3>
+                                <p className="text-sm text-slate-500 font-medium hidden sm:block">Dữ liệu đã xóa từ nay sẽ nằm tại đây.</p>
                             </div>
                             
-                            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 space-y-4 bg-slate-50/30">
-                                {allLearners.length === 0 ? <div className="h-full flex flex-col items-center justify-center opacity-40"><Icon name="users" size={64} className="mb-4 text-slate-300" /><p className="font-bold text-lg text-slate-500">Chưa có dữ liệu học viên</p></div> 
-                                : allLearners.map((l, index) => {
-                                    const isOnline = l.lastActive && (Date.now() - l.lastActive < 120000);
-                                    
-                                    return (
-                                    <div key={l.uniqueId} className="p-5 flex flex-col lg:flex-row gap-5 justify-between items-start lg:items-center bg-white border border-slate-200 rounded-[1.5rem] hover:border-indigo-300 hover:shadow-md transition-all">
-                                        <div className="flex items-start sm:items-center gap-4 w-full lg:w-auto flex-1 min-w-0">
-                                            <div className="w-12 h-12 bg-slate-50 text-slate-500 rounded-2xl flex items-center justify-center font-black text-lg shrink-0 border border-slate-200 relative">
-                                                {index + 1}
-                                                {isOnline && <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full animate-pulse shadow-sm"></div>}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2.5">
-                                                    <p className="font-black text-base text-slate-800 truncate tracking-tight">{l.deviceName}</p>
-                                                    <span className={`text-[10px] px-2 py-1 rounded-lg flex items-center gap-1.5 border shrink-0 font-bold ${isOnline ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
-                                                        <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></span>
-                                                        {isOnline ? 'Đang học' : (l.lastActive > 0 ? `Offline ${getTimeAgo(l.lastActive)}` : 'Chưa online')}
-                                                    </span>
-                                                </div>
-                                                
-                                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5 w-fit">
-                                                    <p className="text-[11px] font-medium text-slate-500 truncate">
-                                                        Nhóm/TK: <span className="font-bold text-slate-700">{l.accountName}</span> <span className="mx-1 text-slate-300">|</span> User: <span className="font-bold text-indigo-600">{l.username}</span> <span className="mx-1 text-slate-300">|</span> Pass: <span className="font-bold text-slate-700">{l.password}</span>
+                            {trashData.length === 0 ? (
+                                <div className="text-center py-16 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+                                    <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm"><Icon name="check-circle" size={40} className="text-emerald-400" /></div>
+                                    <p className="text-slate-500 font-bold text-base">Thùng rác trống.</p>
+                                    <p className="text-slate-400 text-sm mt-1">Hệ thống đang hoạt động trơn tru.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {trashData.map(item => {
+                                        const getProfileNames = (profileData) => {
+                                            if (!profileData) return '';
+                                            return Object.values(profileData).map(d => d.name || 'Máy ẩn danh').join(', ');
+                                        };
+
+                                        return (
+                                            <div key={item.id} className="p-4 sm:p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 border border-slate-200 rounded-[1.5rem]">
+                                                <div className="flex-1 mb-4 sm:mb-0">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className={`text-[10px] uppercase font-black px-2 py-1 rounded-lg ${item.type === 'account' ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'}`}>
+                                                            {item.type === 'account' ? 'Tài khoản gốc' : 'Hồ sơ Thiết bị'}
+                                                        </span>
+                                                        <span className="text-xs text-slate-400 font-bold">Xóa lúc: {new Date(item.deletedAt).toLocaleString('vi-VN')}</span>
+                                                    </div>
+                                                    <h4 className="font-black text-lg text-slate-700">
+                                                        {item.type === 'account' ? (item.user ? item.user.name : 'Unknown User') : `Tên hiển thị: ${getProfileNames(item.profileData)}`}
+                                                    </h4>
+                                                    <p className="text-xs text-slate-500 mt-1 font-medium">
+                                                        {item.type === 'account' ? `Username: ${item.user?.username || 'Không rõ'}` : `Thuộc tài khoản gốc ID: ${item.accountId}`}
                                                     </p>
                                                 </div>
+                                                <div className="flex gap-2 w-full sm:w-auto shrink-0">
+                                                    <button onClick={() => handleRestoreFromTrash(item)} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 font-bold rounded-xl transition-colors text-sm">
+                                                        <Icon name="refresh-ccw" size={16}/> Khôi phục
+                                                    </button>
+                                                    <button onClick={() => handlePermanentDelete(item.id)} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 bg-slate-200 text-slate-600 hover:bg-red-100 hover:text-red-600 font-bold rounded-xl transition-colors text-sm">
+                                                        <Icon name="trash-2" size={16}/> Xóa vĩnh viễn
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    )}
 
-                                                {(() => {
-                                                    const accountDevices = timeData[l.accountId] || {};
-                                                    const hasMultipleNames = Object.values(accountDevices).some(dev => dev.name && dev.name.trim().toLowerCase() !== l.deviceName.trim().toLowerCase());
-                                                    if (hasMultipleNames) {
-                                                        return (
-                                                            <button onClick={() => handleForceSyncName(l.accountId, l.deviceName)} className="mt-2.5 flex items-center gap-1.5 text-[10px] font-bold bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors w-fit border border-indigo-100">
-                                                                <Icon name="link" size={12} /> Gộp mọi máy trong TK về tên này
-                                                            </button>
-                                                        );
-                                                    }
-                                                    return null;
-                                                })()}
-                                                
-                                                {l.topLesson && (
-                                                    <div className="mt-2.5 flex items-center gap-1.5 text-[11px] font-bold text-amber-600 bg-amber-50 w-fit max-w-full px-2.5 py-1 rounded-lg border border-amber-100/50 truncate">
-                                                        <Icon name="star" size={12} className="shrink-0 text-amber-500" />
-                                                        <span className="truncate">Yêu thích: {getLessonTitle(l.topLesson.path)} ({l.topLesson.percent}%)</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between lg:justify-end gap-4 w-full lg:w-auto mt-3 lg:mt-0 pt-4 lg:pt-0 border-t border-slate-100 lg:border-none">
-                                            <div className="flex flex-col gap-1.5 bg-slate-50 p-3 rounded-xl border border-slate-200 w-full sm:w-auto shrink-0">
-                                                <div className="flex justify-between items-center sm:justify-start sm:gap-8 min-w-0 sm:min-w-[160px]">
-                                                    <span className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Hôm nay</span>
-                                                    <span className="font-mono tabular-nums font-bold text-sm text-slate-700">{formatTime(l.totalToday)}</span>
-                                                </div>
-                                                <div className="flex justify-between items-center sm:justify-start sm:gap-8">
-                                                    <span className="text-[10px] uppercase font-bold text-amber-500 tracking-widest">Tuần</span>
-                                                    <span className="font-mono tabular-nums font-bold text-sm text-amber-600">{formatTime(l.weeklyTotal)}</span>
-                                                </div>
-                                                <div className="flex justify-between items-center sm:justify-start sm:gap-8">
-                                                    <span className="text-[10px] uppercase font-bold text-emerald-500 tracking-widest">Tháng</span>
-                                                    <span className="font-mono tabular-nums font-black text-sm text-emerald-600">{formatTime(l.monthlyTotal)}</span>
-                                                </div>
-                                            </div>
-                                            
-                                            {deletingId === l.uniqueId ? (
-                                                <div className="flex flex-row sm:flex-col gap-2 shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
-                                                    {l.isDeviceRow && <button onClick={() => handleDeleteProfile(l.accountId, l.devIds)} className="flex-1 sm:flex-none text-[10px] font-black bg-orange-100 text-orange-600 px-3 py-2 rounded-xl hover:bg-orange-200 active:scale-95 uppercase text-center transition-colors" title="Chỉ xóa hồ sơ học viên này">Xóa Tên</button>}
-                                                    <button onClick={() => handleDeleteAccount(l.accountId)} className="flex-1 sm:flex-none text-[10px] font-black bg-red-100 text-red-600 px-3 py-2 rounded-xl hover:bg-red-200 active:scale-95 uppercase text-center transition-colors" title="Xóa hoàn toàn tài khoản gốc chứa học viên này">Xóa TK Gốc</button>
-                                                    <button onClick={() => setDeletingId(null)} className="flex-1 sm:flex-none text-[10px] font-black bg-slate-200 text-slate-600 px-3 py-2 rounded-xl hover:bg-slate-300 active:scale-95 uppercase text-center transition-colors">Hủy</button>
-                                                </div>
-                                            ) : (
-                                                <button onClick={() => setDeletingId(l.uniqueId)} className="w-full sm:w-10 h-10 flex items-center justify-center text-slate-400 bg-white border border-slate-200 hover:text-red-500 hover:bg-red-50 hover:border-red-200 rounded-xl transition-colors shrink-0 sm:ml-2 mt-2 sm:mt-0"><Icon name="trash-2" size={18} /><span className="sm:hidden ml-2 text-sm font-bold">Xóa dữ liệu</span></button>
-                                            )}
-                                        </div>
-                                    </div>
-                                )})}
+                    {/* TAB: SAO LƯU */}
+                    {adminTab === 'backup' && (
+                        <div className="xl:col-span-12 bg-white rounded-[2rem] border border-slate-200/60 shadow-sm p-6 sm:p-8 animate-fade-in">
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="font-black text-xl flex items-center gap-3 tracking-tight text-slate-800"><div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl"><Icon name="download-cloud" size={20} /></div>Sao lưu & Khôi phục</h3>
+                                <p className="text-sm text-slate-500 font-medium hidden sm:block">Bảo vệ dữ liệu tuyệt đối vào máy tính cá nhân.</p>
+                            </div>
+                            
+                            {backupMessage && (
+                                <div className={`p-4 mb-6 rounded-xl border font-bold text-sm flex items-center gap-2 ${backupMessage.type === 'success' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
+                                    <Icon name={backupMessage.type === 'success' ? 'check-circle' : 'alert-circle'} size={18} />
+                                    {backupMessage.text}
+                                </div>
+                            )}
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="p-6 bg-slate-50 rounded-3xl border border-slate-200 text-center flex flex-col h-full">
+                                    <div className="w-16 h-16 bg-white text-indigo-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-100"><Icon name="download" size={32} /></div>
+                                    <h4 className="font-black text-lg text-slate-800 mb-2">Tải bản sao lưu</h4>
+                                    <p className="text-sm text-slate-500 mb-6 flex-1">Nên bấm tải hệ thống thường xuyên! Tải toàn bộ tài khoản và thời gian học hiện tại dưới dạng file về máy tính.</p>
+                                    <button onClick={handleExportData} className="w-full py-3 bg-indigo-600 text-white font-black rounded-xl hover:bg-indigo-700 transition-colors shadow-sm">Tải xuống File Backup</button>
+                                </div>
+
+                                <div className="p-6 bg-slate-50 rounded-3xl border border-slate-200 text-center flex flex-col h-full">
+                                    <div className="w-16 h-16 bg-white text-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-100"><Icon name="upload" size={32} /></div>
+                                    <h4 className="font-black text-lg text-slate-800 mb-2">Khôi phục từ File</h4>
+                                    <p className="text-sm text-slate-500 mb-6 flex-1">Chọn file Backup bạn đã tải trước đó tải lên đây để khôi phục lại dữ liệu nếu có sự cố xảy ra.</p>
+                                    <input type="file" accept=".json" ref={fileInputRef} onChange={handleImportData} className="hidden" />
+                                    <button disabled={isRestoringBackup} onClick={() => fileInputRef.current.click()} className="w-full py-3 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-700 transition-colors shadow-sm flex justify-center items-center">
+                                        {isRestoringBackup ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 'Chọn File Tải Lên'}
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    )}
+
                 </div>
             );
         };
