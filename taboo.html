@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vocab Master Pro</title>
+    <title>Vocab Master Pro - Flashcard Review</title>
     
     <!-- Thư viện Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts: Plus Jakarta Sans for a modern, premium look -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -39,6 +38,7 @@
                     animation: {
                         'blob': 'blob 7s infinite',
                         'fade-in-up': 'fadeInUp 0.5s ease-out forwards',
+                        'shake': 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both',
                     },
                     keyframes: {
                         blob: {
@@ -50,6 +50,12 @@
                         fadeInUp: {
                             '0%': { opacity: '0', transform: 'translateY(20px)' },
                             '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        shake: {
+                            '10%, 90%': { transform: 'translate3d(-1px, 0, 0)' },
+                            '20%, 80%': { transform: 'translate3d(2px, 0, 0)' },
+                            '30%, 50%, 70%': { transform: 'translate3d(-4px, 0, 0)' },
+                            '40%, 60%': { transform: 'translate3d(4px, 0, 0)' }
                         }
                     }
                 }
@@ -64,8 +70,6 @@
             overflow-x: hidden;
             -webkit-tap-highlight-color: transparent;
         }
-
-        /* Animated Background Elements */
         .bg-mesh {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -73,8 +77,6 @@
             background: radial-gradient(circle at 15% 50%, rgba(37, 99, 235, 0.15), transparent 25%),
                         radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.15), transparent 25%);
         }
-
-        /* Premium Glassmorphism */
         .glass-panel {
             background: rgba(17, 24, 39, 0.6);
             backdrop-filter: blur(20px);
@@ -83,35 +85,16 @@
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             border-radius: 1.5rem;
         }
-
-        /* 3D Card Effects */
         .perspective-1000 { perspective: 1000px; }
         .preserve-3d { transform-style: preserve-3d; }
         .backface-hidden { backface-visibility: hidden; }
         .rotate-y-180 { transform: rotateY(180deg); }
-        
-        .card-shadow {
-            box-shadow: 0 20px 40px -10px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05) inset;
-        }
-
-        /* Sleek Scrollbar */
+        .card-shadow { box-shadow: 0 20px 40px -10px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05) inset; }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
-
-        /* Typography Enhancements */
-        .text-gradient {
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        
-        /* Select Dropdown Styling */
-        select option {
-            background-color: #111827;
-            color: white;
-        }
+        select option { background-color: #111827; color: white; }
     </style>
 </head>
 <body>
@@ -126,9 +109,8 @@
         import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
         import { getFirestore, collection, doc, setDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
-        const { useState, useEffect, useMemo, useCallback } = React;
+        const { useState, useEffect, useMemo, useCallback, useRef } = React;
 
-        // --- SAFE FIREBASE INITIALIZATION ---
         let app, auth, db;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         let isFirebaseActive = false;
@@ -372,23 +354,165 @@
             { category: 'Kinh doanh', keyword: 'CONTRACT', ipa: '/ˈkɒn.trækt/', taboo: ['Sign', 'Paper', 'Agreement', 'Lawyer', 'Deal'], vietnamese_keyword: 'Hợp đồng', vietnamese_taboo: ['Ký', 'Tờ giấy', 'Thỏa thuận', 'Luật sư', 'Giao dịch'] },
             { category: 'Kinh doanh', keyword: 'STOCK', ipa: '/stɒk/', taboo: ['Market', 'Share', 'Company', 'Trade', 'Price'], vietnamese_keyword: 'Cổ phiếu', vietnamese_taboo: ['Thị trường', 'Cổ phần', 'Công ty', 'Giao dịch', 'Giá cả'] },
             { category: 'Kinh doanh', keyword: 'NEGOTIATION', ipa: '/nəˌɡəʊ.ʃiˈeɪ.ʃən/', taboo: ['Talk', 'Deal', 'Price', 'Agree', 'Meeting'], vietnamese_keyword: 'Sự đàm phán', vietnamese_taboo: ['Nói chuyện', 'Giao dịch', 'Giá cả', 'Đồng ý', 'Cuộc họp'] },
-            { category: 'Kinh doanh', keyword: 'INFLATION', ipa: '/ɪnˈfleɪ.ʃən/', taboo: ['Price', 'Money', 'Rise', 'Economy', 'Value'], vietnamese_keyword: 'Lạm phát', vietnamese_taboo: ['Giá cả', 'Tiền bạc', 'Tăng lên', 'Nền kinh tế', 'Giá trị'] }
+            { category: 'Kinh doanh', keyword: 'INFLATION', ipa: '/ɪnˈfleɪ.ʃən/', taboo: ['Price', 'Money', 'Rise', 'Economy', 'Value'], vietnamese_keyword: 'Lạm phát', vietnamese_taboo: ['Giá cả', 'Tiền bạc', 'Tăng lên', 'Nền kinh tế', 'Giá trị'] },
+
+            // BỔ SUNG THÊM 5 TỪ CHO MỖI CHỦ ĐỀ (Đạt 15 từ/chủ đề)
+            // Thể thao bổ sung
+            { category: 'Thể thao', keyword: 'BOXING', ipa: '/ˈbɒk.sɪŋ/', taboo: ['Fight', 'Gloves', 'Ring', 'Punch', 'Sport'], vietnamese_keyword: 'Quyền anh', vietnamese_taboo: ['Đánh nhau', 'Găng tay', 'Võ đài', 'Cú đấm', 'Thể thao'] },
+            { category: 'Thể thao', keyword: 'SKIING', ipa: '/ˈskiː.ɪŋ/', taboo: ['Snow', 'Winter', 'Mountain', 'Cold', 'Board'], vietnamese_keyword: 'Trượt tuyết', vietnamese_taboo: ['Tuyết', 'Mùa đông', 'Ngọn núi', 'Lạnh', 'Ván trượt'] },
+            { category: 'Thể thao', keyword: 'SURFING', ipa: '/ˈsɜː.fɪŋ/', taboo: ['Water', 'Ocean', 'Waves', 'Board', 'Beach'], vietnamese_keyword: 'Lướt sóng', vietnamese_taboo: ['Nước', 'Đại dương', 'Con sóng', 'Tấm ván', 'Bãi biển'] },
+            { category: 'Thể thao', keyword: 'CYCLING', ipa: '/ˈsaɪ.klɪŋ/', taboo: ['Bicycle', 'Ride', 'Wheels', 'Pedal', 'Helmet'], vietnamese_keyword: 'Đạp xe', vietnamese_taboo: ['Xe đạp', 'Lái/Cưỡi', 'Bánh xe', 'Bàn đạp', 'Mũ bảo hiểm'] },
+            { category: 'Thể thao', keyword: 'GYMNASTICS', ipa: '/dʒɪmˈnæs.tɪks/', taboo: ['Flexibility', 'Flip', 'Bars', 'Floor', 'Sport'], vietnamese_keyword: 'Thể dục dụng cụ', vietnamese_taboo: ['Dẻo dai', 'Lộn nhào', 'Xà đơn', 'Sàn đấu', 'Thể thao'] },
+
+            // Nhà cửa bổ sung
+            { category: 'Nhà cửa', keyword: 'BLANKET', ipa: '/ˈblæŋ.kɪt/', taboo: ['Bed', 'Warm', 'Sleep', 'Cold', 'Cover'], vietnamese_keyword: 'Cái chăn', vietnamese_taboo: ['Giường', 'Ấm áp', 'Ngủ', 'Lạnh', 'Đắp'] },
+            { category: 'Nhà cửa', keyword: 'PILLOW', ipa: '/ˈpɪl.əʊ/', taboo: ['Head', 'Bed', 'Sleep', 'Soft', 'Cushion'], vietnamese_keyword: 'Cái gối', vietnamese_taboo: ['Cái đầu', 'Giường', 'Ngủ', 'Mềm mại', 'Đệm'] },
+            { category: 'Nhà cửa', keyword: 'MIRROR', ipa: '/ˈmɪr.ər/', taboo: ['Look', 'Reflection', 'Glass', 'Wall', 'Face'], vietnamese_keyword: 'Cái gương', vietnamese_taboo: ['Nhìn', 'Sự phản chiếu', 'Kính', 'Bức tường', 'Khuôn mặt'] },
+            { category: 'Nhà cửa', keyword: 'SINK', ipa: '/sɪŋk/', taboo: ['Water', 'Wash', 'Kitchen', 'Bathroom', 'Hands'], vietnamese_keyword: 'Bồn rửa', vietnamese_taboo: ['Nước', 'Rửa', 'Nhà bếp', 'Phòng tắm', 'Bàn tay'] },
+            { category: 'Nhà cửa', keyword: 'CARPET', ipa: '/ˈkɑː.pɪt/', taboo: ['Floor', 'Rug', 'Soft', 'Walk', 'Room'], vietnamese_keyword: 'Tấm thảm', vietnamese_taboo: ['Sàn nhà', 'Thảm nhỏ', 'Mềm mại', 'Đi bộ', 'Căn phòng'] },
+
+            // Giao thông bổ sung
+            { category: 'Giao thông', keyword: 'TRUCK', ipa: '/trʌk/', taboo: ['Heavy', 'Drive', 'Carry', 'Lorry', 'Road'], vietnamese_keyword: 'Xe tải', vietnamese_taboo: ['Nặng', 'Lái xe', 'Chở/Mang', 'Xe tải lớn', 'Đường đi'] },
+            { category: 'Giao thông', keyword: 'SCOOTER', ipa: '/ˈskuː.tər/', taboo: ['Ride', 'Two wheels', 'Motor', 'City', 'Vespa'], vietnamese_keyword: 'Xe tay ga', vietnamese_taboo: ['Lái', 'Hai bánh', 'Động cơ', 'Thành phố', 'Xe Vespa'] },
+            { category: 'Giao thông', keyword: 'FERRY', ipa: '/ˈfer.i/', taboo: ['Water', 'Boat', 'Car', 'River', 'Cross'], vietnamese_keyword: 'Phà', vietnamese_taboo: ['Nước', 'Con thuyền', 'Ô tô', 'Dòng sông', 'Đi ngang qua'] },
+            { category: 'Giao thông', keyword: 'TRAM', ipa: '/træm/', taboo: ['City', 'Tracks', 'Electricity', 'Train', 'Public'], vietnamese_keyword: 'Tàu điện', vietnamese_taboo: ['Thành phố', 'Đường ray', 'Điện', 'Tàu hỏa', 'Công cộng'] },
+            { category: 'Giao thông', keyword: 'VAN', ipa: '/væn/', taboo: ['Car', 'Delivery', 'Big', 'Carry', 'Drive'], vietnamese_keyword: 'Xe chở hàng', vietnamese_taboo: ['Ô tô', 'Giao hàng', 'To lớn', 'Chở/Mang', 'Lái xe'] },
+
+            // Trang phục bổ sung
+            { category: 'Trang phục', keyword: 'SWEATER', ipa: '/ˈswet.ər/', taboo: ['Cold', 'Winter', 'Wool', 'Warm', 'Wear'], vietnamese_keyword: 'Áo len', vietnamese_taboo: ['Lạnh', 'Mùa đông', 'Len', 'Ấm áp', 'Mặc'] },
+            { category: 'Trang phục', keyword: 'GLOVES', ipa: '/ɡlʌvz/', taboo: ['Hands', 'Fingers', 'Cold', 'Winter', 'Wear'], vietnamese_keyword: 'Găng tay', vietnamese_taboo: ['Bàn tay', 'Ngón tay', 'Lạnh', 'Mùa đông', 'Đeo'] },
+            { category: 'Trang phục', keyword: 'BOOTS', ipa: '/buːts/', taboo: ['Shoes', 'Feet', 'Rain', 'Winter', 'Leather'], vietnamese_keyword: 'Ủng/Bốt', vietnamese_taboo: ['Giày', 'Bàn chân', 'Mưa', 'Mùa đông', 'Da'] },
+            { category: 'Trang phục', keyword: 'SHORTS', ipa: '/ʃɔːts/', taboo: ['Legs', 'Pants', 'Summer', 'Hot', 'Wear'], vietnamese_keyword: 'Quần đùi', vietnamese_taboo: ['Đôi chân', 'Cái quần', 'Mùa hè', 'Nóng', 'Mặc'] },
+            { category: 'Trang phục', keyword: 'COAT', ipa: '/kəʊt/', taboo: ['Jacket', 'Long', 'Winter', 'Cold', 'Wear'], vietnamese_keyword: 'Áo choàng', vietnamese_taboo: ['Áo khoác', 'Dài', 'Mùa đông', 'Lạnh', 'Mặc'] },
+
+            // Cơ thể bổ sung
+            { category: 'Cơ thể', keyword: 'TONGUE', ipa: '/tʌŋ/', taboo: ['Mouth', 'Taste', 'Speak', 'Food', 'Lick'], vietnamese_keyword: 'Cái lưỡi', vietnamese_taboo: ['Cái miệng', 'Nếm', 'Nói', 'Thức ăn', 'Liếm'] },
+            { category: 'Cơ thể', keyword: 'TEETH', ipa: '/tiːθ/', taboo: ['Mouth', 'Bite', 'Chew', 'Dentist', 'White'], vietnamese_keyword: 'Răng', vietnamese_taboo: ['Cái miệng', 'Cắn', 'Nhai', 'Nha sĩ', 'Màu trắng'] },
+            { category: 'Cơ thể', keyword: 'NECK', ipa: '/nek/', taboo: ['Head', 'Shoulder', 'Throat', 'Scarf', 'Body'], vietnamese_keyword: 'Cái cổ', vietnamese_taboo: ['Cái đầu', 'Bờ vai', 'Cổ họng', 'Khăn quàng', 'Cơ thể'] },
+            { category: 'Cơ thể', keyword: 'SHOULDER', ipa: '/ˈʃəʊl.dər/', taboo: ['Arm', 'Neck', 'Carry', 'Back', 'Body'], vietnamese_keyword: 'Bờ vai', vietnamese_taboo: ['Cánh tay', 'Cái cổ', 'Mang/Vác', 'Cái lưng', 'Cơ thể'] },
+            { category: 'Cơ thể', keyword: 'KNEE', ipa: '/niː/', taboo: ['Leg', 'Joint', 'Bend', 'Jump', 'Body'], vietnamese_keyword: 'Đầu gối', vietnamese_taboo: ['Cái chân', 'Khớp xương', 'Uốn cong', 'Nhảy', 'Cơ thể'] },
+
+            // Giáo dục bổ sung
+            { category: 'Giáo dục', keyword: 'BACKPACK', ipa: '/ˈbæk.pæk/', taboo: ['Bag', 'School', 'Carry', 'Books', 'Shoulder'], vietnamese_keyword: 'Ba lô', vietnamese_taboo: ['Cái túi', 'Trường học', 'Mang', 'Sách', 'Bờ vai'] },
+            { category: 'Giáo dục', keyword: 'ERASER', ipa: '/ɪˈreɪ.zər/', taboo: ['Pencil', 'Mistake', 'Rubber', 'Clean', 'Write'], vietnamese_keyword: 'Cục tẩy', vietnamese_taboo: ['Bút chì', 'Lỗi sai', 'Cao su', 'Làm sạch', 'Viết'] },
+            { category: 'Giáo dục', keyword: 'RULER', ipa: '/ˈruː.lər/', taboo: ['Measure', 'Line', 'Straight', 'Math', 'Plastic'], vietnamese_keyword: 'Cái thước', vietnamese_taboo: ['Đo lường', 'Đường kẻ', 'Thẳng', 'Toán học', 'Nhựa'] },
+            { category: 'Giáo dục', keyword: 'WHITEBOARD', ipa: '/ˈwaɪt.bɔːd/', taboo: ['Marker', 'Teacher', 'Write', 'Classroom', 'Erase'], vietnamese_keyword: 'Bảng trắng', vietnamese_taboo: ['Bút lông', 'Giáo viên', 'Viết', 'Lớp học', 'Xóa'] },
+            { category: 'Giáo dục', keyword: 'CALCULATOR', ipa: '/ˈkæl.kjə.leɪ.tər/', taboo: ['Math', 'Numbers', 'Add', 'Machine', 'Solve'], vietnamese_keyword: 'Máy tính (cầm tay)', vietnamese_taboo: ['Toán học', 'Con số', 'Cộng', 'Máy móc', 'Giải quyết'] },
+
+            // Giải trí bổ sung
+            { category: 'Giải trí', keyword: 'COMEDY', ipa: '/ˈkɒm.ə.di/', taboo: ['Laugh', 'Funny', 'Joke', 'Movie', 'Humor'], vietnamese_keyword: 'Hài kịch', vietnamese_taboo: ['Cười', 'Buồn cười', 'Trò đùa', 'Bộ phim', 'Sự hài hước'] },
+            { category: 'Giải trí', keyword: 'DOCUMENTARY', ipa: '/ˌdɒk.jəˈmen.tər.i/', taboo: ['Real', 'Film', 'Information', 'Animals', 'History'], vietnamese_keyword: 'Phim tài liệu', vietnamese_taboo: ['Thực tế', 'Phim ảnh', 'Thông tin', 'Động vật', 'Lịch sử'] },
+            { category: 'Giải trí', keyword: 'MAGIC', ipa: '/ˈmædʒ.ɪk/', taboo: ['Trick', 'Illusion', 'Wand', 'Show', 'Rabbit'], vietnamese_keyword: 'Ảo thuật', vietnamese_taboo: ['Mánh khóe', 'Ảo ảnh', 'Đũa phép', 'Buổi diễn', 'Con thỏ'] },
+            { category: 'Giải trí', keyword: 'PUZZLE', ipa: '/ˈpʌz.əl/', taboo: ['Pieces', 'Solve', 'Game', 'Picture', 'Brain'], vietnamese_keyword: 'Xếp hình / Giải đố', vietnamese_taboo: ['Mảnh ghép', 'Giải quyết', 'Trò chơi', 'Bức tranh', 'Bộ não'] },
+            { category: 'Giải trí', keyword: 'KARAOKE', ipa: '/ˌkær.iˈəʊ.ki/', taboo: ['Sing', 'Music', 'Microphone', 'Song', 'Friends'], vietnamese_keyword: 'Ka-ra-ô-kê', vietnamese_taboo: ['Hát', 'Âm nhạc', 'Mi-crô', 'Bài hát', 'Bạn bè'] },
+
+            // Du lịch bổ sung
+            { category: 'Du lịch', keyword: 'TENT', ipa: '/tent/', taboo: ['Camping', 'Sleep', 'Outdoors', 'Nature', 'Pitch'], vietnamese_keyword: 'Cái lều', vietnamese_taboo: ['Cắm trại', 'Ngủ', 'Ngoài trời', 'Thiên nhiên', 'Dựng (lều)'] },
+            { category: 'Du lịch', keyword: 'CRUISE', ipa: '/kruːz/', taboo: ['Ship', 'Ocean', 'Vacation', 'Travel', 'Water'], vietnamese_keyword: 'Du thuyền', vietnamese_taboo: ['Con tàu', 'Đại dương', 'Kỳ nghỉ', 'Du lịch', 'Nước'] },
+            { category: 'Du lịch', keyword: 'BORDER', ipa: '/ˈbɔː.dər/', taboo: ['Country', 'Line', 'Cross', 'Passport', 'Guard'], vietnamese_keyword: 'Biên giới', vietnamese_taboo: ['Quốc gia', 'Đường ranh', 'Băng qua', 'Hộ chiếu', 'Lính gác'] },
+            { category: 'Du lịch', keyword: 'CUSTOMS', ipa: '/ˈkʌs.təmz/', taboo: ['Airport', 'Check', 'Bag', 'Border', 'Declare'], vietnamese_keyword: 'Hải quan', vietnamese_taboo: ['Sân bay', 'Kiểm tra', 'Túi', 'Biên giới', 'Khai báo'] },
+            { category: 'Du lịch', keyword: 'CAMPING', ipa: '/ˈkæm.pɪŋ/', taboo: ['Tent', 'Nature', 'Fire', 'Forest', 'Sleep'], vietnamese_keyword: 'Cắm trại', vietnamese_taboo: ['Cái lều', 'Thiên nhiên', 'Ngọn lửa', 'Khu rừng', 'Ngủ'] },
+
+            // Thực phẩm bổ sung
+            { category: 'Thực phẩm', keyword: 'SOUP', ipa: '/suːp/', taboo: ['Bowl', 'Hot', 'Liquid', 'Spoon', 'Eat'], vietnamese_keyword: 'Món súp / Canh', vietnamese_taboo: ['Cái bát', 'Nóng', 'Chất lỏng', 'Cái thìa', 'Ăn'] },
+            { category: 'Thực phẩm', keyword: 'SUSHI', ipa: '/ˈsuː.ʃi/', taboo: ['Japan', 'Rice', 'Fish', 'Raw', 'Seaweed'], vietnamese_keyword: 'Su-shi', vietnamese_taboo: ['Nhật Bản', 'Cơm', 'Cá', 'Sống (chưa chín)', 'Rong biển'] },
+            { category: 'Thực phẩm', keyword: 'SANDWICH', ipa: '/ˈsæn.wɪdʒ/', taboo: ['Bread', 'Meat', 'Eat', 'Lunch', 'Cheese'], vietnamese_keyword: 'Bánh kẹp Sandwich', vietnamese_taboo: ['Bánh mì', 'Thịt', 'Ăn', 'Bữa trưa', 'Phô mai'] },
+            { category: 'Thực phẩm', keyword: 'SAUSAGE', ipa: '/ˈsɒs.ɪdʒ/', taboo: ['Meat', 'Hot dog', 'Pork', 'Grill', 'Eat'], vietnamese_keyword: 'Xúc xích', vietnamese_taboo: ['Thịt', 'Bánh mì kẹp xúc xích', 'Thịt lợn', 'Nướng', 'Ăn'] },
+            { category: 'Thực phẩm', keyword: 'HONEY', ipa: '/ˈhʌn.i/', taboo: ['Bee', 'Sweet', 'Yellow', 'Sticky', 'Bear'], vietnamese_keyword: 'Mật ong', vietnamese_taboo: ['Con ong', 'Ngọt', 'Màu vàng', 'Dính', 'Con gấu'] },
+
+            // Nghề nghiệp bổ sung
+            { category: 'Nghề nghiệp', keyword: 'NURSE', ipa: '/nɜːs/', taboo: ['Hospital', 'Doctor', 'Care', 'Sick', 'Patient'], vietnamese_keyword: 'Y tá', vietnamese_taboo: ['Bệnh viện', 'Bác sĩ', 'Chăm sóc', 'Ốm', 'Bệnh nhân'] },
+            { category: 'Nghề nghiệp', keyword: 'DENTIST', ipa: '/ˈden.tɪst/', taboo: ['Teeth', 'Doctor', 'Mouth', 'Cavity', 'Brush'], vietnamese_keyword: 'Nha sĩ', vietnamese_taboo: ['Răng', 'Bác sĩ', 'Cái miệng', 'Sâu răng', 'Đánh răng'] },
+            { category: 'Nghề nghiệp', keyword: 'MECHANIC', ipa: '/mɪˈkæn.ɪk/', taboo: ['Car', 'Fix', 'Engine', 'Repair', 'Tools'], vietnamese_keyword: 'Thợ máy', vietnamese_taboo: ['Ô tô', 'Sửa chữa', 'Động cơ', 'Phục hồi', 'Công cụ'] },
+            { category: 'Nghề nghiệp', keyword: 'BAKER', ipa: '/ˈbeɪ.kər/', taboo: ['Bread', 'Cake', 'Oven', 'Flour', 'Make'], vietnamese_keyword: 'Thợ làm bánh', vietnamese_taboo: ['Bánh mì', 'Bánh kem', 'Lò nướng', 'Bột mì', 'Làm'] },
+            { category: 'Nghề nghiệp', keyword: 'PLUMBER', ipa: '/ˈplʌm.ər/', taboo: ['Water', 'Pipes', 'Fix', 'Sink', 'Toilet'], vietnamese_keyword: 'Thợ sửa ống nước', vietnamese_taboo: ['Nước', 'Đường ống', 'Sửa chữa', 'Bồn rửa', 'Bồn cầu'] },
+
+            // Công nghệ bổ sung
+            { category: 'Công nghệ', keyword: 'MOUSE', ipa: '/maʊs/', taboo: ['Computer', 'Click', 'Cursor', 'Scroll', 'Animal'], vietnamese_keyword: 'Chuột máy tính', vietnamese_taboo: ['Máy tính', 'Nhấp chuột', 'Con trỏ', 'Cuộn', 'Động vật'] },
+            { category: 'Công nghệ', keyword: 'PRINTER', ipa: '/ˈprɪn.tər/', taboo: ['Paper', 'Ink', 'Computer', 'Document', 'Color'], vietnamese_keyword: 'Máy in', vietnamese_taboo: ['Giấy', 'Mực in', 'Máy tính', 'Tài liệu', 'Màu sắc'] },
+            { category: 'Công nghệ', keyword: 'ROUTER', ipa: '/ˈruː.tər/', taboo: ['Wifi', 'Internet', 'Connection', 'Signal', 'Network'], vietnamese_keyword: 'Bộ định tuyến (Router)', vietnamese_taboo: ['Mạng Wifi', 'Internet', 'Kết nối', 'Tín hiệu', 'Mạng lưới'] },
+            { category: 'Công nghệ', keyword: 'TABLET', ipa: '/ˈtæb.lət/', taboo: ['Screen', 'Computer', 'Touch', 'iPad', 'Portable'], vietnamese_keyword: 'Máy tính bảng', vietnamese_taboo: ['Màn hình', 'Máy tính', 'Chạm', 'iPad', 'Gọn nhẹ'] },
+            { category: 'Công nghệ', keyword: 'WEBCAM', ipa: '/ˈweb.kæm/', taboo: ['Video', 'Call', 'Computer', 'Camera', 'See'], vietnamese_keyword: 'Webcam', vietnamese_taboo: ['Video', 'Gọi điện', 'Máy tính', 'Máy ảnh', 'Nhìn'] },
+
+            // Môi trường bổ sung
+            { category: 'Môi trường', keyword: 'FLOOD', ipa: '/flʌd/', taboo: ['Water', 'Rain', 'Disaster', 'River', 'House'], vietnamese_keyword: 'Lũ lụt', vietnamese_taboo: ['Nước', 'Mưa', 'Thảm họa', 'Dòng sông', 'Ngôi nhà'] },
+            { category: 'Môi trường', keyword: 'EARTHQUAKE', ipa: '/ˈɜːθ.kweɪk/', taboo: ['Shake', 'Ground', 'Disaster', 'Tremor', 'Building'], vietnamese_keyword: 'Động đất', vietnamese_taboo: ['Rung lắc', 'Mặt đất', 'Thảm họa', 'Dư chấn', 'Tòa nhà'] },
+            { category: 'Môi trường', keyword: 'TSUNAMI', ipa: '/tsuːˈnɑː.mi/', taboo: ['Wave', 'Ocean', 'Earthquake', 'Disaster', 'Water'], vietnamese_keyword: 'Sóng thần', vietnamese_taboo: ['Con sóng', 'Đại dương', 'Động đất', 'Thảm họa', 'Nước'] },
+            { category: 'Môi trường', keyword: 'VOLCANO', ipa: '/vɒlˈkeɪ.nəʊ/', taboo: ['Mountain', 'Lava', 'Erupt', 'Hot', 'Ash'], vietnamese_keyword: 'Núi lửa', vietnamese_taboo: ['Ngọn núi', 'Dung nham', 'Phun trào', 'Nóng', 'Tro bụi'] },
+            { category: 'Môi trường', keyword: 'GLACIER', ipa: '/ˈɡlæs.i.ər/', taboo: ['Ice', 'Melt', 'Cold', 'Global warming', 'Slow'], vietnamese_keyword: 'Sông băng', vietnamese_taboo: ['Băng giá', 'Tan chảy', 'Lạnh', 'Nóng lên toàn cầu', 'Chậm chạp'] },
+
+            // Cảm xúc bổ sung
+            { category: 'Cảm xúc', keyword: 'EXCITEMENT', ipa: '/ɪkˈsaɪt.mənt/', taboo: ['Happy', 'Thrill', 'Eager', 'Wait', 'Fun'], vietnamese_keyword: 'Sự phấn khích', vietnamese_taboo: ['Hạnh phúc', 'Hồi hộp', 'Háo hức', 'Chờ đợi', 'Vui vẻ'] },
+            { category: 'Cảm xúc', keyword: 'BOREDOM', ipa: '/ˈbɔː.dəm/', taboo: ['Nothing', 'Do', 'Tired', 'Yawn', 'Dull'], vietnamese_keyword: 'Sự nhàm chán', vietnamese_taboo: ['Không có gì', 'Làm', 'Mệt mỏi', 'Ngáp', 'Tẻ nhạt'] },
+            { category: 'Cảm xúc', keyword: 'CONFUSION', ipa: '/kənˈfjuː.ʒən/', taboo: ['Understand', 'Lost', 'Puzzle', 'Clear', 'Question'], vietnamese_keyword: 'Sự bối rối', vietnamese_taboo: ['Hiểu', 'Lạc lối', 'Câu đố', 'Rõ ràng', 'Câu hỏi'] },
+            { category: 'Cảm xúc', keyword: 'GUILT', ipa: '/ɡɪlt/', taboo: ['Sorry', 'Bad', 'Wrong', 'Apologize', 'Conscience'], vietnamese_keyword: 'Cảm giác tội lỗi', vietnamese_taboo: ['Xin lỗi', 'Tồi tệ', 'Sai trái', 'Nhận lỗi', 'Lương tâm'] },
+            { category: 'Cảm xúc', keyword: 'PRIDE', ipa: '/praɪd/', taboo: ['Proud', 'Good', 'Achieve', 'Ego', 'Lion'], vietnamese_keyword: 'Sự tự hào', vietnamese_taboo: ['Tự hào', 'Tốt', 'Đạt được', 'Cái tôi', 'Sư tử'] },
+
+            // Khái niệm bổ sung
+            { category: 'Khái niệm', keyword: 'BEAUTY', ipa: '/ˈbjuː.ti/', taboo: ['Pretty', 'Look', 'Attractive', 'Ugly', 'Face'], vietnamese_keyword: 'Vẻ đẹp', vietnamese_taboo: ['Xinh đẹp', 'Nhìn', 'Hấp dẫn', 'Xấu xí', 'Khuôn mặt'] },
+            { category: 'Khái niệm', keyword: 'DANGER', ipa: '/ˈdeɪn.dʒər/', taboo: ['Safe', 'Warning', 'Risk', 'Careful', 'Harm'], vietnamese_keyword: 'Sự nguy hiểm', vietnamese_taboo: ['An toàn', 'Cảnh báo', 'Rủi ro', 'Cẩn thận', 'Tổn hại'] },
+            { category: 'Khái niệm', keyword: 'LUCK', ipa: '/lʌk/', taboo: ['Fortune', 'Good', 'Chance', 'Clover', 'Win'], vietnamese_keyword: 'Sự may mắn', vietnamese_taboo: ['Vận may', 'Tốt', 'Cơ hội', 'Cỏ ba lá', 'Chiến thắng'] },
+            { category: 'Khái niệm', keyword: 'POWER', ipa: '/paʊər/', taboo: ['Strong', 'Control', 'Electricity', 'Energy', 'Weak'], vietnamese_keyword: 'Sức mạnh / Quyền lực', vietnamese_taboo: ['Mạnh mẽ', 'Kiểm soát', 'Điện', 'Năng lượng', 'Yếu đuối'] },
+            { category: 'Khái niệm', keyword: 'SECRET', ipa: '/ˈsiː.krət/', taboo: ['Tell', 'Hide', 'Know', 'Whisper', 'Keep'], vietnamese_keyword: 'Bí mật', vietnamese_taboo: ['Kể lại', 'Giấu', 'Biết', 'Thì thầm', 'Giữ'] },
+
+            // Động vật bổ sung
+            { category: 'Động vật', keyword: 'BEAR', ipa: '/beər/', taboo: ['Brown', 'Honey', 'Forest', 'Big', 'Sleep'], vietnamese_keyword: 'Con gấu', vietnamese_taboo: ['Màu nâu', 'Mật ong', 'Khu rừng', 'To lớn', 'Ngủ'] },
+            { category: 'Động vật', keyword: 'WOLF', ipa: '/wʊlf/', taboo: ['Dog', 'Howl', 'Moon', 'Pack', 'Forest'], vietnamese_keyword: 'Chó sói', vietnamese_taboo: ['Con chó', 'Hú', 'Mặt trăng', 'Bầy đàn', 'Khu rừng'] },
+            { category: 'Động vật', keyword: 'FOX', ipa: '/fɒks/', taboo: ['Red', 'Tail', 'Sly', 'Animal', 'Chicken'], vietnamese_keyword: 'Con cáo', vietnamese_taboo: ['Màu đỏ', 'Cái đuôi', 'Xảo quyệt', 'Động vật', 'Con gà'] },
+            { category: 'Động vật', keyword: 'DEER', ipa: '/dɪər/', taboo: ['Antlers', 'Forest', 'Bambi', 'Run', 'Animal'], vietnamese_keyword: 'Con nai', vietnamese_taboo: ['Gạc (sừng)', 'Khu rừng', 'Bambi', 'Chạy', 'Động vật'] },
+            { category: 'Động vật', keyword: 'RABBIT', ipa: '/ˈræb.ɪt/', taboo: ['Ears', 'Hop', 'Carrot', 'Bunny', 'Fast'], vietnamese_keyword: 'Con thỏ', vietnamese_taboo: ['Cái tai', 'Nhảy lò cò', 'Cà rốt', 'Thỏ con', 'Nhanh'] },
+
+            // Sức khỏe bổ sung
+            { category: 'Sức khỏe', keyword: 'BANDAGE', ipa: '/ˈbæn.dɪdʒ/', taboo: ['Cut', 'Blood', 'Wrap', 'Wound', 'Heal'], vietnamese_keyword: 'Băng gạc', vietnamese_taboo: ['Vết cắt', 'Máu', 'Quấn', 'Vết thương', 'Chữa lành'] },
+            { category: 'Sức khỏe', keyword: 'CLINIC', ipa: '/ˈklɪn.ɪk/', taboo: ['Doctor', 'Hospital', 'Sick', 'Health', 'Visit'], vietnamese_keyword: 'Phòng khám', vietnamese_taboo: ['Bác sĩ', 'Bệnh viện', 'Ốm đau', 'Sức khỏe', 'Ghé thăm'] },
+            { category: 'Sức khỏe', keyword: 'DISEASE', ipa: '/dɪˈziːz/', taboo: ['Sick', 'Illness', 'Catch', 'Health', 'Cure'], vietnamese_keyword: 'Căn bệnh', vietnamese_taboo: ['Ốm đau', 'Bệnh tật', 'Mắc phải', 'Sức khỏe', 'Chữa trị'] },
+            { category: 'Sức khỏe', keyword: 'VIRUS', ipa: '/ˈvaɪə.rəs/', taboo: ['Computer', 'Sick', 'Infection', 'Covid', 'Spread'], vietnamese_keyword: 'Vi-rút', vietnamese_taboo: ['Máy tính', 'Ốm đau', 'Nhiễm trùng', 'Covid', 'Lây lan'] },
+            { category: 'Sức khỏe', keyword: 'HYGIENE', ipa: '/ˈhaɪ.dʒiːn/', taboo: ['Clean', 'Wash', 'Hands', 'Dirty', 'Health'], vietnamese_keyword: 'Vệ sinh', vietnamese_taboo: ['Làm sạch', 'Rửa', 'Bàn tay', 'Bẩn', 'Sức khỏe'] },
+
+            // Vũ trụ bổ sung
+            { category: 'Vũ trụ', keyword: 'ALIEN', ipa: '/ˈeɪ.li.ən/', taboo: ['Space', 'UFO', 'Green', 'Planet', 'Mars'], vietnamese_keyword: 'Người ngoài hành tinh', vietnamese_taboo: ['Không gian', 'Đĩa bay', 'Màu xanh', 'Hành tinh', 'Sao Hỏa'] },
+            { category: 'Vũ trụ', keyword: 'ASTEROID', ipa: '/ˈæs.tər.ɔɪd/', taboo: ['Rock', 'Space', 'Dinosaur', 'Hit', 'Earth'], vietnamese_keyword: 'Tiểu hành tinh', vietnamese_taboo: ['Đá', 'Không gian', 'Khủng long', 'Va chạm', 'Trái Đất'] },
+            { category: 'Vũ trụ', keyword: 'SPACESHIP', ipa: '/ˈspeɪs.ʃɪp/', taboo: ['Fly', 'Rocket', 'Astronaut', 'Alien', 'Travel'], vietnamese_keyword: 'Tàu vũ trụ', vietnamese_taboo: ['Bay', 'Tên lửa', 'Phi hành gia', 'Người ngoài hành tinh', 'Du lịch'] },
+            { category: 'Vũ trụ', keyword: 'SUN', ipa: '/sʌn/', taboo: ['Hot', 'Star', 'Light', 'Day', 'Yellow'], vietnamese_keyword: 'Mặt trời', vietnamese_taboo: ['Nóng', 'Ngôi sao', 'Ánh sáng', 'Ban ngày', 'Màu vàng'] },
+            { category: 'Vũ trụ', keyword: 'MOON', ipa: '/muːn/', taboo: ['Night', 'Sky', 'Wolf', 'White', 'Orbit'], vietnamese_keyword: 'Mặt trăng', vietnamese_taboo: ['Ban đêm', 'Bầu trời', 'Chó sói', 'Màu trắng', 'Quỹ đạo'] },
+
+            // Thời tiết bổ sung
+            { category: 'Thời tiết', keyword: 'CLOUD', ipa: '/klaʊd/', taboo: ['Sky', 'White', 'Rain', 'Sun', 'Grey'], vietnamese_keyword: 'Đám mây', vietnamese_taboo: ['Bầu trời', 'Màu trắng', 'Mưa', 'Mặt trời', 'Màu xám'] },
+            { category: 'Thời tiết', keyword: 'WIND', ipa: '/wɪnd/', taboo: ['Blow', 'Tree', 'Air', 'Kite', 'Breeze'], vietnamese_keyword: 'Gió', vietnamese_taboo: ['Thổi', 'Cây', 'Không khí', 'Cái diều', 'Cơn gió nhẹ'] },
+            { category: 'Thời tiết', keyword: 'SNOW', ipa: '/snəʊ/', taboo: ['White', 'Cold', 'Winter', 'Flake', 'Melt'], vietnamese_keyword: 'Tuyết', vietnamese_taboo: ['Màu trắng', 'Lạnh', 'Mùa đông', 'Bông tuyết', 'Tan chảy'] },
+            { category: 'Thời tiết', keyword: 'ICE', ipa: '/aɪs/', taboo: ['Cold', 'Water', 'Melt', 'Freeze', 'Cube'], vietnamese_keyword: 'Băng / Đá', vietnamese_taboo: ['Lạnh', 'Nước', 'Tan chảy', 'Đóng băng', 'Khối lập phương'] },
+            { category: 'Thời tiết', keyword: 'TEMPERATURE', ipa: '/ˈtem.prə.tʃər/', taboo: ['Hot', 'Cold', 'Thermometer', 'Degree', 'Weather'], vietnamese_keyword: 'Nhiệt độ', vietnamese_taboo: ['Nóng', 'Lạnh', 'Nhiệt kế', 'Độ', 'Thời tiết'] },
+
+            // Kinh doanh bổ sung
+            { category: 'Kinh doanh', keyword: 'TAX', ipa: '/tæks/', taboo: ['Money', 'Government', 'Pay', 'Income', 'Law'], vietnamese_keyword: 'Thuế', vietnamese_taboo: ['Tiền bạc', 'Chính phủ', 'TrTrả tiền', 'Thu nhập', 'Luật pháp'] },
+            { category: 'Kinh doanh', keyword: 'SALARY', ipa: '/ˈsæl.ər.i/', taboo: ['Money', 'Work', 'Job', 'Month', 'Pay'], vietnamese_keyword: 'Tiền lương', vietnamese_taboo: ['Tiền bạc', 'Làm việc', 'Công việc', 'Tháng', 'Trả tiền'] },
+            { category: 'Kinh doanh', keyword: 'MANAGER', ipa: '/ˈmæn.ɪ.dʒər/', taboo: ['Boss', 'Lead', 'Team', 'Office', 'Work'], vietnamese_keyword: 'Người quản lý', vietnamese_taboo: ['Sếp', 'Dẫn dắt', 'Đội/Nhóm', 'Văn phòng', 'Làm việc'] },
+            { category: 'Kinh doanh', keyword: 'EMPLOYEE', ipa: '/ɪmˈplɔɪ.iː/', taboo: ['Work', 'Boss', 'Company', 'Salary', 'Staff'], vietnamese_keyword: 'Nhân viên', vietnamese_taboo: ['Làm việc', 'Sếp', 'Công ty', 'Tiền lương', 'Nhân sự'] },
+            { category: 'Kinh doanh', keyword: 'MEETING', ipa: '/ˈmiː.tɪŋ/', taboo: ['Talk', 'Office', 'Room', 'Discuss', 'Together'], vietnamese_keyword: 'Cuộc họp', vietnamese_taboo: ['Nói chuyện', 'Văn phòng', 'Căn phòng', 'Thảo luận', 'Cùng nhau'] }
         ];
 
         function App() {
             const [user, setUser] = useState(null);
             const [notebook, setNotebook] = useState({});
-            const [screen, setScreen] = useState('home'); // home, translate, notebook
+            const [learnedWords, setLearnedWords] = useState({}); // Lưu trữ từ đã học
+            
+            const [screen, setScreen] = useState('home'); // home, translate, notebook, review
             const [theme, setTheme] = useState('all');
             const [shuffledPack, setShuffledPack] = useState([...wordDatabase]);
             const [homeIndex, setHomeIndex] = useState(0);
             const [isFlipped, setIsFlipped] = useState(false);
+            
             const [selectedWord, setSelectedWord] = useState(null);
             const [viText, setViText] = useState('');
             const [enText, setEnText] = useState('');
             const [isTranslating, setIsTranslating] = useState(false);
 
-            // --- UTILS ---
+            // Review States
+            const [reviewIndex, setReviewIndex] = useState(0);
+            const [reviewInput, setReviewInput] = useState('');
+            const [reviewStatus, setReviewStatus] = useState(null); // 'correct', 'wrong', null
+            const inputRef = useRef(null);
+
             const shuffle = (array) => {
                 let res = [...array];
                 for (let i = res.length - 1; i > 0; i--) {
@@ -410,12 +534,7 @@
                 if (!window.speechSynthesis) return null;
                 const voices = window.speechSynthesis.getVoices();
                 if (!voices.length) return null;
-                
-                // Prioritize natural sounding voices
-                const preferredNames = [
-                    'Google US English', 'Samantha', 'Daniel', 'Karen', 
-                    'Microsoft Aria Online (Natural) - English (United States)'
-                ];
+                const preferredNames = ['Google US English', 'Samantha', 'Daniel', 'Karen', 'Microsoft Aria Online (Natural) - English (United States)'];
                 for (const name of preferredNames) {
                     const voice = voices.find(v => v.name === name);
                     if (voice) return voice;
@@ -442,9 +561,7 @@
                             } else {
                                 await signInAnonymously(auth);
                             }
-                        } catch (error) {
-                            console.error("Auth error:", error);
-                        }
+                        } catch (error) { console.error("Auth error:", error); }
                     };
                     initAuth();
                     const unsubscribe = onAuthStateChanged(auth, setUser);
@@ -452,18 +569,30 @@
                 } else {
                     const localData = localStorage.getItem('vocab_master_notebook');
                     if (localData) setNotebook(JSON.parse(localData));
+                    const localLearned = localStorage.getItem('vocab_master_learned');
+                    if (localLearned) setLearnedWords(JSON.parse(localLearned));
                 }
             }, []);
 
             useEffect(() => {
                 if (isFirebaseActive && user && db) {
+                    // Fetch Notebook
                     const notebookRef = collection(db, 'artifacts', appId, 'users', user.uid, 'notebook');
-                    const unsubscribe = onSnapshot(notebookRef, (snapshot) => {
+                    const unsubNotes = onSnapshot(notebookRef, (snapshot) => {
                         const data = {};
                         snapshot.forEach(doc => { data[doc.id] = doc.data(); });
                         setNotebook(data);
-                    }, (error) => console.error("Snapshot error:", error));
-                    return () => unsubscribe();
+                    }, (err) => console.error(err));
+
+                    // Fetch Learned Words
+                    const learnedRef = collection(db, 'artifacts', appId, 'users', user.uid, 'learned');
+                    const unsubLearned = onSnapshot(learnedRef, (snapshot) => {
+                        const data = {};
+                        snapshot.forEach(doc => { data[doc.id] = true; });
+                        setLearnedWords(data);
+                    }, (err) => console.error(err));
+
+                    return () => { unsubNotes(); unsubLearned(); };
                 }
             }, [user]);
 
@@ -473,6 +602,17 @@
                 setHomeIndex(0);
                 setIsFlipped(false);
             }, [theme]);
+
+            const markAsLearned = async (word) => {
+                if (isFirebaseActive && user && db) {
+                    const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'learned', word.keyword);
+                    await setDoc(docRef, { timestamp: Date.now() }, { merge: true });
+                } else {
+                    const newLearned = { ...learnedWords, [word.keyword]: true };
+                    setLearnedWords(newLearned);
+                    localStorage.setItem('vocab_master_learned', JSON.stringify(newLearned));
+                }
+            };
 
             const handleTranslate = async () => {
                 if (!viText.trim()) return;
@@ -485,11 +625,8 @@
                     setEnText(translatedText);
 
                     const newNoteData = {
-                        keyword: selectedWord.keyword,
-                        category: selectedWord.category,
-                        vi: viText,
-                        en: translatedText,
-                        timestamp: Date.now()
+                        keyword: selectedWord.keyword, category: selectedWord.category,
+                        vi: viText, en: translatedText, timestamp: Date.now()
                     };
 
                     if (isFirebaseActive && user && db && selectedWord) {
@@ -501,11 +638,8 @@
                         setNotebook(currentNotes);
                         localStorage.setItem('vocab_master_notebook', JSON.stringify(currentNotes));
                     }
-                } catch (error) {
-                    console.error("Translation Error:", error);
-                } finally {
-                    setIsTranslating(false);
-                }
+                } catch (error) { console.error(error); } 
+                finally { setIsTranslating(false); }
             };
 
             const openTranslate = (word) => {
@@ -513,20 +647,53 @@
                 if (notebook[word.keyword]) {
                     setViText(notebook[word.keyword].vi || '');
                     setEnText(notebook[word.keyword].en || '');
-                } else {
-                    setViText('');
-                    setEnText('');
-                }
+                } else { setViText(''); setEnText(''); }
                 setScreen('translate');
             };
 
             const currentHomeWord = shuffledPack[homeIndex];
             const themes = [...new Set(wordDatabase.map(w => w.category))];
+            const isCurrentLearned = currentHomeWord && learnedWords[currentHomeWord.keyword];
 
-            // Helper to get aesthetic image URLs
             const getImageUrl = (keyword) => {
-                // Using Bing search with 'aesthetic photography' to get professional, natural looks
                 return `https://tse2.mm.bing.net/th?q=${encodeURIComponent(keyword + " aesthetic beautiful photography high quality")}&w=600&h=400&c=7&rs=1&p=0`;
+            };
+
+            const learnedPack = useMemo(() => wordDatabase.filter(w => learnedWords[w.keyword]), [learnedWords]);
+            const currentReviewWord = learnedPack[reviewIndex];
+
+            const openReview = () => {
+                setReviewIndex(0);
+                setReviewInput('');
+                setReviewStatus(null);
+                setScreen('review');
+            };
+
+            const checkReviewAnswer = () => {
+                if (!currentReviewWord) return;
+                const normalizedInput = reviewInput.trim().toLowerCase();
+                const normalizedTarget = currentReviewWord.keyword.toLowerCase();
+                
+                if (normalizedInput === normalizedTarget) {
+                    setReviewStatus('correct');
+                    speak(currentReviewWord.keyword);
+                } else {
+                    setReviewStatus('wrong');
+                }
+            };
+
+            const handleReviewKeyDown = (e) => {
+                if (e.key === 'Enter') {
+                    if (reviewStatus === 'correct') nextReviewWord();
+                    else checkReviewAnswer();
+                }
+            };
+
+            const nextReviewWord = () => {
+                setReviewStatus(null);
+                setReviewInput('');
+                setReviewIndex((prev) => (prev + 1) % learnedPack.length);
+                if (inputRef.current) inputRef.current.focus();
             };
 
             return (
@@ -543,9 +710,19 @@
                                     </h1>
                                     <p className="text-sm text-gray-400 mt-1 font-medium">Nâng tầm vốn từ của bạn</p>
                                 </div>
-                                <button onClick={() => setScreen('notebook')} className="bg-white/5 hover:bg-white/10 p-3 rounded-2xl flex items-center justify-center transition-all border border-white/10 shadow-lg backdrop-blur-md active:scale-95">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-amber-400"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
-                                </button>
+                                <div className="flex gap-2">
+                                    <button onClick={openReview} className="bg-white/5 hover:bg-white/10 p-3 rounded-2xl flex items-center justify-center transition-all border border-white/10 shadow-lg backdrop-blur-md active:scale-95 group relative">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-green-400"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                                        {learnedPack.length > 0 && (
+                                            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white shadow-sm">
+                                                {learnedPack.length}
+                                            </span>
+                                        )}
+                                    </button>
+                                    <button onClick={() => setScreen('notebook')} className="bg-white/5 hover:bg-white/10 p-3 rounded-2xl flex items-center justify-center transition-all border border-white/10 shadow-lg backdrop-blur-md active:scale-95">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-amber-400"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+                                    </button>
+                                </div>
                             </div>
                             
                             {/* Theme Selector */}
@@ -566,8 +743,8 @@
                                 </div>
                             </div>
 
-                            {}
-                            <div className="perspective-1000 h-[420px] w-full cursor-pointer relative mb-8" onClick={() => setIsFlipped(!isFlipped)}>
+                            {/* Flashcard */}
+                            <div className="perspective-1000 h-[420px] w-full cursor-pointer relative mb-6" onClick={() => setIsFlipped(!isFlipped)}>
                                 <div className={`w-full h-full transition-transform duration-700 ease-out preserve-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
                                     
                                     {/* FRONT OF CARD */}
@@ -580,13 +757,15 @@
                                                 alt={currentHomeWord.keyword}
                                                 onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1557682250-33bd709cbe85?w=600&h=400&fit=crop'; }}
                                             />
-                                            {/* Gradient Overlay for smooth transition */}
                                             <div className="absolute inset-0 bg-gradient-to-t from-white via-white/40 to-transparent"></div>
-                                            
-                                            {/* Category Tag */}
                                             <div className="absolute top-4 left-4 bg-black/30 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wide border border-white/20 shadow-sm">
                                                 {currentHomeWord.category}
                                             </div>
+                                            {isCurrentLearned && (
+                                                <div className="absolute top-4 right-4 bg-green-500/90 backdrop-blur-md text-white text-xs font-bold p-1.5 rounded-full border border-white/20 shadow-sm">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* Content Area */}
@@ -632,27 +811,146 @@
                                 </div>
                             </div>
 
-                            {}
-                            <div className="flex gap-3 mb-5">
+                            {/* Nav Buttons */}
+                            <div className="flex gap-3 mb-4">
                                 <button onClick={() => { setHomeIndex((homeIndex - 1 + shuffledPack.length) % shuffledPack.length); setIsFlipped(false); }} className="flex-1 bg-dark-800/50 hover:bg-dark-700/80 backdrop-blur-md py-4 rounded-2xl font-bold transition-all border border-white/10 flex items-center justify-center gap-2 text-sm uppercase tracking-wide text-gray-300 shadow-lg active:scale-95">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-                                    Trước
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg> Trước
                                 </button>
                                 <button onClick={() => { setHomeIndex((homeIndex + 1) % shuffledPack.length); setIsFlipped(false); }} className="flex-1 bg-dark-800/50 hover:bg-dark-700/80 backdrop-blur-md py-4 rounded-2xl font-bold transition-all border border-white/10 flex items-center justify-center gap-2 text-sm uppercase tracking-wide text-gray-300 shadow-lg active:scale-95">
-                                    Tiếp
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                                    Tiếp <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
                                 </button>
                             </div>
                             
-                            <button onClick={() => openTranslate(currentHomeWord)} className="w-full bg-gradient-to-r from-primary-600 to-purple-600 hover:from-primary-500 hover:to-purple-500 py-4 rounded-2xl font-black uppercase tracking-wide text-[15px] shadow-[0_10px_25px_-5px_rgba(59,130,246,0.5)] flex items-center justify-center gap-3 transition-all active:scale-[0.98] border border-white/10 text-white relative overflow-hidden group">
-                                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="relative z-10"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 Z"/></svg>
-                                <span className="relative z-10">Tạo câu & Lưu Sổ Tay</span>
-                            </button>
+                            {/* Action Buttons */}
+                            <div className="flex gap-3">
+                                <button 
+                                    onClick={() => markAsLearned(currentHomeWord)} 
+                                    className={`flex-[0.8] py-4 rounded-2xl font-black uppercase tracking-wide text-[13px] shadow-lg flex items-center justify-center gap-2 transition-all active:scale-[0.98] border ${isCurrentLearned ? 'bg-green-600/20 text-green-400 border-green-500/30' : 'bg-dark-800 border-white/10 text-white hover:bg-dark-700'}`}
+                                >
+                                    {isCurrentLearned ? (
+                                        <><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Đã Học</>
+                                    ) : (
+                                        <><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Đánh dấu Học</>
+                                    )}
+                                </button>
+                                <button onClick={() => openTranslate(currentHomeWord)} className="flex-[1.2] bg-gradient-to-r from-primary-600 to-purple-600 hover:from-primary-500 hover:to-purple-500 py-4 rounded-2xl font-black uppercase tracking-wide text-[13px] shadow-[0_10px_25px_-5px_rgba(59,130,246,0.5)] flex items-center justify-center gap-2 transition-all active:scale-[0.98] border border-white/10 text-white">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 Z"/></svg> Tạo câu & Lưu
+                                </button>
+                            </div>
                         </div>
                     )}
 
-                    {}
+                    {/* ================= REVIEW SCREEN ================= */}
+                    {screen === 'review' && (
+                        <div className="glass-panel p-6 flex flex-col h-[92vh] animate-fade-in-up relative overflow-hidden">
+                            {/* Header */}
+                            <div className="flex justify-between items-center mb-6 z-10 pb-4 border-b border-white/10 shrink-0">
+                                <h2 className="text-xl font-black uppercase tracking-widest flex items-center gap-2 text-white">
+                                    <div className="p-2 bg-green-400/20 rounded-xl text-green-400">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                                    </div>
+                                    Ôn Tập
+                                </h2>
+                                <button onClick={() => setScreen('home')} className="p-2.5 bg-white/5 hover:bg-white/10 rounded-2xl transition-all border border-white/10 shadow-sm backdrop-blur-md active:scale-95">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                </button>
+                            </div>
+
+                            {learnedPack.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center flex-grow text-center">
+                                    <div className="p-4 bg-dark-800 rounded-full border border-white/5 mb-4 text-gray-500">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                                    </div>
+                                    <h3 className="text-lg font-bold text-gray-300 mb-2">Chưa có từ nào để ôn tập</h3>
+                                    <p className="text-sm text-gray-500 px-4">Hãy quay lại màn hình chính và bấm "Đánh dấu Học" để bắt đầu nhé.</p>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col flex-grow">
+                                    {/* Progress */}
+                                    <div className="text-center mb-6">
+                                        <p className="text-sm font-bold text-gray-400">Từ {reviewIndex + 1} / {learnedPack.length}</p>
+                                    </div>
+
+                                    {/* Flashcard (VN) */}
+                                    <div className="bg-gradient-to-br from-dark-800 to-dark-900 border border-white/10 p-0 rounded-[2rem] mb-6 text-center shadow-2xl relative overflow-hidden z-10 flex-grow flex flex-col justify-start">
+                                        {/* Added Image Header for Review */}
+                                        <div className="relative h-40 w-full bg-gray-100 shrink-0">
+                                            <img
+                                                src={getImageUrl(currentReviewWord.keyword)}
+                                                className="w-full h-full object-cover opacity-80"
+                                                alt={currentReviewWord.keyword}
+                                                onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1557682250-33bd709cbe85?w=600&h=400&fit=crop'; }}
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-dark-900 via-dark-900/60 to-transparent"></div>
+                                        </div>
+
+                                        <div className="p-6 flex flex-col items-center justify-center flex-grow -mt-10 z-10">
+                                            <div className="absolute top-[-20px] left-[-20px] w-20 h-20 bg-green-500/10 rounded-full blur-xl"></div>
+                                            <h3 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-300 mb-3 uppercase leading-tight drop-shadow-md">
+                                                {currentReviewWord.vietnamese_keyword}
+                                            </h3>
+                                            <div className="flex flex-wrap justify-center gap-2 mt-2 opacity-80">
+                                                {currentReviewWord.vietnamese_taboo.slice(0, 3).map((w, i) => (
+                                                    <span key={i} className="text-xs font-semibold text-white bg-white/10 px-3 py-1.5 rounded-lg border border-white/5 backdrop-blur-md">{w}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Input Section */}
+                                    <div className="flex flex-col gap-4 mt-auto">
+                                        <div className="flex gap-2">
+                                            <div className={`flex-grow bg-white/5 backdrop-blur-md rounded-2xl p-4 border shadow-inner transition-colors ${reviewStatus === 'wrong' ? 'border-red-500/50 animate-shake' : reviewStatus === 'correct' ? 'border-green-500/50 bg-green-500/10' : 'border-white/10 focus-within:border-primary-500/50'}`}>
+                                                <input 
+                                                    ref={inputRef}
+                                                    type="text"
+                                                    value={reviewInput}
+                                                    onChange={(e) => setReviewInput(e.target.value)}
+                                                    onKeyDown={handleReviewKeyDown}
+                                                    disabled={reviewStatus === 'correct'}
+                                                    placeholder="Nhập từ Tiếng Anh..."
+                                                    className="w-full bg-transparent outline-none text-white font-bold text-lg text-center placeholder:text-gray-600 uppercase tracking-widest"
+                                                    autoComplete="off"
+                                                />
+                                            </div>
+                                            <button onClick={() => speak(currentReviewWord.keyword)} className="p-4 bg-primary-600/20 text-primary-400 rounded-2xl border border-primary-500/30 hover:bg-primary-600/30 transition-all active:scale-95 flex items-center justify-center">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                                            </button>
+                                        </div>
+
+                                        {/* Status Message */}
+                                        {reviewStatus === 'wrong' && (
+                                            <p className="text-center text-red-400 font-semibold text-sm animate-fade-in-up">Chưa chính xác. Hãy thử lại hoặc nghe gợi ý!</p>
+                                        )}
+                                        {reviewStatus === 'correct' && (
+                                            <div className="text-center text-green-400 font-bold flex flex-col items-center gap-1 animate-fade-in-up mb-2">
+                                                <p className="text-sm uppercase tracking-widest text-green-500/80">Chính xác!</p>
+                                                <p className="text-3xl font-black text-white uppercase tracking-tight">{currentReviewWord.keyword}</p>
+                                                <p className="text-sm text-gray-400 font-mono bg-dark-800 px-3 py-1 rounded-md border border-white/10">{currentReviewWord.ipa}</p>
+                                            </div>
+                                        )}
+
+                                        {/* Submit/Next Button */}
+                                        {reviewStatus === 'correct' ? (
+                                            <button onClick={nextReviewWord} className="w-full bg-green-600 hover:bg-green-500 py-4 rounded-2xl font-black text-[15px] uppercase tracking-wider transition-all shadow-lg active:scale-[0.98] border border-green-400/30 text-white flex items-center justify-center gap-2">
+                                                Tiếp theo <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                                            </button>
+                                        ) : (
+                                            <button 
+                                                onClick={checkReviewAnswer} 
+                                                disabled={!reviewInput.trim()}
+                                                className="w-full bg-primary-600 hover:bg-primary-500 py-4 rounded-2xl font-black text-[15px] uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg active:scale-[0.98] border border-primary-400/30 text-white"
+                                            >
+                                                Kiểm tra
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* ================= TRANSLATE SCREEN ================= */}
                     {screen === 'translate' && selectedWord && (
                         <div className="glass-panel p-6 flex flex-col h-[92vh] animate-fade-in-up relative overflow-hidden">
                             {/* Header */}
@@ -666,7 +964,6 @@
                                 </button>
                             </div>
 
-                            {/* Target Word Display */}
                             <div className="bg-gradient-to-br from-dark-800 to-dark-900 border border-white/10 p-5 rounded-[1.5rem] mb-6 text-center shadow-lg relative overflow-hidden z-10">
                                 <div className="absolute top-[-20px] right-[-20px] w-20 h-20 bg-primary-500/20 rounded-full blur-xl"></div>
                                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1.5">Từ vựng mục tiêu</p>
@@ -676,9 +973,7 @@
                                 <p className="text-sm font-semibold text-primary-400 mt-1">{selectedWord.vietnamese_keyword}</p>
                             </div>
 
-                            {/* Input / Output Area */}
                             <div className="flex flex-col gap-4 flex-grow z-10">
-                                {/* VN Input */}
                                 <div className="bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10 shadow-inner focus-within:border-primary-500/50 transition-colors relative">
                                     <span className="absolute -top-3 left-4 bg-dark-900 text-gray-300 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md border border-white/10">Viết câu (Tiếng Việt)</span>
                                     <textarea 
@@ -689,26 +984,18 @@
                                     />
                                 </div>
 
-                                {/* Action Button */}
                                 <button 
                                     onClick={handleTranslate} 
                                     disabled={!viText.trim() || isTranslating}
                                     className="w-full bg-primary-600 hover:bg-primary-500 py-4 rounded-2xl font-bold text-[14px] uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] border border-primary-400/30 text-white"
                                 >
                                     {isTranslating ? (
-                                        <>
-                                            <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                            Đang xử lý...
-                                        </>
+                                        <><svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Đang xử lý...</>
                                     ) : (
-                                        <>
-                                            Dịch & Lưu
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
-                                        </>
+                                        <>Dịch & Lưu <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg></>
                                     )}
                                 </button>
 
-                                {/* EN Output */}
                                 <div className="bg-dark-800/80 backdrop-blur-xl rounded-2xl p-5 border border-white/10 flex-grow overflow-y-auto relative custom-scrollbar shadow-inner mt-2">
                                     <span className="absolute -top-3 left-4 bg-primary-600 text-white text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md shadow-sm">Bản dịch (Tiếng Anh)</span>
                                     {!enText ? (
@@ -722,11 +1009,7 @@
                                                 {enText.split(/(\s+)/).map((segment, idx) => {
                                                     if (/\s+/.test(segment)) return <span key={idx}>{segment}</span>;
                                                     return (
-                                                        <span 
-                                                            key={idx} 
-                                                            onClick={() => speak(segment.replace(/[.,!?]/g, ''))} 
-                                                            className="cursor-pointer hover:text-primary-400 hover:bg-primary-900/30 px-1 -mx-1 rounded transition-colors duration-200"
-                                                        >
+                                                        <span key={idx} onClick={() => speak(segment.replace(/[.,!?]/g, ''))} className="cursor-pointer hover:text-primary-400 hover:bg-primary-900/30 px-1 -mx-1 rounded transition-colors duration-200">
                                                             {segment}
                                                         </span>
                                                     );
@@ -736,23 +1019,19 @@
                                     )}
                                 </div>
                                 
-                                {/* Tip */}
                                 <div className="bg-dark-800/50 border border-white/5 rounded-xl p-3 flex items-start gap-3 text-gray-400 backdrop-blur-sm z-10 mt-1">
                                     <div className="mt-0.5 text-primary-400">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12h4l3-9 5 18 3-9h5"/></svg>
                                     </div>
-                                    <p className="text-[12px] font-medium leading-relaxed">
-                                        <span className="text-gray-300 font-bold">Mẹo tương tác:</span> Chạm vào từng từ tiếng Anh trong bản dịch để nghe máy đọc chuẩn xác phát âm.
-                                    </p>
+                                    <p className="text-[12px] font-medium leading-relaxed"><span className="text-gray-300 font-bold">Mẹo tương tác:</span> Chạm vào từng từ tiếng Anh trong bản dịch để nghe máy đọc chuẩn xác phát âm.</p>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {}
+                    {/* ================= NOTEBOOK SCREEN ================= */}
                     {screen === 'notebook' && (
                         <div className="glass-panel p-6 flex flex-col h-[92vh] animate-fade-in-up">
-                            {/* Header */}
                             <div className="flex justify-between items-center mb-6 pb-4 border-b border-white/10 shrink-0">
                                 <h2 className="text-xl font-black uppercase tracking-widest flex items-center gap-2 text-white">
                                     <div className="p-2 bg-amber-400/20 rounded-xl text-amber-400">
@@ -765,7 +1044,6 @@
                                 </button>
                             </div>
 
-                            {/* Content List */}
                             <div className="overflow-y-auto pr-2 space-y-4 flex-grow custom-scrollbar">
                                 {Object.keys(notebook).length === 0 ? (
                                     <div className="flex flex-col items-center justify-center h-full text-gray-500 gap-4">
@@ -797,11 +1075,7 @@
                                                     {item.en.split(/(\s+)/).map((segment, i) => {
                                                         if (/\s+/.test(segment)) return <span key={i}>{segment}</span>;
                                                         return (
-                                                            <span 
-                                                                key={i} 
-                                                                onClick={() => speak(segment.replace(/[.,!?]/g, ''))} 
-                                                                className="cursor-pointer hover:text-primary-400 transition-colors"
-                                                            >
+                                                            <span key={i} onClick={() => speak(segment.replace(/[.,!?]/g, ''))} className="cursor-pointer hover:text-primary-400 transition-colors">
                                                                 {segment}
                                                             </span>
                                                         );
