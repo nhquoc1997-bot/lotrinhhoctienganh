@@ -28,11 +28,6 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        .tabular-nums {
-            font-variant-numeric: tabular-nums;
-            font-feature-settings: "tnum";
-        }
-
         /* Hiệu ứng kính hiện đại */
         .glass-panel {
             background: var(--glass-bg);
@@ -53,6 +48,7 @@
         .animate-fade-up { animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
         .animate-pulse-slow { animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        .animate-bounce { animation: bounce 2s infinite; }
         
         @keyframes fadeUp { 
             from { opacity: 0; transform: translateY(20px); } 
@@ -61,6 +57,10 @@
         @keyframes fadeIn { 
             from { opacity: 0; } 
             to { opacity: 1; } 
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(-10%); animation-timing-function: cubic-bezier(0.8,0,1,1); }
+            50% { transform: translateY(0); animation-timing-function: cubic-bezier(0,0,0.2,1); }
         }
 
         /* Card Hover Effects */
@@ -83,7 +83,7 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         
-        /* Rank Colors Tinh chỉnh sang trọng hơn */
+        /* Rank Colors */
         .rank-1 { background: linear-gradient(135deg, #FFDF00 0%, #D4AF37 100%); color: #fff; border: 1px solid rgba(255,255,255,0.4); box-shadow: 0 10px 25px -5px rgba(212, 175, 55, 0.4); }
         .rank-2 { background: linear-gradient(135deg, #E2E8F0 0%, #94A3B8 100%); color: #fff; border: 1px solid rgba(255,255,255,0.4); box-shadow: 0 10px 25px -5px rgba(148, 163, 184, 0.4); }
         .rank-3 { background: linear-gradient(135deg, #F4A460 0%, #CD7F32 100%); color: #fff; border: 1px solid rgba(255,255,255,0.4); box-shadow: 0 10px 25px -5px rgba(205, 127, 50, 0.4); }
@@ -148,7 +148,8 @@
             { id: "listening", title: "Listening", subtitle: "Luyện nghe", desc: "Luyện nghe qua hội thoại hàng ngày.", icon: "headphones", color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-100", path: "listening.html" },
             { id: "speaking", title: "Speaking", subtitle: "Luyện nói", desc: "Thực hành phản xạ nói tự nhiên.", icon: "message-circle", color: "text-violet-600", bg: "bg-violet-50", border: "border-violet-100", path: "speaking.html" },
             { id: "vocabulary", title: "Vocabulary", subtitle: "Từ vựng", desc: "Học từ mới theo các chủ đề đa dạng.", icon: "sparkles", color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-100", path: "vocabulary.html" },
-            { id: "bilingual", title: "Bilingual", subtitle: "Song ngữ", desc: "Nâng cao vốn từ qua tin tức song ngữ.", icon: "languages", color: "text-rose-600", bg: "bg-rose-50", border: "border-rose-100", path: "bilingual.html" }
+            { id: "bilingual", title: "Bilingual", subtitle: "Song ngữ", desc: "Nâng cao vốn từ qua tin tức song ngữ.", icon: "languages", color: "text-rose-600", bg: "bg-rose-50", border: "border-rose-100", path: "bilingual.html" },
+            { id: "taboo", title: "Taboo", subtitle: "Trò chơi", desc: "Học từ vựng qua trò chơi giải thích từ.", icon: "gamepad-2", color: "text-fuchsia-600", bg: "bg-fuchsia-50", border: "border-fuchsia-100", path: "taboo.html" }
         ];
 
         const getLessonTitle = (path) => { const lesson = lessonsData.find(l => l.path === path); return lesson ? lesson.title : path; };
@@ -182,12 +183,15 @@
             return dates;
         };
 
-        // Đã tối ưu formatTime để chỉ hiển thị Giờ và Phút
+        // Đã cập nhật formatTime để hiển thị "X tiếng Y phút"
         const formatTime = (totalSeconds) => {
-            if (!totalSeconds || isNaN(totalSeconds)) return "00:00";
+            if (!totalSeconds || isNaN(totalSeconds) || totalSeconds < 60) return "0 phút";
             const h = Math.floor(totalSeconds / 3600);
             const m = Math.floor((totalSeconds % 3600) / 60);
-            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+            if (h > 0) {
+                return m > 0 ? `${h} tiếng ${m} phút` : `${h} tiếng`;
+            }
+            return `${m} phút`;
         };
 
         const getTimeAgo = (timestamp) => {
@@ -280,6 +284,7 @@
                 localStorage.removeItem('bob_currentUser'); 
                 localStorage.removeItem('bob_deviceName');
                 localStorage.removeItem('bob_deviceId');
+                sessionStorage.removeItem('bob_welcome_shown');
             };
 
             if (!isFirebaseReady || isLoadingData) return (
@@ -342,6 +347,9 @@
             const [activeLesson, setActiveLesson] = useState(null);
             const [currentTab, setCurrentTab] = useState('lessons'); 
             
+            // State popup khích lệ (dùng sessionStorage để chỉ hiện 1 lần mỗi lần mở trình duyệt)
+            const [showWelcome, setShowWelcome] = useState(() => !sessionStorage.getItem('bob_welcome_shown'));
+
             const todayStr = getTodayStr();
             const weekDates = useMemo(() => getCurrentWeekDates(), []);
             const monthDates = useMemo(() => getCurrentMonthDates(), []);
@@ -392,7 +400,6 @@
             const [localSeconds, setLocalSeconds] = useState(() => Number(timeData[user.id]?.[deviceId]?.times?.[todayStr] || 0));
             const [localLessonStats, setLocalLessonStats] = useState(() => timeData[user.id]?.[deviceId]?.lessonStats || {});
             
-            // Dùng useRef để lưu thời gian ngầm, không làm UI bị giật mỗi giây
             const exactSecondsRef = useRef(localSeconds);
             const exactLessonStatsRef = useRef(localLessonStats);
 
@@ -429,7 +436,6 @@
                 };
             }, [deviceName, isIdle]);
 
-            // Cập nhật State và Ref khi có thay đổi từ DB
             useEffect(() => {
                 const dbSeconds = Number(timeData[user.id]?.[deviceId]?.times?.[todayStr] || 0);
                 if (deviceName && dbSeconds > exactSecondsRef.current) {
@@ -443,7 +449,6 @@
                 }
             }, [timeData, user.id, deviceId, todayStr, deviceName]);
 
-            // Tối ưu UI: Chỉ trigger render 60 giây / lần
             useEffect(() => {
                 if (!deviceName) return;
                 const timer = setInterval(() => {
@@ -456,8 +461,6 @@
                                 [path]: Number(exactLessonStatsRef.current[path] || 0) + 1
                             };
                         }
-                        
-                        // Cập nhật lên UI mỗi 60s
                         if (exactSecondsRef.current % 60 === 0) {
                             setLocalSeconds(exactSecondsRef.current);
                             setLocalLessonStats(exactLessonStatsRef.current);
@@ -467,7 +470,6 @@
                 return () => clearInterval(timer);
             }, [deviceName]);
 
-            // Cập nhật lên Firebase
             useEffect(() => {
                 if (!deviceName || !db) return;
                 if (localSeconds - lastSyncedSeconds.current >= 10) {
@@ -636,6 +638,44 @@
                 );
             }
 
+            const closeWelcome = () => {
+                sessionStorage.setItem('bob_welcome_shown', 'true');
+                setShowWelcome(false);
+            };
+
+            const RoastModal = () => {
+                if (!showWelcome) return null;
+                const timeStr = formatTime(myWeeklyTotal);
+                let message = ""; let emoji = "🙄";
+                
+                if (myWeeklyTotal < 60) {
+                    message = "Tuần này chưa học chữ nào luôn á trời? Bấm vào bài học ngay đi!";
+                    emoji = "🫵";
+                } else if (myWeeklyTotal < 3600) {
+                    message = `Tuần này học gì mới có ${timeStr} vậy trời? Học tiếp đi cho giỏi, lười thế này bao giờ mới trùm trường!`;
+                    emoji = "🤏";
+                } else if (myWeeklyTotal < 10800) {
+                    message = `Đã học được ${timeStr} tuần này rồi đấy! Tạm được, nhưng cày thêm đi mới bứt phá được!`;
+                    emoji = "💪";
+                } else {
+                    message = `Cháy quá! Đã cày được ${timeStr} tuần này. Giữ vững phong độ này nhé idol!`;
+                    emoji = "🔥";
+                }
+
+                return (
+                    <div className="fixed inset-0 z-[99999] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
+                        <div className="bg-white p-8 sm:p-10 rounded-[2.5rem] max-w-sm w-full text-center shadow-2xl animate-fade-up">
+                            <div className="text-6xl mb-4 animate-bounce">{emoji}</div>
+                            <h3 className="font-black text-2xl mb-3 text-slate-800 tracking-tight">Ê này!</h3>
+                            <p className="text-slate-600 font-medium mb-8 leading-relaxed text-sm">{message}</p>
+                            <button onClick={closeWelcome} className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-lg hover:bg-indigo-700 active:scale-[0.98] transition-all uppercase text-sm tracking-widest">
+                                Biết rồi, học đây!
+                            </button>
+                        </div>
+                    </div>
+                );
+            };
+
             const IdleWarningModal = () => {
                 if (!isIdle) return null;
                 return (
@@ -683,7 +723,7 @@
                                 <div className={`relative w-2.5 h-2.5 rounded-full shadow-sm ${isIdle ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
                             </div>
                             <Icon name="clock" size={16} className={isIdle ? 'text-amber-500' : 'text-emerald-600'} />
-                            <span className={`font-mono tabular-nums font-black text-base sm:text-lg tracking-widest mt-0.5`}>
+                            <span className={`font-bold text-sm sm:text-base tracking-wide mt-0.5`}>
                                 {formatTime(localSeconds)}
                             </span>
                             <span className={`hidden sm:block text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-lg ${isIdle ? 'bg-amber-100/50' : 'bg-emerald-100/50'}`}>
@@ -720,6 +760,7 @@
 
             return (
                 <div className="max-w-[1200px] mx-auto space-y-6 sm:space-y-8 animate-fade-in sm:px-4">
+                    <RoastModal />
                     <IdleWarningModal />
                     <EditNameModal />
                     <GlobalNav />
@@ -757,17 +798,17 @@
                                     <div className={`absolute top-0 left-0 w-full h-1.5 ${isIdle ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
                                     <Icon name="sun" size={20} className="text-indigo-300 mx-auto mb-2 opacity-80 group-hover:scale-110 transition-transform" />
                                     <p className="text-[10px] uppercase font-bold text-indigo-200 tracking-widest mb-1.5">Hôm nay</p>
-                                    <p className="font-mono tabular-nums font-black text-base sm:text-2xl text-white drop-shadow-md">{formatTime(myDailyTotal)}</p>
+                                    <p className="font-black text-sm sm:text-lg text-white drop-shadow-md">{formatTime(myDailyTotal)}</p>
                                 </div>
                                 <div className="glass-panel p-3 sm:p-5 rounded-2xl flex flex-col justify-center text-center group hover:bg-white/10 transition-colors">
                                     <Icon name="calendar" size={20} className="text-amber-300 mx-auto mb-2 opacity-80 group-hover:scale-110 transition-transform" />
                                     <p className="text-[10px] uppercase font-bold text-indigo-200 tracking-widest mb-1.5">Tuần này</p>
-                                    <p className="font-mono tabular-nums font-black text-base sm:text-2xl text-amber-300 drop-shadow-md">{formatTime(myWeeklyTotal)}</p>
+                                    <p className="font-black text-sm sm:text-lg text-amber-300 drop-shadow-md">{formatTime(myWeeklyTotal)}</p>
                                 </div>
                                 <div className="glass-panel p-3 sm:p-5 rounded-2xl flex flex-col justify-center text-center group hover:bg-white/10 transition-colors">
                                     <Icon name="calendar-days" size={20} className="text-emerald-300 mx-auto mb-2 opacity-80 group-hover:scale-110 transition-transform" />
                                     <p className="text-[10px] uppercase font-bold text-indigo-200 tracking-widest mb-1.5">Tháng này</p>
-                                    <p className="font-mono tabular-nums font-black text-base sm:text-2xl text-emerald-300 drop-shadow-md">{formatTime(myMonthlyTotal)}</p>
+                                    <p className="font-black text-sm sm:text-lg text-emerald-300 drop-shadow-md">{formatTime(myMonthlyTotal)}</p>
                                 </div>
                             </div>
 
@@ -910,7 +951,7 @@
                                             </div>
                                         </div>
                                         <div className="text-right shrink-0 ml-2 sm:ml-4">
-                                            <p className={`font-mono tabular-nums font-black ${index === 0 ? 'text-xl sm:text-2xl drop-shadow-md' : 'text-lg sm:text-xl'}`}>{formatTime(student.total)}</p>
+                                            <p className={`font-black ${index === 0 ? 'text-base sm:text-lg drop-shadow-md' : 'text-sm sm:text-base'}`}>{formatTime(student.total)}</p>
                                             <p className="text-[9px] sm:text-[10px] uppercase font-bold opacity-70 tracking-widest mt-1">{label}</p>
                                         </div>
                                     </div>
@@ -1308,15 +1349,15 @@
                                                     <div className="flex flex-col gap-1.5 bg-slate-50 p-3 rounded-xl border border-slate-200 w-full sm:w-auto shrink-0">
                                                         <div className="flex justify-between items-center sm:justify-start sm:gap-8 min-w-0 sm:min-w-[160px]">
                                                             <span className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Hôm nay</span>
-                                                            <span className="font-mono tabular-nums font-bold text-sm text-slate-700">{formatTime(l.totalToday)}</span>
+                                                            <span className="font-bold text-xs text-slate-700">{formatTime(l.totalToday)}</span>
                                                         </div>
                                                         <div className="flex justify-between items-center sm:justify-start sm:gap-8">
                                                             <span className="text-[10px] uppercase font-bold text-amber-500 tracking-widest">Tuần</span>
-                                                            <span className="font-mono tabular-nums font-bold text-sm text-amber-600">{formatTime(l.weeklyTotal)}</span>
+                                                            <span className="font-bold text-xs text-amber-600">{formatTime(l.weeklyTotal)}</span>
                                                         </div>
                                                         <div className="flex justify-between items-center sm:justify-start sm:gap-8">
                                                             <span className="text-[10px] uppercase font-bold text-emerald-500 tracking-widest">Tháng</span>
-                                                            <span className="font-mono tabular-nums font-black text-sm text-emerald-600">{formatTime(l.monthlyTotal)}</span>
+                                                            <span className="font-black text-xs text-emerald-600">{formatTime(l.monthlyTotal)}</span>
                                                         </div>
                                                     </div>
                                                     
