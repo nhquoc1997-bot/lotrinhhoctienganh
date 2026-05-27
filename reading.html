@@ -117,6 +117,11 @@
             z-index: 40;
             margin: 0 !important;
         }
+
+        @keyframes fade-in-up {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body class="bg-slate-50 h-[100dvh] text-slate-800 overflow-hidden flex flex-col">
@@ -124,8 +129,13 @@
     <!-- Header tối ưu lại chiều cao trên mobile -->
     <nav class="bg-white/80 backdrop-blur-md shadow-sm shrink-0 z-40 border-b border-slate-200 sticky top-0">
         <div class="max-w-6xl mx-auto px-3 md:px-4 h-12 md:h-16 flex items-center justify-between">
-            <div class="font-extrabold text-lg md:text-xl text-blue-600 flex items-center tracking-tight">
-                <i class="fa-solid fa-graduation-cap mr-2 text-xl md:text-2xl"></i> EnglishPro
+            <div class="flex items-center">
+                <div class="font-extrabold text-lg md:text-xl text-blue-600 flex items-center tracking-tight">
+                    <i class="fa-solid fa-graduation-cap mr-2 text-xl md:text-2xl"></i> <span class="hidden md:inline">EnglishPro</span>
+                </div>
+                <button id="btnOpenNotebook" class="ml-3 md:ml-6 flex items-center text-[11px] md:text-sm font-bold text-slate-700 hover:text-blue-700 transition-colors bg-white hover:bg-blue-50 px-2.5 py-1.5 md:px-4 md:py-2 rounded-xl border border-slate-200 shadow-sm active:scale-95">
+                    <i class="fa-solid fa-book-bookmark mr-1.5 md:mr-2 text-blue-500"></i> Sổ tay (<span id="notebookCount">0</span>)
+                </button>
             </div>
             <div class="flex space-x-2 md:space-x-8 text-[10px] md:text-sm font-semibold">
                 <div id="step1" class="flex items-center text-blue-600 transition-colors duration-300">
@@ -238,6 +248,28 @@
                 </div>
             </div>
         </div>
+
+        <!-- Màn hình Sổ Tay -->
+        <div id="screen-notebook" class="screen flex-col h-full w-full max-w-4xl mx-auto pt-4 md:pt-10 pb-4 md:pb-8 overflow-hidden">
+            <div class="flex justify-between items-center mb-4 md:mb-8 shrink-0 px-2 md:px-0">
+                <h1 class="text-xl md:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center">
+                    <i class="fa-solid fa-book-bookmark text-blue-600 mr-2 md:mr-3"></i> Sổ tay của tôi
+                </h1>
+                <button id="btnCloseNotebook" class="px-3 py-1.5 md:px-4 md:py-2 text-slate-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg md:rounded-xl font-bold transition-colors flex items-center text-xs md:text-base border border-slate-200 shadow-sm bg-white active:scale-95">
+                    <i class="fa-solid fa-arrow-left mr-1.5 md:mr-2"></i> Quay lại
+                </button>
+            </div>
+            
+            <div class="flex-grow bg-white rounded-2xl md:rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden flex flex-col">
+                <div class="p-3 md:p-5 bg-slate-50 border-b border-slate-100 flex justify-between items-center shrink-0">
+                    <span class="text-sm md:text-base font-bold text-slate-600">Bạn đã lưu <span id="notebookTotal" class="text-blue-600 text-lg mx-1">0</span> bài luyện đọc</span>
+                </div>
+                <div id="notebookList" class="flex-grow overflow-y-auto p-2 md:p-4 flex flex-col gap-2 md:gap-3 bg-slate-50/50">
+                    <!-- Danh sách bài lưu sẽ hiển thị ở đây -->
+                </div>
+            </div>
+        </div>
+
     </main>
 
     <!-- Toolbar thu gọn hơn trên mobile -->
@@ -270,7 +302,8 @@
     <script>
         const screens = {
             input: document.getElementById('screen-input'),
-            workspace: document.getElementById('screen-workspace')
+            workspace: document.getElementById('screen-workspace'),
+            notebook: document.getElementById('screen-notebook')
         };
         const steps = {
             step1: document.getElementById('step1'),
@@ -348,11 +381,13 @@
                 s.querySelector('span').classList.add('bg-slate-100', 'text-slate-500');
             });
 
-            let activeStep = screenName === 'input' ? steps.step1 : steps.step2;
-            activeStep.classList.remove('text-slate-400');
-            activeStep.classList.add('text-blue-600');
-            activeStep.querySelector('span').classList.remove('bg-slate-100', 'text-slate-500');
-            activeStep.querySelector('span').classList.add('bg-blue-100', 'text-blue-600', 'shadow-inner');
+            if (screenName !== 'notebook') {
+                let activeStep = screenName === 'input' ? steps.step1 : steps.step2;
+                activeStep.classList.remove('text-slate-400');
+                activeStep.classList.add('text-blue-600');
+                activeStep.querySelector('span').classList.remove('bg-slate-100', 'text-slate-500');
+                activeStep.querySelector('span').classList.add('bg-blue-100', 'text-blue-600', 'shadow-inner');
+            }
             
             window.speechSynthesis.cancel();
             if (recognition && !isUserStopped) document.getElementById('btnStopRecord').click();
@@ -387,6 +422,99 @@
             synth.speak(utter);
         }
 
+        // --- SỔ TAY LOGIC (NOTEBOOK) ---
+        let notebook = JSON.parse(localStorage.getItem('englishProNotebook')) || [];
+
+        function saveToNotebook(text) {
+            const trimmed = text.trim();
+            if (!trimmed) return;
+            
+            // Tránh lưu trùng lặp nội dung
+            if (notebook.some(item => item.content === trimmed)) return;
+            
+            // Lấy tiêu đề là 60 ký tự đầu tiên
+            let title = trimmed.substring(0, 60);
+            if(trimmed.length > 60) title += '...';
+
+            const newItem = {
+                id: Date.now(),
+                content: trimmed,
+                title: title,
+                date: new Date().toLocaleDateString('vi-VN')
+            };
+            
+            notebook.unshift(newItem); // Thêm lên đầu danh sách
+            localStorage.setItem('englishProNotebook', JSON.stringify(notebook));
+            updateNotebookUI();
+        }
+
+        function deleteFromNotebook(id, event) {
+            event.stopPropagation(); // Ngăn sự kiện click vào div bao ngoài tải bài học
+            notebook = notebook.filter(item => item.id !== id);
+            localStorage.setItem('englishProNotebook', JSON.stringify(notebook));
+            updateNotebookUI();
+            renderNotebookList();
+            showToast("Đã xóa bài khỏi sổ tay", "success");
+        }
+
+        function updateNotebookUI() {
+            document.getElementById('notebookCount').textContent = notebook.length;
+            if(document.getElementById('notebookTotal')) {
+                document.getElementById('notebookTotal').textContent = notebook.length;
+            }
+        }
+
+        function renderNotebookList() {
+            const list = document.getElementById('notebookList');
+            list.innerHTML = '';
+            
+            if (notebook.length === 0) {
+                list.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-full text-slate-400 py-16">
+                        <i class="fa-solid fa-box-open text-5xl md:text-7xl mb-4 text-slate-200"></i>
+                        <p class="text-base md:text-lg font-bold text-slate-500">Sổ tay trống</p>
+                        <p class="text-xs md:text-sm mt-1 text-center px-4">Các bài bạn luyện đọc sẽ được lưu tự động tại đây để tiện xem lại sau.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            notebook.forEach(item => {
+                const div = document.createElement('div');
+                div.className = "p-3 md:p-5 rounded-xl md:rounded-2xl border border-slate-200 hover:border-blue-300 hover:shadow-md bg-white cursor-pointer transition-all group flex justify-between items-center gap-3 animate-fade-in-up";
+                div.style.animation = "fade-in-up 0.3s ease-out forwards";
+                div.onclick = () => {
+                    document.getElementById('inputText').value = item.content;
+                    switchScreen('input');
+                    // Tự động nhấn nút bắt đầu luyện tập để tải ngay lập tức
+                    setTimeout(() => document.getElementById('btnProcess').click(), 100);
+                };
+                
+                div.innerHTML = `
+                    <div class="flex-1 overflow-hidden">
+                        <h3 class="font-bold text-slate-800 text-sm md:text-base mb-1 md:mb-1.5 truncate group-hover:text-blue-600 transition-colors leading-relaxed">${item.title}</h3>
+                        <p class="text-[10px] md:text-xs text-slate-400 flex items-center font-medium"><i class="fa-regular fa-clock mr-1.5"></i> Đã lưu: ${item.date}</p>
+                    </div>
+                    <button onclick="deleteFromNotebook(${item.id}, event)" class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-slate-50 hover:bg-rose-100 text-slate-400 hover:text-rose-500 flex items-center justify-center transition-colors shrink-0 border border-transparent hover:border-rose-200" title="Xóa khỏi sổ tay">
+                        <i class="fa-solid fa-trash-can text-xs md:text-sm"></i>
+                    </button>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        document.getElementById('btnOpenNotebook').addEventListener('click', () => {
+            renderNotebookList();
+            switchScreen('notebook');
+        });
+
+        document.getElementById('btnCloseNotebook').addEventListener('click', () => {
+            switchScreen('input');
+        });
+
+        updateNotebookUI();
+        // --- END SỔ TAY LOGIC ---
+
         let chunks = [];
         let currentChunkIndex = 0;
 
@@ -397,6 +525,8 @@
                 return;
             }
             
+            saveToNotebook(text); // Tự động lưu vào sổ tay
+
             unlockAudioOnMobile();
             findBestVoice(); 
 
