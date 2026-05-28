@@ -98,17 +98,46 @@
             const handleStartProcessing = () => {
                 if (!inputText.trim()) return;
                 
-                // Tách câu và chia thành từng đoạn (1-2 câu 1 đoạn)
-                const sentences = inputText.match(/[^.?!]+[.?!]+(?=\s|$)|[^.?!]+$/g);
-                if (!sentences) {
-                    setChunks([inputText]);
+                // Tách câu thông minh sử dụng Intl.Segmenter (nếu trình duyệt hỗ trợ)
+                // Giúp nhận diện đúng các câu có chứa từ viết tắt như Mr., Mrs., e.g. mà không bị cắt vụn
+                let sentences = [];
+                if (window.Intl && Intl.Segmenter) {
+                    const segmenter = new Intl.Segmenter('en', { granularity: 'sentence' });
+                    sentences = Array.from(segmenter.segment(inputText)).map(s => s.segment.trim()).filter(s => s.length > 0);
                 } else {
-                    const newChunks = [];
-                    for (let i = 0; i < sentences.length; i += 2) {
-                        newChunks.push(sentences.slice(i, i + 2).join(' ').trim());
-                    }
-                    setChunks(newChunks);
+                    // Fallback dự phòng nếu trình duyệt cũ
+                    const match = inputText.match(/[^.?!]+[.?!]+(?=\s|$)|[^.?!]+$/g);
+                    sentences = match ? match.map(s => s.trim()).filter(s => s.length > 0) : [inputText];
                 }
+
+                const newChunks = [];
+                let currentChunk = [];
+                let currentWordCount = 0;
+
+                for (let i = 0; i < sentences.length; i++) {
+                    const sentence = sentences[i];
+                    const words = sentence.split(/\s+/).length;
+                    
+                    currentChunk.push(sentence);
+                    currentWordCount += words;
+                    
+                    // Logic nhóm câu (1-2 câu 1 lần):
+                    // Sẽ đóng gói thành 1 phần nếu thoả mãn 1 trong 2 điều kiện:
+                    // 1. Đã gom đủ 2 câu.
+                    // 2. Độ dài đoạn hiện tại đã đủ dài (>= 15 từ) thì dù mới 1 câu cũng giữ nguyên 1 câu để tránh bị quá tải ý.
+                    if (currentChunk.length >= 2 || currentWordCount >= 15) {
+                        newChunks.push(currentChunk.join(" "));
+                        currentChunk = [];
+                        currentWordCount = 0;
+                    }
+                }
+
+                // Push nốt đoạn cuối nếu còn sót lại
+                if (currentChunk.length > 0) {
+                    newChunks.push(currentChunk.join(" "));
+                }
+
+                setChunks(newChunks);
                 setCurrentIndex(0);
                 resetTurn();
             };
@@ -141,7 +170,6 @@
             const parseAIResponse = (text) => {
                 try {
                     let cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-                    // Tìm vị trí của dấu { và } ngoài cùng
                     const start = cleanedText.indexOf('{');
                     const end = cleanedText.lastIndexOf('}');
                     if (start !== -1 && end !== -1) {
@@ -186,7 +214,6 @@
                 } catch (error) {
                     console.error("Error fetching hints:", error);
                     setRecognitionError("Không thể lấy gợi ý lúc này. Vui lòng thử lại.");
-                    // Dữ liệu dự phòng nếu mạng chập chờn
                     setHintsData({
                         translation: "Đang gặp lỗi kết nối với máy chủ AI. Bạn hãy cố gắng tự đọc hiểu câu này nhé!",
                         suggestions: [
@@ -268,7 +295,7 @@
                                 Nhập tài liệu học tập của bạn
                             </h2>
                             <p className="text-gray-500 mb-6 text-base">
-                                Dán văn bản (Tiếng Việt/Anh) vào đây. Hệ thống sẽ tự động chia nhỏ để bạn luyện tập từng bước cùng AI nhé.
+                                Dán văn bản (Tiếng Việt/Anh) vào đây. Hệ thống sẽ tự động chia nhỏ mỗi phần 1-2 câu để bạn luyện tập từng bước cùng AI nhé.
                             </p>
                             
                             <textarea 
@@ -328,7 +355,7 @@
                                     >
                                         <div className="flex items-center mb-1">
                                             <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${idx === currentIndex ? 'bg-indigo-200 text-indigo-800' : 'bg-gray-200 text-gray-600'}`}>
-                                                Câu {idx + 1}
+                                                Phần {idx + 1}
                                             </span>
                                             {idx < currentIndex && <i data-lucide="check-circle-2" className="w-4 h-4 ml-auto text-green-500"></i>}
                                         </div>
