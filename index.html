@@ -183,7 +183,6 @@
             return dates;
         };
 
-        // Đã cập nhật formatTime để hiển thị "X tiếng Y phút"
         const formatTime = (totalSeconds) => {
             if (!totalSeconds || isNaN(totalSeconds) || totalSeconds < 60) return "0 phút";
             const h = Math.floor(totalSeconds / 3600);
@@ -224,6 +223,9 @@
             const [usersList, setUsersList] = useState([]);
             const [timeData, setTimeData] = useState({});
             const [isLoadingData, setIsLoadingData] = useState(true);
+
+            // State mới: Kiểm tra xem user đã bấm qua màn hình chờ chuyên nghiệp chưa
+            const [isIntroPassed, setIsIntroPassed] = useState(false);
 
             const [user, setUser] = useState(() => {
                 const savedUser = localStorage.getItem('bob_currentUser');
@@ -281,6 +283,7 @@
 
             const handleLogout = () => { 
                 setUser(null); 
+                setIsIntroPassed(false); // Reset trạng thái màn hình chờ khi đăng xuất
                 localStorage.removeItem('bob_currentUser'); 
                 localStorage.removeItem('bob_deviceName');
                 localStorage.removeItem('bob_deviceId');
@@ -300,14 +303,70 @@
                 <div className="min-h-screen pb-10">
                     {!user ? <LoginScreen onLogin={handleLogin} error={error} /> : (
                         <div className="animate-fade-in">
-                            <main className="mx-auto sm:p-4 lg:p-6 lg:max-w-[1400px]">
-                                {user.role === 'admin' ? <AdminPanel users={usersList} timeData={timeData} db={db} handleLogout={handleLogout} /> : <StudentHub user={user} users={usersList} timeData={timeData} db={db} handleLogout={handleLogout} />}
-                            </main>
+                            {user.role === 'admin' ? (
+                                <main className="mx-auto sm:p-4 lg:p-6 lg:max-w-[1400px]">
+                                    <AdminPanel users={usersList} timeData={timeData} db={db} handleLogout={handleLogout} />
+                                </main>
+                            ) : (
+                                !isIntroPassed ? (
+                                    <ProfessionalWelcomeScreen user={user} onEnter={() => setIsIntroPassed(true)} />
+                                ) : (
+                                    <main className="mx-auto sm:p-4 lg:p-6 lg:max-w-[1400px]">
+                                        <StudentHub user={user} users={usersList} timeData={timeData} db={db} handleLogout={handleLogout} />
+                                    </main>
+                                )
+                            )}
                         </div>
                     )}
                 </div>
             );
         }
+
+        // --- COMPONENT MỚI: Màn hình chào mừng chuyên nghiệp ---
+        const ProfessionalWelcomeScreen = ({ user, onEnter }) => {
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900 p-4 sm:p-8 animate-fade-in overflow-y-auto">
+                    {/* Vùng nền hiệu ứng phía sau (Trang trí thêm) */}
+                    <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-600/20 rounded-full blur-[120px] pointer-events-none"></div>
+                    <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-cyan-600/20 rounded-full blur-[100px] pointer-events-none"></div>
+
+                    {/* Khung nội dung chính */}
+                    <div className="relative z-10 w-full max-w-2xl bg-white/10 backdrop-blur-xl border border-white/20 rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col animate-fade-up my-auto">
+                        
+                        {/* Phần hiển thị hình ảnh vui nhộn/nhắc nhở */}
+                        <div className="w-full bg-black/40 flex items-center justify-center p-3 sm:p-6 border-b border-white/10">
+                            <img 
+                                src="https://i.postimg.cc/6qLDzKGS/678315769-2327138497774526-1771947556966335947-n.jpg" 
+                                alt="Thông điệp từ BobEnglish" 
+                                className="w-full h-auto max-h-[45vh] sm:max-h-[55vh] object-contain rounded-xl shadow-lg"
+                            />
+                        </div>
+
+                        {/* Phần thông tin và nút bấm */}
+                        <div className="p-6 sm:p-8 text-center">
+                            <h1 className="mb-2 text-2xl sm:text-3xl font-black text-white tracking-tight drop-shadow-md">
+                                Chào mừng trở lại, {user.name}! 👋
+                            </h1>
+                            <p className="mb-6 text-indigo-200 text-sm font-medium leading-relaxed">
+                                Đọc kỹ thông điệp phía trên và chuẩn bị tinh thần chiến bài học hôm nay nhé.
+                            </p>
+
+                            {/* Nút bắt đầu */}
+                            <button
+                                onClick={onEnter}
+                                className="w-full sm:w-auto sm:min-w-[280px] px-8 py-4 sm:py-5 text-sm font-black tracking-[0.2em] text-white uppercase transition-all shadow-[0_10px_20px_-5px_rgba(99,102,241,0.4)] hover:shadow-[0_15px_30px_-5px_rgba(99,102,241,0.6)] border border-white/20 bg-gradient-to-r from-indigo-600 to-cyan-600 rounded-2xl hover:-translate-y-1 active:translate-y-0 active:scale-[0.98] inline-flex items-center justify-center gap-3 group mx-auto"
+                            >
+                                Vào phòng học ngay
+                                <span className="bg-white/20 p-1 rounded-full group-hover:translate-x-1 transition-transform">
+                                    <Icon name="arrow-right" size={16} />
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+        // --------------------------------------------------------
 
         const LoginScreen = ({ onLogin, error }) => {
             const [u, setU] = useState(''); const [p, setP] = useState('');
@@ -335,7 +394,7 @@
                                     <label className="text-[10px] font-bold text-indigo-200 uppercase tracking-widest ml-1">Mật khẩu</label>
                                     <input type="password" value={p} onChange={e=>setP(e.target.value)} className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-indigo-400 focus:bg-white/10 text-white text-sm font-medium transition-all placeholder:text-slate-400" placeholder="••••••••" required />
                                 </div>
-                                <button className="w-full py-4 bg-gradient-to-r from-indigo-500 to-cyan-500 text-white font-black rounded-2xl shadow-[0_10px_20px_-5px_rgba(99,102,241,0.4)] hover:shadow-[0_15px_25px_-5px_rgba(99,102,241,0.5)] active:scale-[0.98] transition-all uppercase text-xs tracking-[0.2em] mt-4 border border-white/10">Bắt đầu học ngay</button>
+                                <button className="w-full py-4 bg-gradient-to-r from-indigo-500 to-cyan-500 text-white font-black rounded-2xl shadow-[0_10px_20px_-5px_rgba(99,102,241,0.4)] hover:shadow-[0_15px_25px_-5px_rgba(99,102,241,0.5)] active:scale-[0.98] transition-all uppercase text-xs tracking-[0.2em] mt-4 border border-white/10">Đăng nhập</button>
                             </form>
                         </div>
                     </div>
@@ -631,7 +690,7 @@
                                 }
                             }}>
                                 <input type="text" placeholder="Nhập tên của bạn..." value={tempName} onChange={e => setTempName(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white text-sm font-medium mb-4 transition-colors" required autoFocus />
-                                <button className="w-full py-4 bg-slate-900 text-white font-black rounded-2xl shadow-lg hover:shadow-xl hover:bg-indigo-600 active:scale-[0.98] transition-all uppercase tracking-wider">Bắt đầu học</button>
+                                <button className="w-full py-4 bg-slate-900 text-white font-black rounded-2xl shadow-lg hover:shadow-xl hover:bg-indigo-600 active:scale-[0.98] transition-all uppercase tracking-wider">Tiếp tục</button>
                             </form>
                         </div>
                     </div>
