@@ -672,10 +672,10 @@
 
             const handleReviewKeyDown = (e) => {
                 if (e.key === 'Enter') {
-                    e.preventDefault(); // Ngăn lỗi chặn focus của bàn phím trên một số trình duyệt
+                    e.preventDefault(); // Ngăn lỗi chặn focus của bàn phím
                     if (reviewStatus === 'correct') {
                         nextReviewWord();
-                    } else {
+                    } else if (reviewInput.trim()) {
                         checkReviewAnswer();
                     }
                 }
@@ -691,10 +691,13 @@
                 // Cập nhật index từ
                 setReviewIndex((prev) => (prev + 1) % learnedPack.length);
                 
-                // Đảm bảo DOM cập nhật (remove disabled) trước khi auto focus lại vào ô input
+                // Đảm bảo DOM cập nhật trước khi auto focus lại vào ô input
                 setTimeout(() => {
-                    if (inputRef.current) inputRef.current.focus();
-                }, 50);
+                    if (inputRef.current) {
+                        inputRef.current.disabled = false;
+                        inputRef.current.focus();
+                    }
+                }, 100);
             };
 
             // Hàm tạo Gợi ý đầu, giữa, cuối
@@ -975,9 +978,9 @@
                                             <div className="flex gap-2 mt-2 w-full">
                                                 <button 
                                                     onClick={nextReviewWord} 
-                                                    className="flex-[0.8] bg-dark-800 hover:bg-dark-700 py-4 rounded-2xl font-black text-[14px] uppercase tracking-wider transition-all shadow-lg active:scale-[0.98] border border-white/10 text-gray-400 flex items-center justify-center"
+                                                    className="flex-[0.8] bg-dark-800 hover:bg-dark-700 py-4 rounded-2xl font-black text-[14px] uppercase tracking-wider transition-all shadow-lg active:scale-[0.98] border border-white/10 text-gray-300 flex items-center justify-center gap-2"
                                                 >
-                                                    Bỏ qua
+                                                    Tiếp theo <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
                                                 </button>
                                                 <button 
                                                     onClick={checkReviewAnswer} 
@@ -991,8 +994,6 @@
                                     </div>
                                 </div>
                             )}
-                        </div>
-                    )}
 
                     {/* ================= TRANSLATE SCREEN ================= */}
                     {screen === 'translate' && selectedWord && (
