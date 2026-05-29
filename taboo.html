@@ -445,11 +445,11 @@
             const [enText, setEnText] = useState('');
             const [isTranslating, setIsTranslating] = useState(false);
 
-            // Gợi ý thông minh
+            // Ôn tập
             const [reviewIndex, setReviewIndex] = useState(0);
             const [reviewInput, setReviewInput] = useState('');
             const [reviewStatus, setReviewStatus] = useState(null); 
-            const [reviewHintCount, setReviewHintCount] = useState(0);
+            const [showHint, setShowHint] = useState(false);
             const inputRef = useRef(null);
 
             const shuffle = (array) => {
@@ -558,7 +558,7 @@
                 setReviewIndex(0);
                 setReviewInput('');
                 setReviewStatus(null);
-                setReviewHintCount(0); 
+                setShowHint(false); 
                 setScreen('review');
             };
 
@@ -585,30 +585,26 @@
             const nextReviewWord = () => {
                 setReviewStatus(null);
                 setReviewInput('');
-                setReviewHintCount(0);
+                setShowHint(false);
                 setReviewIndex((prev) => (prev + 1) % learnedPack.length);
                 if (inputRef.current) inputRef.current.focus();
             };
 
+            // Hàm tạo Gợi ý đầu, giữa, cuối
             const getHintText = () => {
-                if (!currentReviewWord || reviewHintCount < 2) return '';
+                if (!currentReviewWord) return '';
                 const target = currentReviewWord.keyword;
+                const len = target.length;
+                let mid = Math.floor(len / 2);
                 
-                // Cấp 2: Chỉ lộ khoảng trắng _ _ _ _
-                if (reviewHintCount === 2) {
-                    return target.split('').map(char => char === ' ' ? ' ' : '_').join(' ');
+                // Nếu điểm giữa rơi vào khoảng trắng, dịch ra một chút
+                if (target[mid] === ' ') {
+                    mid = mid - 1 >= 0 ? mid - 1 : mid + 1;
                 }
-                
-                // Cấp 3: Lộ ký tự đầu mỗi từ
-                if (reviewHintCount === 3) {
-                    const words = target.split(' ');
-                    return words.map(w => w[0] + ' ' + '_ '.repeat(w.length - 1).trim()).join('   ');
-                }
-                
-                // Cấp 4: Lộ ký tự đầu, cuối hoặc ngẫu nhiên
+
                 return target.split('').map((char, index) => {
-                    if (char === ' ') return ' ';
-                    if (index === 0 || index === target.length - 1 || index % 3 === 0) {
+                    if (char === ' ') return '   ';
+                    if (index === 0 || index === len - 1 || index === mid) {
                         return char;
                     }
                     return '_';
@@ -810,49 +806,26 @@
                                         </div>
                                     </div>
 
-                                    {/* KHU VỰC GỢI Ý THÔNG MINH - HIỂN THỊ KHI BẤM NÚT */}
-                                    {reviewHintCount > 0 && (
+                                    {/* KHU VỰC GỢI Ý THÔNG MINH */}
+                                    {showHint && (
                                         <div className="animate-fade-in-up mb-4 flex flex-col gap-3">
-                                            {/* Level 1: Các từ khóa liên quan */}
-                                            {reviewHintCount >= 1 && (
-                                                <div className="bg-white/5 p-3 rounded-2xl border border-white/10 text-center shadow-inner">
-                                                    <p className="text-[10px] text-primary-400/80 font-bold tracking-widest uppercase mb-2">Các từ khóa liên quan:</p>
-                                                    <div className="flex flex-wrap justify-center gap-2">
-                                                        {currentReviewWord.taboo.map((w, i) => (
-                                                            <span 
-                                                                key={i} 
-                                                                onClick={(e) => { e.stopPropagation(); speak(w); }}
-                                                                title="Nghe phát âm"
-                                                                className="cursor-pointer hover:bg-primary-500/30 active:scale-95 transition-all text-[11px] font-semibold text-white bg-primary-500/20 px-3 py-1.5 rounded-lg border border-primary-500/20 flex items-center gap-1.5"
-                                                            >
-                                                                {w}
-                                                                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon></svg>
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-                                            
-                                            {/* Level 2, 3, 4: Cấu trúc từ */}
-                                            {reviewHintCount >= 2 && (
-                                                <div className="text-center mt-1">
-                                                    <p className="text-[10px] text-amber-500/80 font-extrabold tracking-widest uppercase mb-1">Cấu trúc từ:</p>
-                                                    <p className="text-[18px] font-mono font-bold tracking-[0.3em] text-amber-400 bg-amber-500/10 py-2 px-5 rounded-xl inline-block border border-amber-500/20 shadow-inner">
-                                                        {getHintText()}
-                                                    </p>
-                                                </div>
-                                            )}
+                                            <div className="text-center mt-1">
+                                                <p className="text-[10px] text-amber-500/80 font-extrabold tracking-widest uppercase mb-1">Gợi ý từ (Đầu, Giữa, Cuối):</p>
+                                                <p className="text-[18px] font-mono font-bold tracking-[0.3em] text-amber-400 bg-amber-500/10 py-2 px-5 rounded-xl inline-block border border-amber-500/20 shadow-inner">
+                                                    {getHintText()}
+                                                </p>
+                                            </div>
                                         </div>
                                     )}
 
                                     <div className="flex flex-col gap-4 mt-auto">
-                                        <div className="flex gap-2">
-                                            {/* Nút Xem Gợi ý Đa Cấp */}
+                                        <div className="flex gap-2 w-full">
+                                            {/* Nút Xem Gợi ý */}
                                             <button 
-                                                onClick={() => setReviewHintCount(prev => Math.min(prev + 1, 4))}
-                                                disabled={reviewStatus === 'correct' || reviewHintCount === 4}
-                                                title={`Gợi ý (Cấp độ ${reviewHintCount}/4)`}
-                                                className={`px-4 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center transition-all ${reviewHintCount > 0 ? 'text-amber-400 border-amber-400/30 bg-amber-500/10' : 'text-gray-400 hover:text-white active:scale-95 disabled:opacity-50'}`}
+                                                onClick={() => setShowHint(true)}
+                                                disabled={reviewStatus === 'correct' || showHint}
+                                                title="Gợi ý"
+                                                className={`px-4 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center transition-all ${showHint ? 'text-amber-400 border-amber-400/30 bg-amber-500/10' : 'text-gray-400 hover:text-white active:scale-95 disabled:opacity-50'}`}
                                             >
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A5 5 0 0 0 8 8c0 1.3.5 2.6 1.5 3.5.8.8 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
                                             </button>
@@ -884,17 +857,25 @@
                                         )}
 
                                         {reviewStatus === 'correct' ? (
-                                            <button onClick={nextReviewWord} className="w-full bg-green-600 hover:bg-green-500 py-4 rounded-2xl font-black text-[15px] uppercase tracking-wider transition-all shadow-lg active:scale-[0.98] border border-green-400/30 text-white flex items-center justify-center gap-2">
+                                            <button onClick={nextReviewWord} className="w-full bg-green-600 hover:bg-green-500 py-4 rounded-2xl font-black text-[15px] uppercase tracking-wider transition-all shadow-lg active:scale-[0.98] border border-green-400/30 text-white flex items-center justify-center gap-2 mt-2">
                                                 Tiếp theo <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
                                             </button>
                                         ) : (
-                                            <button 
-                                                onClick={checkReviewAnswer} 
-                                                disabled={!reviewInput.trim()}
-                                                className="w-full bg-primary-600 hover:bg-primary-500 py-4 rounded-2xl font-black text-[15px] uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg active:scale-[0.98] border border-primary-400/30 text-white"
-                                            >
-                                                Kiểm tra
-                                            </button>
+                                            <div className="flex gap-2 mt-2 w-full">
+                                                <button 
+                                                    onClick={nextReviewWord} 
+                                                    className="flex-[0.8] bg-dark-800 hover:bg-dark-700 py-4 rounded-2xl font-black text-[14px] uppercase tracking-wider transition-all shadow-lg active:scale-[0.98] border border-white/10 text-gray-400 flex items-center justify-center"
+                                                >
+                                                    Bỏ qua
+                                                </button>
+                                                <button 
+                                                    onClick={checkReviewAnswer} 
+                                                    disabled={!reviewInput.trim()}
+                                                    className="flex-[1.2] bg-primary-600 hover:bg-primary-500 py-4 rounded-2xl font-black text-[14px] uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg active:scale-[0.98] border border-primary-400/30 text-white flex items-center justify-center"
+                                                >
+                                                    Kiểm tra
+                                                </button>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
