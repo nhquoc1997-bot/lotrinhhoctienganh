@@ -154,7 +154,7 @@
                 <div id="outputArea" class="flex flex-col gap-6"></div>
             </section>
 
-            <!-- DANH SÁCH SỔ TAY ĐÃ LƯU (MỚI THÊM) -->
+            <!-- DANH SÁCH SỔ TAY ĐÃ LƯU -->
             <section id="savedListSection" class="hidden flex-col gap-6 w-full fade-in">
                 <div class="flex justify-between items-center mb-2">
                     <div>
@@ -167,9 +167,7 @@
                         <i class="ph ph-plus"></i> Dịch bài mới
                     </button>
                 </div>
-                <!-- Grid chứa các thẻ bài đã lưu -->
                 <div id="savedGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <!-- Nội dung render qua JS -->
                 </div>
             </section>
 
@@ -180,7 +178,6 @@
 
             <!-- 2. CHẾ ĐỘ LUYỆN DỊCH -->
             <section id="practiceSection" class="hidden flex-col gap-6 max-w-3xl mx-auto w-full">
-                <!-- (Giữ nguyên như cũ) -->
                 <div class="flex justify-between items-center">
                     <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
                         <i class="ph-fill ph-pencil-simple text-blue-600"></i> Luyện Dịch Sang Tiếng Anh
@@ -216,7 +213,6 @@
 
             <!-- 3. CHẾ ĐỘ LUYỆN ĐẶT CÂU HỎI -->
             <section id="askSection" class="hidden flex-col gap-6 max-w-3xl mx-auto w-full">
-                <!-- (Giữ nguyên như cũ) -->
                 <div class="flex justify-between items-center">
                     <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
                         <i class="ph-fill ph-question text-purple-600"></i> Luyện Đặt Câu Hỏi Từ Văn Bản
@@ -839,13 +835,26 @@
 
             html += `
                     </div>
-                    <div class="flex flex-col sm:flex-row gap-4">
-                        <button id="closeNotebookBtn" class="flex-1 py-4 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-all border border-slate-200 flex items-center justify-center gap-2">
-                            <i class="ph ph-arrow-left text-xl"></i> ${fromTranslationScreen ? 'Quay lại bản dịch' : 'Quay lại thư viện'}
-                        </button>
-                        <button id="copyNotebookFullBtn" class="flex-[2] py-4 rounded-xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 text-white bg-amber-600 hover:bg-amber-700">
-                            <i class="ph ph-copy text-xl"></i> Copy toàn bộ Sổ tay
-                        </button>
+                    
+                    <div class="flex flex-col gap-4">
+                        <!-- NÚT COPY TỪNG NGÔN NGỮ (BỔ SUNG MỚI) -->
+                        <div class="flex flex-col sm:flex-row gap-4">
+                            <button id="copyNotebookEnBtn" class="flex-1 py-3 bg-blue-50 text-blue-700 rounded-xl font-bold hover:bg-blue-100 transition-all border border-blue-200 flex items-center justify-center gap-2">
+                                <i class="ph ph-copy text-xl"></i> Copy Tiếng Anh
+                            </button>
+                            <button id="copyNotebookViBtn" class="flex-1 py-3 bg-teal-50 text-teal-700 rounded-xl font-bold hover:bg-teal-100 transition-all border border-teal-200 flex items-center justify-center gap-2">
+                                <i class="ph ph-copy text-xl"></i> Copy Tiếng Việt
+                            </button>
+                        </div>
+                        
+                        <div class="flex flex-col sm:flex-row gap-4">
+                            <button id="closeNotebookBtn" class="flex-1 py-4 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-all border border-slate-200 flex items-center justify-center gap-2">
+                                <i class="ph ph-arrow-left text-xl"></i> ${fromTranslationScreen ? 'Quay lại bản dịch' : 'Quay lại thư viện'}
+                            </button>
+                            <button id="copyNotebookFullBtn" class="flex-[2] py-4 rounded-xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 text-white bg-amber-600 hover:bg-amber-700">
+                                <i class="ph ph-copy text-xl"></i> Copy toàn bộ Sổ tay
+                            </button>
+                        </div>
                     </div>
                 </div>
             `;
@@ -861,6 +870,34 @@
                 } else {
                     savedListSection.classList.remove('hidden');
                 }
+            });
+
+            // GẮN SỰ KIỆN NÚT COPY TIẾNG ANH
+            document.getElementById('copyNotebookEnBtn').addEventListener('click', function() {
+                let textToCopy = '';
+                pairs.forEach((pair) => {
+                    const enText = pair.sourceLang === 'en' ? pair.source : pair.target;
+                    textToCopy += enText + '\n\n';
+                });
+                copyTextToClipboard(textToCopy, 'Đã copy toàn bộ phần Tiếng Anh!');
+                
+                const originalHtml = this.innerHTML;
+                this.innerHTML = `<i class="ph ph-check text-xl"></i> Đã copy!`;
+                setTimeout(() => { this.innerHTML = originalHtml; }, 2000);
+            });
+
+            // GẮN SỰ KIỆN NÚT COPY TIẾNG VIỆT
+            document.getElementById('copyNotebookViBtn').addEventListener('click', function() {
+                let textToCopy = '';
+                pairs.forEach((pair) => {
+                    const viText = pair.sourceLang === 'vi' ? pair.source : pair.target;
+                    textToCopy += viText + '\n\n';
+                });
+                copyTextToClipboard(textToCopy, 'Đã copy toàn bộ phần Tiếng Việt!');
+                
+                const originalHtml = this.innerHTML;
+                this.innerHTML = `<i class="ph ph-check text-xl"></i> Đã copy!`;
+                setTimeout(() => { this.innerHTML = originalHtml; }, 2000);
             });
 
             document.getElementById('copyNotebookFullBtn').addEventListener('click', () => {
