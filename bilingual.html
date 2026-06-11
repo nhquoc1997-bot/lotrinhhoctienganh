@@ -52,7 +52,6 @@
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* Custom CSS cho giao diện Sổ Tay (Glassmorphism) */
         .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 0.8); }
     </style>
 </head>
@@ -118,6 +117,10 @@
                         <button id="startAskBtn" class="flex-1 md:flex-none bg-purple-600 hover:bg-purple-700 text-white font-medium py-2.5 px-4 rounded-lg shadow-sm transition-colors flex justify-center items-center gap-2">
                             <i class="ph ph-question text-lg"></i> Luyện Đặt Câu
                         </button>
+                        <!-- NÚT TÓM TẮT MỚI THÊM -->
+                        <button id="startSummaryBtn" class="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 px-4 rounded-lg shadow-sm transition-colors flex justify-center items-center gap-2" title="Lấy ý chính để tự viết lại">
+                            <i class="ph ph-list-dashes text-lg"></i> Tóm Tắt (3-4 Ý)
+                        </button>
                     </div>
                 </div>
             </section>
@@ -135,7 +138,6 @@
                         <i class="ph-fill ph-check-circle text-green-500"></i> Kết quả Song Ngữ
                     </h2>
                     <div class="flex flex-wrap items-center gap-2">
-                        <!-- NÚT LƯU VÀO SỔ TAY -->
                         <button id="saveToNotebookBtn" class="text-sm font-bold text-amber-700 bg-amber-100 hover:bg-amber-200 py-2 px-4 rounded-lg flex items-center gap-1 border border-amber-300 transition-colors shadow-sm">
                             <i class="ph ph-floppy-disk text-lg"></i> Lưu vào Sổ tay
                         </button>
@@ -290,6 +292,39 @@
                 </div>
             </section>
 
+            <!-- 4. CHẾ ĐỘ TÓM TẮT MỚI -->
+            <section id="summarySection" class="hidden flex-col gap-6 max-w-3xl mx-auto w-full fade-in">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <i class="ph-fill ph-list-dashes text-emerald-600"></i> Tóm Tắt Ý Chính (Dùng để tự triển khai lại)
+                    </h2>
+                    <button onclick="exitToMain()" class="text-sm font-medium text-slate-500 hover:text-red-600 py-1 px-3 rounded-lg border border-slate-200 bg-white shadow-sm transition-colors">
+                        <i class="ph ph-x"></i> Thoát
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 flex flex-col gap-6">
+                    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                        <p class="text-blue-800 text-sm font-medium flex items-center gap-2">
+                            <i class="ph-fill ph-info"></i> Hãy nhìn vào các ý chính dưới đây và tự triển khai lại bằng ngôn ngữ của bạn mà không cần nhìn văn bản gốc nhé!
+                        </p>
+                    </div>
+                    
+                    <ul id="summaryList" class="flex flex-col gap-4 list-none pl-0">
+                        <!-- Ý chính sẽ được điền vào đây bằng Javascript -->
+                    </ul>
+                    
+                    <div class="flex flex-col sm:flex-row gap-4 mt-4">
+                        <button onclick="copySummary()" class="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-6 rounded-xl transition-colors border border-slate-300">
+                            <i class="ph ph-copy"></i> Copy các ý chính
+                        </button>
+                        <button id="saveSummaryToNotebookBtn" class="flex-1 flex items-center justify-center gap-2 bg-amber-100 hover:bg-amber-200 text-amber-700 font-bold py-3 px-6 rounded-xl transition-colors border border-amber-300">
+                            <i class="ph ph-floppy-disk text-xl"></i> Lưu vào Sổ tay
+                        </button>
+                    </div>
+                </div>
+            </section>
+
         </main>
 
         <!-- Popup Từ Điển -->
@@ -313,9 +348,9 @@
                 <div class="flex flex-col gap-3">
                     <div class="bg-green-50 border border-green-200 text-green-800 text-sm p-3 rounded-lg flex items-start gap-2">
                         <i class="ph-fill ph-check-circle mt-0.5"></i>
-                        <p>Hệ thống mặc định sử dụng <b>AI Công cộng Miễn phí</b>. Bạn không cần thiết lập gì vẫn có thể dùng ngay!</p>
+                        <p>Hệ thống mặc định sử dụng <b>AI Công cộng Miễn phí</b> được tích hợp tự động. Bạn không cần thiết lập gì vẫn có thể dùng ngay!</p>
                     </div>
-                    <p class="text-sm text-slate-600">Nếu AI miễn phí bị chậm, bạn có thể tự thêm Gemini API Key của Google (Miễn phí) để ổn định hơn.</p>
+                    <p class="text-sm text-slate-600">Tuy nhiên nếu bạn muốn dùng Key riêng biệt, bạn có thể tự thêm Gemini API Key của Google tại đây.</p>
                     <input type="password" id="apiKeyInput" class="w-full p-3 rounded-lg border border-slate-300 focus:border-blue-500 outline-none text-slate-800" placeholder="Nhập Gemini API Key (Không bắt buộc)">
                 </div>
                 <button id="saveApiBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-sm transition-colors w-full mt-2">
@@ -328,6 +363,7 @@
     <!-- LOGIC ỨNG DỤNG -->
     <script>
         // --- QUẢN LÝ CẤU HÌNH AI ---
+        const apiKey = ""; // Tự động nhận diện key hệ thống do môi trường cung cấp
         let userApiKey = localStorage.getItem('gemini_api_key') || "";
         const apiModal = document.getElementById('apiModal');
         const apiKeyInput = document.getElementById('apiKeyInput');
@@ -352,7 +388,7 @@
             } else {
                 localStorage.removeItem('gemini_api_key');
                 userApiKey = "";
-                showToast('Đã chuyển về dùng AI Miễn phí mặc định!');
+                showToast('Đã chuyển về dùng AI mặc định!');
             }
             apiModal.classList.remove('flex');
             apiModal.classList.add('hidden');
@@ -466,41 +502,51 @@
             }
         }
 
+        // HÀM HỖ TRỢ RETRY API
+        async function fetchWithRetry(url, options, retries = 5) {
+            const delays = [1000, 2000, 4000, 8000, 16000];
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.ok) return response;
+                    if (i === retries - 1) throw new Error(`Status ${response.status}`);
+                } catch (error) {
+                    if (i === retries - 1) throw error;
+                }
+                await new Promise(res => setTimeout(res, delays[i]));
+            }
+        }
+
         // --- CÁC HÀM GỌI API ---
         async function translateText(text, sl, tl) {
             const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`;
             try {
-                const res = await fetch(url);
+                const res = await fetchWithRetry(url, { method: 'GET' }, 3);
                 const data = await res.json();
                 return data[0].map(item => item[0]).join('');
             } catch (error) { return "[Lỗi dịch thuật]"; }
         }
 
         async function callAI(promptText) {
-            if (userApiKey) {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${userApiKey}`;
-                const payload = { contents: [{ parts: [{ text: promptText }] }] };
-                const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (!res.ok) throw new Error("Lỗi API Gemini");
-                const data = await res.json();
-                return extractJSON(data.candidates[0].content.parts[0].text);
-            } else {
-                const url = "https://text.pollinations.ai/";
-                const res = await fetch(url, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        messages: [
-                            { role: "system", content: "You are a JSON-only API. You must strictly output valid JSON and absolutely no other markdown or explanations." },
-                            { role: "user", content: promptText }
-                        ],
-                        jsonMode: true
-                    })
-                });
-                if (!res.ok) throw new Error("Lỗi API Miễn phí");
-                const text = await res.text();
-                return extractJSON(text);
-            }
+            const activeKey = userApiKey || apiKey;
+            
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${activeKey}`;
+            const payload = { 
+                contents: [{ parts: [{ text: promptText }] }],
+                // Yêu cầu bắt buộc trả về JSON
+                generationConfig: { responseMimeType: "application/json" }
+            };
+            
+            const res = await fetchWithRetry(url, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(payload) 
+            });
+            
+            const data = await res.json();
+            const textResult = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            // Parse dữ liệu JSON an toàn
+            return extractJSON(textResult || "{}");
         }
 
         async function aiSuggestQuestions(contextText) {
@@ -530,11 +576,30 @@
             return await callAI(prompt);
         }
 
+        // HÀM GỌI AI MỚI DÀNH RIÊNG CHO TÍNH NĂNG TÓM TẮT
+        async function aiSummarizeText(text) {
+            const prompt = `Đoạn văn: "${text}"
+            Nhiệm vụ: Hãy phân tích đoạn văn trên và trích xuất đúng 3 đến 4 ý chính quan trọng nhất. 
+            Mục đích: Giúp người dùng nhìn vào các ý này để có thể tự mình viết/kể lại được toàn bộ nội dung mà không cần nhìn văn bản gốc.
+            Yêu cầu: Viết các ý bằng Tiếng Việt. Mỗi ý phải ngắn gọn, súc tích nhưng đủ nghĩa.
+            BẮT BUỘC TRẢ VỀ CHÍNH XÁC ĐỊNH DẠNG JSON (KHÔNG BÌNH LUẬN GÌ THÊM):
+            {
+              "summaryPoints": [
+                "Ý chính thứ 1",
+                "Ý chính thứ 2",
+                "Ý chính thứ 3"
+              ]
+            }`;
+            return await callAI(prompt);
+        }
+
         // --- DOM Elements & Navigation ---
         const sourceText = document.getElementById('sourceText');
         const translateBtn = document.getElementById('translateBtn');
         const startPracticeBtn = document.getElementById('startPracticeBtn');
         const startAskBtn = document.getElementById('startAskBtn');
+        const startSummaryBtn = document.getElementById('startSummaryBtn'); // Nút tóm tắt mới
+        
         const inputSection = document.getElementById('inputSection');
         const loadingIndicator = document.getElementById('loadingIndicator');
         const resultSection = document.getElementById('resultSection');
@@ -542,6 +607,7 @@
         const notebookSection = document.getElementById('notebookSection');
         const practiceSection = document.getElementById('practiceSection');
         const askSection = document.getElementById('askSection');
+        const summarySection = document.getElementById('summarySection'); // Section tóm tắt mới
 
         document.getElementById('charCount').textContent = `${sourceText.value.length} ký tự`;
         sourceText.addEventListener('input', () => {
@@ -556,6 +622,7 @@
             notebookSection.classList.add('hidden');
             practiceSection.classList.add('hidden');
             askSection.classList.add('hidden');
+            summarySection.classList.add('hidden'); // Thêm dòng này
             loadingIndicator.classList.replace('hidden', 'flex');
         }
 
@@ -567,6 +634,7 @@
             hideLoading();
             practiceSection.classList.add('hidden');
             askSection.classList.add('hidden');
+            summarySection.classList.add('hidden'); // Thêm dòng này
             resultSection.classList.add('hidden');
             notebookSection.classList.add('hidden');
             savedListSection.classList.add('hidden');
@@ -603,8 +671,10 @@
 
         // --- LƯU TRỮ VÀ QUẢN LÝ SỔ TAY LOCALSTORAGE (CHỐNG LAG) ---
         const NOTEBOOK_STORAGE_KEY = 'bilingual_saved_notebooks';
-        const MAX_SAVES = 50; // Giới hạn 50 sổ tay để chống đầy bộ nhớ và lag UI
-        let currentTempPairs = []; // Chứa dữ liệu của bài vừa dịch xong nhưng chưa lưu
+        const MAX_SAVES = 50; 
+        let currentTempPairs = []; 
+        let currentTempSummary = []; 
+        let currentSourceText = ""; 
 
         function getSavedNotebooks() {
             try {
@@ -615,18 +685,18 @@
             }
         }
 
-        function saveNotebookToLocal(pairs, title) {
+        function saveNotebookToLocal(pairs, summary, title) {
             let notebooks = getSavedNotebooks();
             const newNotebook = {
                 id: Date.now().toString(),
                 date: new Date().toLocaleString('vi-VN', {hour: '2-digit', minute:'2-digit', day: '2-digit', month: '2-digit', year: 'numeric'}),
                 title: title || `Bản dịch ${new Date().toLocaleDateString('vi-VN')}`,
-                pairs: pairs
+                pairs: pairs || [],
+                summary: summary || []
             };
 
-            notebooks.unshift(newNotebook); // Thêm lên đầu danh sách
+            notebooks.unshift(newNotebook); 
             
-            // XÓA BẢN CŨ NẾU VƯỢT QUÁ GIỚI HẠN CHỐNG LAG
             if (notebooks.length > MAX_SAVES) {
                 notebooks = notebooks.slice(0, MAX_SAVES);
             }
@@ -645,7 +715,7 @@
             let notebooks = getSavedNotebooks();
             notebooks = notebooks.filter(n => n.id !== id);
             localStorage.setItem(NOTEBOOK_STORAGE_KEY, JSON.stringify(notebooks));
-            renderSavedList(); // Vẽ lại danh sách
+            renderSavedList(); 
             showToast('Đã xóa khỏi Sổ tay');
         }
 
@@ -654,20 +724,24 @@
             const text = sourceText.value.trim();
             if (!text) return showToast('Vui lòng nhập văn bản!', 'error');
 
+            if (text !== currentSourceText) {
+                currentTempSummary = [];
+                currentSourceText = text;
+            }
+
             const dir = document.getElementById('langDirection').value.split('-');
             const chunks = getChunks(text, document.getElementById('chunkSize').value);
             
             showLoading("Đang dịch văn bản...");
             const outputArea = document.getElementById('outputArea');
             outputArea.innerHTML = '';
-            currentTempPairs = []; // Reset dữ liệu tạm thời
+            currentTempPairs = []; 
 
             try {
                 for (let i = 0; i < chunks.length; i++) {
                     const originalP = chunks[i];
                     const translatedP = await translateText(originalP, dir[0], dir[1]);
 
-                    // Đưa vào mảng lưu trữ tạm thời
                     currentTempPairs.push({
                         source: originalP,
                         target: translatedP,
@@ -675,7 +749,6 @@
                         targetLang: dir[1]
                     });
 
-                    // Render giao diện kết quả dịch bình thường
                     const row = document.createElement('div');
                     row.className = 'grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8 p-5 md:p-7 bg-white rounded-2xl shadow-sm border border-slate-200';
                     
@@ -702,17 +775,14 @@
 
         // --- NÚT LƯU BẢN DỊCH VÀO SỔ TAY ---
         document.getElementById('saveToNotebookBtn').addEventListener('click', function() {
-            if(currentTempPairs.length === 0) return;
+            if(currentTempPairs.length === 0 && currentTempSummary.length === 0) return;
             
-            // Tự động tạo tiêu đề từ đoạn đầu tiên để lưu luôn
-            const firstWords = currentTempPairs[0].source.substring(0, 30) + "...";
+            const firstWords = sourceText.value.trim().substring(0, 30) + "...";
             const autoTitle = `Đoạn: ${firstWords}`;
             
-            // Lưu tự động không cần hiển thị popup hỏi tên
-            const savedItem = saveNotebookToLocal(currentTempPairs, autoTitle);
+            const savedItem = saveNotebookToLocal(currentTempPairs, currentTempSummary, autoTitle);
             
             if (savedItem) {
-                // Đổi giao diện nút tạm thời để báo đã lưu thành công thay vì chuyển trang
                 const btn = this;
                 const originalHtml = btn.innerHTML;
                 
@@ -720,7 +790,6 @@
                 btn.classList.remove('bg-amber-100', 'text-amber-700', 'border-amber-300', 'hover:bg-amber-200');
                 btn.classList.add('bg-green-100', 'text-green-700', 'border-green-300', 'hover:bg-green-200');
                 
-                // Trả lại trạng thái ban đầu sau 2 giây
                 setTimeout(() => {
                     btn.innerHTML = originalHtml;
                     btn.classList.remove('bg-green-100', 'text-green-700', 'border-green-300', 'hover:bg-green-200');
@@ -737,6 +806,7 @@
             notebookSection.classList.add('hidden');
             practiceSection.classList.add('hidden');
             askSection.classList.add('hidden');
+            summarySection.classList.add('hidden');
             savedListSection.classList.remove('hidden');
             
             renderSavedList();
@@ -758,7 +828,7 @@
 
             let html = '';
             notebooks.forEach(n => {
-                const previewSnippet = n.pairs[0] ? (n.pairs[0].sourceLang === 'vi' ? n.pairs[0].source : n.pairs[0].target).substring(0, 80) + "..." : "";
+                const previewSnippet = n.pairs[0] ? (n.pairs[0].sourceLang === 'vi' ? n.pairs[0].source : n.pairs[0].target).substring(0, 80) + "..." : (n.summary && n.summary[0] ? n.summary[0] : "Đã lưu nội dung");
                 
                 html += `
                     <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all group flex flex-col justify-between">
@@ -773,7 +843,7 @@
                             <p class="text-slate-500 text-sm italic line-clamp-2 mb-4 bg-slate-50 p-2 rounded-lg border border-slate-100">"${previewSnippet}"</p>
                         </div>
                         <div class="flex justify-between items-center mt-2 border-t border-slate-100 pt-3">
-                            <span class="text-xs font-bold text-slate-400"><i class="ph-fill ph-stack"></i> ${n.pairs.length} đoạn</span>
+                            <span class="text-xs font-bold text-slate-400"><i class="ph-fill ph-stack"></i> ${n.pairs.length} đoạn | ${n.summary ? n.summary.length : 0} ý</span>
                             <button onclick="openSavedNotebookById('${n.id}')" class="text-sm font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-xl transition-colors">Xem chi tiết</button>
                         </div>
                     </div>
@@ -782,19 +852,19 @@
             grid.innerHTML = html;
         }
 
-        // Trick function to call from inline HTML onclick
         window.deleteNotebook = deleteNotebook;
         window.openSavedNotebookById = function(id) {
             const notebooks = getSavedNotebooks();
             const n = notebooks.find(item => item.id === id);
-            if(n) openNotebookDetail(n.title, n.pairs, false);
+            if(n) openNotebookDetail(n.title, n.pairs, n.summary, false);
         };
 
         // --- TÍCH HỢP UI CHI TIẾT SỔ TAY (DÙNG CHUNG) ---
-        function openNotebookDetail(title, pairs, fromTranslationScreen = false) {
+        function openNotebookDetail(title, pairs, summary, fromTranslationScreen = false) {
             resultSection.classList.add('hidden');
             inputSection.classList.add('hidden');
             savedListSection.classList.add('hidden');
+            summarySection.classList.add('hidden');
             notebookSection.classList.remove('hidden');
             
             let html = `
@@ -809,6 +879,28 @@
 
                     <div class="space-y-6 mb-10">
             `;
+
+            if (summary && summary.length > 0) {
+                html += `
+                        <div class="bg-emerald-50 p-6 rounded-2xl border border-emerald-200 shadow-sm relative group mb-8">
+                            <h4 class="font-bold text-emerald-800 mb-4 flex items-center gap-2">
+                                <i class="ph-fill ph-list-dashes text-xl"></i> Tóm Tắt Ý Chính
+                            </h4>
+                            <ul class="flex flex-col gap-3">
+                `;
+                summary.forEach((point, idx) => {
+                    html += `
+                                <li class="flex items-start gap-3">
+                                    <div class="flex-shrink-0 w-6 h-6 mt-0.5 bg-emerald-600 text-white text-sm font-bold rounded-full flex items-center justify-center">${idx + 1}</div>
+                                    <p class="text-slate-800 font-medium leading-relaxed">${point}</p>
+                                </li>
+                    `;
+                });
+                html += `
+                            </ul>
+                        </div>
+                `;
+            }
 
             pairs.forEach((pair, idx) => {
                 const viText = pair.sourceLang === 'vi' ? pair.source : pair.target;
@@ -837,7 +929,6 @@
                     </div>
                     
                     <div class="flex flex-col gap-4">
-                        <!-- NÚT COPY TỪNG NGÔN NGỮ (BỔ SUNG MỚI) -->
                         <div class="flex flex-col sm:flex-row gap-4">
                             <button id="copyNotebookEnBtn" class="flex-1 py-3 bg-blue-50 text-blue-700 rounded-xl font-bold hover:bg-blue-100 transition-all border border-blue-200 flex items-center justify-center gap-2">
                                 <i class="ph ph-copy text-xl"></i> Copy Tiếng Anh
@@ -861,7 +952,6 @@
 
             notebookSection.innerHTML = html;
 
-            // Gắn sự kiện cho các nút trong Sổ tay
             document.getElementById('closeNotebookBtn').addEventListener('click', () => {
                 notebookSection.classList.add('hidden');
                 if(fromTranslationScreen) {
@@ -872,7 +962,6 @@
                 }
             });
 
-            // GẮN SỰ KIỆN NÚT COPY TIẾNG ANH
             document.getElementById('copyNotebookEnBtn').addEventListener('click', function() {
                 let textToCopy = '';
                 pairs.forEach((pair) => {
@@ -886,7 +975,6 @@
                 setTimeout(() => { this.innerHTML = originalHtml; }, 2000);
             });
 
-            // GẮN SỰ KIỆN NÚT COPY TIẾNG VIỆT
             document.getElementById('copyNotebookViBtn').addEventListener('click', function() {
                 let textToCopy = '';
                 pairs.forEach((pair) => {
@@ -902,6 +990,15 @@
 
             document.getElementById('copyNotebookFullBtn').addEventListener('click', () => {
                 let textToCopy = `📚 SỔ TAY ÔN TẬP: ${title}\n================================\n\n`;
+                
+                if (summary && summary.length > 0) {
+                    textToCopy += `📌 TÓM TẮT Ý CHÍNH:\n`;
+                    summary.forEach((point, idx) => {
+                        textToCopy += `${idx + 1}. ${point}\n`;
+                    });
+                    textToCopy += `--------------------------------\n\n`;
+                }
+
                 pairs.forEach((pair, idx) => {
                     const viText = pair.sourceLang === 'vi' ? pair.source : pair.target;
                     const enText = pair.sourceLang === 'en' ? pair.source : pair.target;
@@ -1196,6 +1293,92 @@
                         </button>
                     </div>
                 `;
+            }
+        });
+
+        // --- CHẾ ĐỘ 4: TÓM TẮT ĐỂ TỰ TRIỂN KHAI LẠI ---
+        startSummaryBtn.addEventListener('click', async () => {
+            const text = sourceText.value.trim();
+            if (!text) return showToast('Vui lòng nhập văn bản!', 'error');
+
+            if (text !== currentSourceText) {
+                currentTempPairs = [];
+                currentSourceText = text;
+            }
+
+            showLoading("AI đang đọc và tóm tắt ý chính...");
+
+            try {
+                // Gọi AI tóm tắt
+                const res = await aiSummarizeText(text);
+
+                // Kiểm tra dữ liệu hợp lệ
+                if (!res || !res.summaryPoints || !Array.isArray(res.summaryPoints)) {
+                    throw new Error("Dữ liệu AI trả về không đúng định dạng");
+                }
+
+                currentTempSummary = res.summaryPoints;
+
+                // Render giao diện
+                const listContainer = document.getElementById('summaryList');
+                listContainer.innerHTML = '';
+
+                res.summaryPoints.forEach((point, index) => {
+                    const li = document.createElement('li');
+                    li.className = "flex items-start gap-4 bg-emerald-50 p-4 rounded-xl border border-emerald-100 shadow-sm";
+                    li.innerHTML = `
+                        <div class="flex-shrink-0 w-8 h-8 mt-0.5 bg-emerald-600 text-white font-bold rounded-full flex items-center justify-center shadow-sm">
+                            ${index + 1}
+                        </div>
+                        <p class="text-slate-800 text-lg leading-relaxed pt-0.5 font-medium">${point}</p>
+                    `;
+                    listContainer.appendChild(li);
+                });
+
+                hideLoading();
+                summarySection.classList.remove('hidden');
+            } catch (error) {
+                console.error(error);
+                showToast('Lỗi khi tóm tắt! Hãy thử lại (Có thể server đang bận)', 'error');
+                exitToMain();
+            }
+        });
+
+        // Hàm hỗ trợ copy riêng cho phần Tóm tắt
+        window.copySummary = function() {
+            const listItems = document.querySelectorAll('#summaryList li p');
+            if (listItems.length === 0) return;
+            
+            let textToCopy = "CÁC Ý CHÍNH CẦN TRIỂN KHAI:\n\n";
+            listItems.forEach((p, index) => {
+                textToCopy += `${index + 1}. ${p.textContent.trim()}\n`;
+            });
+            
+            copyTextToClipboard(textToCopy, 'Đã copy thành công các ý chính!');
+        };
+
+        // GẮN SỰ KIỆN NÚT LƯU Ở PHẦN TÓM TẮT
+        document.getElementById('saveSummaryToNotebookBtn').addEventListener('click', function() {
+            if(currentTempPairs.length === 0 && currentTempSummary.length === 0) return;
+            
+            const firstWords = sourceText.value.trim().substring(0, 30) + "...";
+            const autoTitle = `Đoạn: ${firstWords}`;
+            
+            const savedItem = saveNotebookToLocal(currentTempPairs, currentTempSummary, autoTitle);
+            
+            if (savedItem) {
+                const btn = this;
+                const originalHtml = btn.innerHTML;
+                
+                btn.innerHTML = `<i class="ph-fill ph-check-circle text-xl"></i> Đã lưu xong`;
+                btn.classList.remove('bg-amber-100', 'text-amber-700', 'border-amber-300', 'hover:bg-amber-200');
+                btn.classList.add('bg-green-100', 'text-green-700', 'border-green-300', 'hover:bg-green-200');
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalHtml;
+                    btn.classList.remove('bg-green-100', 'text-green-700', 'border-green-300', 'hover:bg-green-200');
+                    btn.classList.add('bg-amber-100', 'text-amber-700', 'border-amber-300', 'hover:bg-amber-200');
+                }, 2000);
             }
         });
 
