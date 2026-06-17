@@ -12,7 +12,8 @@
     
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- KHÓA PHIÊN BẢN BABEL cố định để tránh tự động cập nhật lỗi -->
+    <script src="https://unpkg.com/@babel/standalone@7.22.20/babel.min.js"></script>
 
     <script>
         tailwind.config = {
@@ -102,7 +103,8 @@
     
     <div id="root"></div>
 
-    <script type="text/babel" data-type="module">
+    <!-- SỬA ĐỔI: Sử dụng type="text/babel" chuẩn kết hợp cấu hình classic và loại bỏ mọi dấy vết của data-type="module" -->
+    <script type="text/babel" data-presets="react" data-runtime="classic">
         const { useState, useEffect, useMemo, useCallback, useRef } = React;
 
         const wordDatabase = [
@@ -178,10 +180,10 @@
             { category: 'Trang phục', keyword: 'SUNGLASSES', ipa: '/ˈsʌnˌɡlɑː.sɪz/', taboo: ['Eyes', 'Sun', 'Wear', 'Bright', 'Protect'], vietnamese_keyword: 'Kính râm', vietnamese_taboo: ['Đôi mắt', 'Mặt trời', 'Đeo', 'Chói sáng', 'Bảo vệ'] },
             { category: 'Trang phục', keyword: 'UNIFORM', ipa: '/ˈjuː.nɪ.fɔːm/', taboo: ['School', 'Work', 'Same', 'Clothes', 'Rule'], vietnamese_keyword: 'Đồng phục', vietnamese_taboo: ['Trường học', 'Công việc', 'Giống nhau', 'Quần áo', 'Quy định'] },
             { category: 'Trang phục', keyword: 'T-SHIRT', ipa: '/ˈtiː.ʃɜːt/', taboo: ['Sleeves', 'Casual', 'Cotton', 'Summer', 'Wear'], vietnamese_keyword: 'Áo thun', vietnamese_taboo: ['Tay áo', 'Thoải mái', 'Vải cotton', 'Mùa hè', 'Mặc'] },
-            { category: 'Trang phục', keyword: 'TROUSERS', ipa: '/ˈtraʊ.zəz/', taboo: ['Pants', 'Legs', 'Wear', 'Belt', 'Jeans'], vietnamese_keyword: 'Quần dài', vietnamese_taboo: ['Cái quần', 'Đôi chân', 'Mặc', 'Thắt lưng', 'Quần bò'] },
+            { category: 'Trang phục', keyword: 'TROUSERS', ipa: '/ˈtraʊ.zəz/', taboo: ['Pants', 'Legs', 'Wear', 'Belt', 'Jeans'], vietnamese_keyword: 'Quần dài', vietnamese_taboo: ['Quần dài', 'Đôi chân', 'Mặc', 'Thắt lưng', 'Quần bò'] },
             { category: 'Trang phục', keyword: 'DRESS', ipa: '/dres/', taboo: ['Women', 'Skirt', 'Wear', 'Party', 'Beautiful'], vietnamese_keyword: 'Cái váy', vietnamese_taboo: ['Phụ nữ', 'Chân váy', 'Mặc', 'Bữa tiệc', 'Xinh đẹp'] },
             { category: 'Trang phục', keyword: 'HAT', ipa: '/hæt/', taboo: ['Head', 'Sun', 'Cap', 'Wear', 'Hair'], vietnamese_keyword: 'Cái mũ', vietnamese_taboo: ['Cái đầu', 'Mặt trời', 'Mũ lưỡi trai', 'Đội', 'Tóc'] },
-            { category: 'Trang phục', keyword: 'SOCKS', ipa: '/sɒks/', taboo: ['Feet', 'Shoes', 'Wear', 'Warm', 'Toes'], vietnamese_keyword: 'Đôi tất', vietnamese_taboo: ['Bàn chân', 'Giày', 'Đi/Mang', 'Ấm áp', 'Ngón chân'] },
+            { category: 'Trang phục', keyword: 'SOCKS', ipa: '/snəʊ/', taboo: ['Feet', 'Shoes', 'Wear', 'Warm', 'Toes'], vietnamese_keyword: 'Đôi tất', vietnamese_taboo: ['Bàn chân', 'Giày', 'Đi/Mang', 'Ấm áp', 'Ngón chân'] },
             { category: 'Trang phục', keyword: 'SCARF', ipa: '/skɑːf/', taboo: ['Neck', 'Cold', 'Winter', 'Wool', 'Wrap'], vietnamese_keyword: 'Khăn quàng cổ', vietnamese_taboo: ['Cái cổ', 'Lạnh', 'Mùa đông', 'Len', 'Quấn'] },
             { category: 'Trang phục', keyword: 'SWEATER', ipa: '/ˈswet.ər/', taboo: ['Cold', 'Winter', 'Wool', 'Warm', 'Wear'], vietnamese_keyword: 'Áo len', vietnamese_taboo: ['Lạnh', 'Mùa đông', 'Len', 'Ấm áp', 'Mặc'] },
             { category: 'Trang phục', keyword: 'GLOVES', ipa: '/ɡlʌvz/', taboo: ['Hands', 'Fingers', 'Cold', 'Winter', 'Wear'], vietnamese_keyword: 'Găng tay', vietnamese_taboo: ['Bàn tay', 'Ngón tay', 'Lạnh', 'Mùa đông', 'Đeo'] },
