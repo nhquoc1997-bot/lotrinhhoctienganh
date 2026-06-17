@@ -5,10 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BobEnglish - Hệ thống học tập trực tuyến</title>
     
+    <!-- Fix lỗi thiếu favicon 404 -->
+    <link rel="icon" href="data:,">
+    
     <!-- Core Libraries -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Cấu hình Babel ép dùng Classic Runtime để FIX lỗi "react/jsx-runtime" -->
+    <script>
+        Babel.registerPreset('my-react', {
+            presets: [
+                [Babel.availablePresets['react'], { runtime: 'classic' }]
+            ]
+        });
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 
@@ -111,7 +124,8 @@
 <body class="text-slate-800 antialiased selection:bg-indigo-100 selection:text-indigo-900">
     <div id="root"></div>
 
-    <script type="text/babel" data-type="module">
+    <!-- Khai báo data-presets="my-react" để áp dụng cấu hình Babel fix lỗi -->
+    <script type="text/babel" data-type="module" data-presets="my-react">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, updateDoc, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -224,7 +238,6 @@
             const [timeData, setTimeData] = useState({});
             const [isLoadingData, setIsLoadingData] = useState(true);
 
-            // Bắt buộc TẤT CẢ học viên (cũ & mới) đều phải xem màn hình nhắc nhở có hình ảnh mỗi khi mở web/đăng nhập.
             const [isIntroPassed, setIsIntroPassed] = useState(false);
 
             const [user, setUser] = useState(() => {
@@ -283,7 +296,7 @@
 
             const handleLogout = () => { 
                 setUser(null); 
-                setIsIntroPassed(false); // Reset trạng thái màn hình chờ khi đăng xuất
+                setIsIntroPassed(false); 
                 localStorage.removeItem('bob_currentUser'); 
                 localStorage.removeItem('bob_deviceName');
                 localStorage.removeItem('bob_deviceId');
@@ -322,24 +335,17 @@
             );
         }
 
-        // --- COMPONENT MỚI: Màn hình chào mừng chuyên nghiệp ---
         const ProfessionalWelcomeScreen = ({ user, onEnter }) => {
-            // Thêm trạng thái kiểm tra ảnh đã tải xong chưa
             const [isImageLoaded, setIsImageLoaded] = useState(false);
 
             return (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900 p-4 sm:p-8 animate-fade-in overflow-y-auto">
-                    {/* Vùng nền hiệu ứng phía sau (Trang trí thêm) */}
                     <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-600/20 rounded-full blur-[120px] pointer-events-none"></div>
                     <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-cyan-600/20 rounded-full blur-[100px] pointer-events-none"></div>
 
-                    {/* Khung nội dung chính */}
                     <div className="relative z-10 w-full max-w-2xl bg-white/10 backdrop-blur-xl border border-white/20 rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col animate-fade-up my-auto min-h-[300px]">
                         
-                        {/* Phần hiển thị hình ảnh vui nhộn/nhắc nhở */}
                         <div className="w-full bg-black/40 flex items-center justify-center p-3 sm:p-6 border-b border-white/10 relative min-h-[250px]">
-                            
-                            {/* Hiệu ứng loading trong lúc chờ tải ảnh */}
                             {!isImageLoaded && (
                                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
                                     <div className="w-8 h-8 border-[3px] border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
@@ -355,7 +361,6 @@
                             />
                         </div>
 
-                        {/* Phần thông tin và nút bấm - CHỈ HIỂN THỊ KHI ẢNH ĐÃ TẢI XONG */}
                         {isImageLoaded && (
                             <div className="p-6 sm:p-8 text-center animate-fade-up">
                                 <h1 className="mb-2 text-2xl sm:text-3xl font-black text-white tracking-tight drop-shadow-md">
@@ -365,7 +370,6 @@
                                     Đọc kỹ thông điệp phía trên và chuẩn bị tinh thần chiến bài học hôm nay nhé.
                                 </p>
 
-                                {/* Nút bắt đầu */}
                                 <button
                                     onClick={onEnter}
                                     className="w-full sm:w-auto sm:min-w-[280px] px-8 py-4 sm:py-5 text-sm font-black tracking-[0.2em] text-white uppercase transition-all shadow-[0_10px_20px_-5px_rgba(99,102,241,0.4)] hover:shadow-[0_15px_30px_-5px_rgba(99,102,241,0.6)] border border-white/20 bg-gradient-to-r from-indigo-600 to-cyan-600 rounded-2xl hover:-translate-y-1 active:translate-y-0 active:scale-[0.98] inline-flex items-center justify-center gap-3 group mx-auto"
@@ -381,7 +385,6 @@
                 </div>
             );
         };
-        // --------------------------------------------------------
 
         const LoginScreen = ({ onLogin, error }) => {
             const [u, setU] = useState(''); const [p, setP] = useState('');
