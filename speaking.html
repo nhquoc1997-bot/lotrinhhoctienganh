@@ -5,9 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SpeakMaster Pro Max - 400 Câu Hỏi B1-B2</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- FIX: Added Import Map to resolve react/jsx-runtime and React ES Modules -->
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+        "react/jsx-runtime": "https://esm.sh/react@18.2.0/jsx-runtime"
+      }
+    }
+    </script>
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
@@ -29,11 +39,11 @@
     <div id="root"></div>
 
     <script type="text/babel" data-type="module">
+        import React, { useState, useEffect, useMemo, useCallback } from "react";
+        import { createRoot } from "react-dom/client";
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        const { useState, useEffect, useMemo, useCallback } = React;
 
         const GITHUB_FIREBASE_CONFIG = null; 
 
@@ -433,7 +443,7 @@
                 { id: 4, text: "Should air travel be restricted to reduce emissions?", trans: "Có nên hạn chế đi lại bằng đường hàng không để giảm khí thải?", vocab: [{w: "Aviation", m: "Hàng không"}, {w: "Emission", m: "Khí thải"}, {w: "Impractical", m: "Thiếu thực tế"}, {w: "Alternative", m: "Sự thay thế"}, {w: "Taxation", m: "Sự đánh thuế"}] },
                 { id: 5, text: "Is it possible to completely switch to renewable energy?", trans: "Có thể chuyển đổi hoàn toàn sang năng lượng tái tạo không?", vocab: [{w: "Transition", m: "Sự chuyển đổi"}, {w: "Fossil fuel", m: "Nhiên liệu hóa thạch"}, {w: "Infrastructure", m: "Cơ sở hạ tầng"}, {w: "Reliability", m: "Độ tin cậy"}, {w: "Feasible", m: "Khả thi"}] },
                 { id: 6, text: "What are the economic consequences of global warming?", trans: "Hậu quả kinh tế của sự nóng lên toàn cầu là gì?", vocab: [{w: "Disaster relief", m: "Cứu trợ thiên tai"}, {w: "Crop failure", m: "Mất mùa"}, {w: "Insurance", m: "Bảo hiểm"}, {w: "Financial burden", m: "Gánh nặng tài chính"}, {w: "Recession", m: "Suy thoái"}] },
-                { id: 7, text: "Should companies be heavily fined for polluting?", trans: "Các công ty có nên bị phạt nặng vì gây ô nhiễm?", vocab: [{w: "Deterrent", m: "Biện pháp răn đe"}, {w: "Accountability", m: "Trách nhiệm giải trình"}, {w: "Profit-driven", m: "Bị thúc đẩy bởi lợi nhuận"}, {w: "Strict", m: "Nghiêm ngặt"}, {w: "Compliance", m: "Sự tuân thủ"}] },
+                { id: 7, text: "Should companies be heavily fined for polluting?", trans: "Các công companies có nên bị phạt nặng vì gây ô nhiễm?", vocab: [{w: "Deterrent", m: "Biện pháp răn đe"}, {w: "Accountability", m: "Trách nhiệm giải trình"}, {w: "Profit-driven", m: "Bị thúc đẩy bởi lợi nhuận"}, {w: "Strict", m: "Nghiêm ngặt"}, {w: "Compliance", m: "Sự tuân thủ"}] },
                 { id: 8, text: "How does consumerism contribute to environmental problems?", trans: "Chủ nghĩa tiêu dùng góp phần vào các vấn đề môi trường thế nào?", vocab: [{w: "Overconsumption", m: "Tiêu thụ quá mức"}, {w: "Waste generation", m: "Việc tạo ra rác thải"}, {w: "Fast fashion", m: "Thời trang nhanh"}, {w: "Throwaway culture", m: "Văn hóa vứt bỏ"}, {w: "Depletion", m: "Sự cạn kiệt"}] },
                 { id: 9, text: "Can technology solve the climate crisis?", trans: "Công nghệ có thể giải quyết cuộc khủng hoảng khí hậu không?", vocab: [{w: "Innovation", m: "Sự đổi mới"}, {w: "Carbon capture", m: "Thu giữ carbon"}, {w: "Over-reliance", m: "Phụ thuộc quá mức"}, {w: "Mitigate", m: "Làm nhẹ bớt"}, {w: "Double-edged sword", m: "Con dao hai lưỡi"}] },
                 { id: 10, text: "What is the most effective way to educate people about the environment?", trans: "Cách hiệu quả nhất để giáo dục mọi người về môi trường là gì?", vocab: [{w: "Curriculum", m: "Chương trình học"}, {w: "Campaign", m: "Chiến dịch"}, {w: "Practical experience", m: "Trải nghiệm thực tế"}, {w: "Media coverage", m: "Đưa tin trên truyền thông"}, {w: "Awareness", m: "Nhận thức"}] }
@@ -556,7 +566,7 @@
             const [showSummary, setShowSummary] = useState(false);
             
             const [isCopied, setIsCopied] = useState(false);
-            const [isCopiedEn, setIsCopiedEn] = useState(false); // State quản lý việc copy riêng phần tiếng Anh
+            const [isCopiedEn, setIsCopiedEn] = useState(false);
 
             const [user, setUser] = useState(null);
             const [isLoadingData, setIsLoadingData] = useState(isCloudEnabled);
@@ -784,7 +794,6 @@
                 document.body.removeChild(textArea);
             };
 
-            // Hàm copy ĐỘC QUYỀN toàn bộ Tiếng Anh của chủ đề
             const copyEnglishOnlyToClipboard = () => {
                 if (!selectedTopic) return;
                 
@@ -1283,7 +1292,7 @@
             );
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
+        const root = createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
 </body>
