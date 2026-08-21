@@ -163,7 +163,9 @@
             { id: "speaking", title: "Speaking", subtitle: "Luyện nói", desc: "Thực hành phản xạ nói tự nhiên.", icon: "message-circle", color: "text-violet-600", bg: "bg-violet-50", border: "border-violet-100", path: "speaking.html" },
             { id: "vocabulary", title: "Vocabulary", subtitle: "Từ vựng", desc: "Học từ mới theo các chủ đề đa dạng.", icon: "sparkles", color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-100", path: "vocabulary.html" },
             { id: "bilingual", title: "Bilingual", subtitle: "Song ngữ", desc: "Nâng cao vốn từ qua tin tức song ngữ.", icon: "languages", color: "text-rose-600", bg: "bg-rose-50", border: "border-rose-100", path: "bilingual.html" },
-            { id: "taboo", title: "Taboo", subtitle: "Trò chơi", desc: "Học từ vựng qua trò chơi giải thích từ.", icon: "gamepad-2", color: "text-fuchsia-600", bg: "bg-fuchsia-50", border: "border-fuchsia-100", path: "taboo.html" }
+            { id: "taboo", title: "Taboo", subtitle: "Trò chơi", desc: "Học từ vựng qua trò chơi giải thích từ.", icon: "gamepad-2", color: "text-fuchsia-600", bg: "bg-fuchsia-50", border: "border-fuchsia-100", path: "taboo.html" },
+            // THÊM BÀI HỌC DỊCH VÀO ĐÂY
+            { id: "hoc_dich", title: "Translation", subtitle: "Học Dịch", desc: "Luyện kỹ năng dịch thuật câu và đoạn văn.", icon: "book-text", color: "text-teal-600", bg: "bg-teal-50", border: "border-teal-100", path: "hoc_dich.html" }
         ];
 
         const getLessonTitle = (path) => { const lesson = lessonsData.find(l => l.path === path); return lesson ? lesson.title : path; };
@@ -1234,7 +1236,6 @@
             return (
                 <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 animate-fade-in max-w-7xl mx-auto">
                     
-                    {/* ADMIN HEADER & NAVIGATION */}
                     <div className="xl:col-span-12 bg-slate-900 sticky top-0 z-40 px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between rounded-[1.5rem] sm:rounded-[2rem] shadow-xl mb-4 gap-4">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/10 rounded-2xl flex items-center justify-center text-white border border-white/20"><Icon name="shield-check" size={20} /></div>
@@ -1255,7 +1256,6 @@
                         </div>
                     </div>
 
-                    {/* MODAL RESET */}
                     {showResetModal && (
                         <div className="fixed inset-0 z-[99999] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
                             <div className="bg-white p-8 rounded-[2.5rem] max-w-md w-full shadow-2xl animate-fade-up border-t-[6px] border-red-500">
@@ -1292,7 +1292,6 @@
                         </div>
                     )}
 
-                    {/* TAB: QUẢN LÝ (TRANG CHỦ ADMIN) */}
                     {adminTab === 'manage' && (
                         <>
                             <div className="xl:col-span-3 order-2 xl:order-1">
@@ -1414,7 +1413,6 @@
                         </>
                     )}
 
-                    {/* TAB: THÙNG RÁC */}
                     {adminTab === 'trash' && (
                         <div className="xl:col-span-12 bg-white rounded-[2rem] border border-slate-200/60 shadow-sm p-6 sm:p-8 animate-fade-in">
                             <div className="flex items-center justify-between mb-6">
@@ -1468,7 +1466,7 @@
                         </div>
                     )}
 
-                    {/* TAB: SAO LƯU */}
+                    {}
                     {adminTab === 'backup' && (
                         <div className="xl:col-span-12 bg-white rounded-[2rem] border border-slate-200/60 shadow-sm p-6 sm:p-8 animate-fade-in">
                             <div className="flex items-center justify-between mb-6">
@@ -1483,27 +1481,23 @@
                                 </div>
                             )}
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="p-6 bg-slate-50 rounded-3xl border border-slate-200 text-center flex flex-col h-full">
-                                    <div className="w-16 h-16 bg-white text-indigo-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-100"><Icon name="download" size={32} /></div>
-                                    <h4 className="font-black text-lg text-slate-800 mb-2">Tải bản sao lưu</h4>
-                                    <p className="text-sm text-slate-500 mb-6 flex-1">Nên bấm tải hệ thống thường xuyên! Tải toàn bộ tài khoản và thời gian học hiện tại dưới dạng file về máy tính.</p>
-                                    <button onClick={handleExportData} className="w-full py-3 bg-indigo-600 text-white font-black rounded-xl hover:bg-indigo-700 transition-colors shadow-sm">Tải xuống File Backup</button>
+                            <div className="flex flex-col sm:flex-row gap-4">
+                                <div className="flex-1 border border-slate-200 rounded-2xl p-5 hover:border-indigo-300 transition-all text-center group cursor-pointer" onClick={handleExportData}>
+                                    <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform"><Icon name="download" size={20} /></div>
+                                    <h4 className="font-bold text-slate-800 text-sm">Tải xuống Bản sao lưu</h4>
+                                    <p className="text-xs text-slate-500 mt-1">Lưu file .json về máy tính</p>
                                 </div>
-
-                                <div className="p-6 bg-slate-50 rounded-3xl border border-slate-200 text-center flex flex-col h-full">
-                                    <div className="w-16 h-16 bg-white text-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-100"><Icon name="upload" size={32} /></div>
-                                    <h4 className="font-black text-lg text-slate-800 mb-2">Khôi phục từ File</h4>
-                                    <p className="text-sm text-slate-500 mb-6 flex-1">Chọn file Backup bạn đã tải trước đó tải lên đây để khôi phục lại dữ liệu nếu có sự cố xảy ra.</p>
-                                    <input type="file" accept=".json" ref={fileInputRef} onChange={handleImportData} className="hidden" />
-                                    <button disabled={isRestoringBackup} onClick={() => fileInputRef.current.click()} className="w-full py-3 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-700 transition-colors shadow-sm flex justify-center items-center">
-                                        {isRestoringBackup ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 'Chọn File Tải Lên'}
-                                    </button>
+                                <div className="flex-1 border border-slate-200 rounded-2xl p-5 hover:border-indigo-300 transition-all text-center relative group overflow-hidden">
+                                    <input type="file" ref={fileInputRef} onChange={handleImportData} accept=".json" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" disabled={isRestoringBackup} />
+                                    <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                                        {isRestoringBackup ? <div className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></div> : <Icon name="upload" size={20} />}
+                                    </div>
+                                    <h4 className="font-bold text-slate-800 text-sm">Phục hồi Dữ liệu</h4>
+                                    <p className="text-xs text-slate-500 mt-1">Tải lên file .json đã lưu</p>
                                 </div>
                             </div>
                         </div>
                     )}
-
                 </div>
             );
         };
