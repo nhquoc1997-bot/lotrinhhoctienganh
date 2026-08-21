@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Học Tiếng Anh - Phonetics (Bài 1-23)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        .clickable-word {
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-block;
+            padding: 0 2px;
+            border-radius: 4px;
+        }
+        .clickable-word:hover {
+            background-color: #dbeafe;
+            color: #1d4ed8;
+            transform: translateY(-1px);
+        }
+        .speaking-active {
+            background-color: #fef08a !important;
+            color: #854d0e !important;
+            box-shadow: 0 0 0 2px #eab308;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased flex flex-col h-screen overflow-hidden">
+
+    <!-- Top Header -->
+    <header class="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between z-20 shrink-0 shadow-xs">
+        <div class="flex items-center space-x-3">
+            <button id="toggleSidebarBtn" class="md:hidden text-slate-600 hover:text-slate-900 focus:outline-none p-1.5 rounded-lg hover:bg-slate-100">
+                <i class="fa-solid fa-bars text-xl"></i>
+            </button>
+            <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+                    IPA
+                </div>
+                <div>
+                    <h1 class="font-bold text-slate-800 leading-tight">Học Tiếng Anh - Phonetics</h1>
+                    <p class="text-xs text-slate-500 hidden sm:block">Luyện phát âm & Từ vựng theo ngữ cảnh (Bài 1 - 23)</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Audio Control Bar -->
+        <div class="flex items-center space-x-1 sm:space-x-2 bg-slate-100 p-1 sm:p-1.5 rounded-xl border border-slate-200 text-xs sm:text-sm">
+            <span class="text-slate-500 font-medium px-1 hidden lg:inline"><i class="fa-solid fa-gauge-high mr-1"></i>Tốc độ:</span>
+            <button onclick="setSpeed(0.75)" id="speed-0.75" class="speed-btn px-2.5 py-1.5 sm:px-2 sm:py-1 rounded-lg font-semibold text-slate-600 hover:bg-white active:scale-95 transition min-w-[38px] text-center">0.75x</button>
+            <button onclick="setSpeed(1.0)" id="speed-1.0" class="speed-btn px-2.5 py-1.5 sm:px-2 sm:py-1 rounded-lg font-semibold bg-white text-blue-600 shadow-sm transition min-w-[38px] text-center">1.0x</button>
+            <button onclick="setSpeed(1.25)" id="speed-1.25" class="speed-btn px-2.5 py-1.5 sm:px-2 sm:py-1 rounded-lg font-semibold text-slate-600 hover:bg-white active:scale-95 transition min-w-[38px] text-center">1.25x</button>
+            <div class="h-4 w-px bg-slate-300 mx-0.5"></div>
+            <button onclick="stopSpeech()" class="px-2.5 py-1.5 sm:px-2 sm:py-1 text-red-600 hover:bg-red-50 rounded-lg font-semibold active:scale-95 transition flex items-center" title="Dừng đọc">
+                <i class="fa-solid fa-circle-stop mr-1 text-sm sm:text-base"></i><span class="hidden sm:inline">Dừng</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden relative">
+
+        <!-- Left Sidebar Navigation -->
+        <aside id="sidebar" class="absolute md:relative z-10 w-72 h-full bg-white border-r border-slate-200 flex flex-col transition-transform duration-300 ease-in-out -translate-x-full md:translate-x-0">
+            <div class="p-3 border-b border-slate-100 bg-slate-50/50 flex flex-col space-y-2">
+                <div class="flex items-center justify-between">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Danh Sách Bài Học (1-23)</p>
+                    <span id="lessonCountBadge" class="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">23 bài</span>
+                </div>
+                <!-- Search Box -->
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-xs text-slate-400"></i>
+                    <input type="text" id="searchLessonInput" oninput="filterLessons()" placeholder="Tìm kiếm âm, từ vựng..." class="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500">
+                </div>
+            </div>
+            
+            <nav class="flex-1 overflow-y-auto p-3 space-y-1" id="lessonNav">
+                <!-- Navigation links populated by JavaScript -->
+            </nav>
+
+            <div class="p-4 border-t border-slate-200 bg-slate-50 text-xs text-slate-500 space-y-1">
+                <p class="font-medium text-slate-700"><i class="fa-solid fa-lightbulb text-amber-500 mr-1"></i> Mẹo học tập:</p>
+                <p>• Bấm nút <i class="fa-solid fa-volume-high text-blue-500"></i> để nghe cả câu.</p>
+                <p>• <strong>Bấm trực tiếp vào từng từ</strong> để nghe phát âm riêng lẻ từ đó!</p>
+            </div>
+        </aside>
+
+        <!-- Sidebar Overlay for mobile -->
+        <div id="sidebarOverlay" class="fixed inset-0 bg-slate-900/40 z-0 hidden md:hidden"></div>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto bg-slate-50 p-3 sm:p-6 md:p-8" id="mainContent">
+            <!-- Dynamic Content loaded via JS -->
+        </main>
+
+    </div>
+
+    <script>
+        // Global Audio Settings
+        let currentSpeechRate = 1.0;
+        let activeLessonId = 'lesson-1';
+
+        // Complete Lessons Dataset (Lessons 1 to 23)
+        const lessonsData = [
+            {
+                id: 'lesson-1',
+                title: 'Bài 1: Âm /i:/',
+                sound: '/i:/ (Âm i dài)',
+                cards: [
+                    { vocab: '1. sheep (con cừu)', vie1: 'Tôi nhìn thấy một con cừu (sheep) trên đồng cỏ.', eng1: 'I see a sheep on the grass.', vie2: 'Tôi lại gần con cừu (sheep) để vuốt ve (to pet) nó.', eng2: 'I walk close to the sheep to pet it.' },
+                    { vocab: '2. eat (ăn)', vie1: 'Tôi ngồi xuống để ăn (to eat) bữa sáng.', eng1: 'I sit down to eat breakfast.', vie2: 'Tôi chọn trái cây tươi để ăn (to eat) mỗi ngày.', eng2: 'I choose fresh fruit to eat every day.' },
+                    { vocab: '3. see (nhìn thấy)', vie1: 'Tôi mở cửa sổ để nhìn thấy (to see) mặt trời.', eng1: 'I open the window to see the sun.', vie2: 'Tôi cảm thấy rất vui khi nhìn thấy (to see) những người bạn cũ.', eng2: 'I feel very happy to see old friends.' },
+                    { vocab: '4. meet (gặp)', vie1: 'Tôi đến quán cà phê để gặp (to meet) đồng nghiệp.', eng1: 'I go to the café to meet my colleague.', vie2: 'Tôi lên lịch để gặp (to meet) đối tác mới.', eng2: 'I set a schedule to meet a new partner.' },
+                    { vocab: '5. read (đọc)', vie1: 'Tôi mở một cuốn sách để đọc (to read) vào buổi tối.', eng1: 'I open a book to read in the evening.', vie2: 'Tôi dành một giờ để đọc (to read) tin tức.', eng2: 'I spend an hour to read the news.' },
+                    { vocab: '6. green (màu xanh lá)', vie1: 'Tôi mặc một chiếc áo màu xanh lá (green) để đi (to go) ra ngoài.', eng1: 'I wear a green shirt to go out.', vie2: 'Tôi rất thích màu xanh lá (green) của thiên nhiên.', eng2: 'I love the green color of nature.' },
+                    { vocab: '7. key (chìa khóa)', vie1: 'Tôi cầm chiếc chìa khóa (key) để mở (to open) cửa.', eng1: 'I hold the key to open the door.', vie2: 'Tôi cất chiếc chìa khóa (key) để tránh (to avoid) bị mất.', eng2: 'I store the key to avoid losing it.' },
+                    { vocab: '8. team (đội / nhóm)', vie1: 'Tôi làm việc cùng đội (team) của mình để hoàn thành (to complete) dự án.', eng1: 'I work with my team to complete the project.', vie2: 'Tôi luôn hỗ trợ đội (team) để đạt (to get) kết quả tốt nhất.', eng2: 'I support my team to get the best results.' }
+                ],
+                fullEng: "I see a sheep on the grass. I walk close to the sheep to pet it. I sit down to eat breakfast. I choose fresh fruit to eat every day. I open the window to see the sun. I feel very happy to see old friends. I go to the café to meet my colleague. I set a schedule to meet a new partner. I open a book to read in the evening. I spend an hour to read the news. I wear a green shirt to go out. I love the green color of nature. I hold the key to open the door. I store the key to avoid losing it. I work with my team to complete the project. I support my team to get the best results.",
+                fullVie: "Tôi nhìn thấy một con cừu trên bãi cỏ. Tôi bước lại gần con cừu để vuốt ve nó. Tôi ngồi xuống ăn sáng. Tôi chọn trái cây tươi để ăn mỗi ngày. Tôi mở cửa sổ để ngắm nhìn ánh mặt trời. Tôi cảm thấy rất vui khi gặp lại những người bạn cũ. Tôi đến quán cà phê để gặp đồng nghiệp. Tôi lên lịch gặp gỡ một đối tác mới. Tôi mở sách ra đọc vào buổi tối. Tôi dành một giờ để đọc tin tức. Tôi mặc chiếc áo màu xanh lá cây khi ra ngoài. Tôi yêu sắc xanh của thiên nhiên. Tôi cầm chìa khóa để mở cửa. Tôi cất giữ chìa khóa cẩn thận để tránh bị mất. Tôi làm việc cùng nhóm để hoàn thành dự án. Tôi hỗ trợ nhóm của mình để đạt được kết quả tốt nhất."
+            },
+            {
+                id: 'lesson-2',
+                title: 'Bài 2: Âm /ɪ/',
+                sound: '/ɪ/ (Âm i ngắn)',
+                cards: [
+                    { vocab: '1. ship (con tàu)', vie1: 'Tôi lên một con tàu (ship) để đi (to travel) ra đảo.', eng1: 'I board a ship to travel to the island.', vie2: 'Tôi đứng trên con tàu (ship) để ngắm (to see) biển.', eng2: 'I stand on the ship to see the sea.' },
+                    { vocab: '2. sit (ngồi)', vie1: 'Tôi chọn một chiếc ghế để ngồi (to sit) nghỉ ngơi.', eng1: 'I choose a chair to sit and rest.', vie2: 'Tôi kéo ghế lại gần để ngồi (to sit) cùng bạn bè.', eng2: 'I pull up a chair to sit with my friends.' },
+                    { vocab: '3. fish (con cá / cá)', vie1: 'Tôi đi ra hồ để câu (to catch) cá (fish).', eng1: 'I go to the lake to catch fish.', vie2: 'Tôi mua cá tươi (fish) để nấu (to cook) bữa tối.', eng2: 'I buy fresh fish to cook dinner.' },
+                    { vocab: '4. big (lớn / to)', vie1: 'Tôi chọn một căn phòng lớn (big) để ở (to stay).', eng1: 'I choose a big room to stay.', vie2: 'Tôi cần một chiếc xe lớn (big) để chở (to carry) đồ đạc.', eng2: 'I need a big car to carry my things.' },
+                    { vocab: '5. live (sống / sinh sống)', vie1: 'Tôi chọn sống (to live) ở một nơi yên tĩnh.', eng1: 'I choose to live in a quiet place.', vie2: 'Tôi chuyển đến đây để sống (to live) gần gia đình.', eng2: 'I move here to live near my family.' },
+                    { vocab: '6. rich (giàu có / phong phú)', vie1: 'Tôi cố gắng làm việc để trở nên (to become) giàu có (rich).', eng1: 'I try to work hard to become rich.', vie2: 'Tôi ăn trái cây để có (to get) nguồn dinh dưỡng phong phú (rich).', eng2: 'I eat fruit to get a rich source of nutrition.' },
+                    { vocab: '7. city (thành phố)', vie1: 'Tôi chuyển đến thành phố (city) để tìm (to find) việc làm.', eng1: 'I move to the city to find a job.', vie2: 'Tôi đi dạo quanh thành phố (city) để khám phá (to explore) các con phố.', eng2: 'I walk around the city to explore the streets.' },
+                    { vocab: '8. pig (con heo / con lợn)', vie1: 'Tôi đến trang trại để xem (to see) con heo (pig).', eng1: 'I go to the farm to see the pig.', vie2: 'Tôi cho con heo (pig) ăn (to eat) rau củ tươi.', eng2: 'I feed the pig vegetables to eat.' }
+                ],
+                fullEng: "I board a ship to travel to the island. I stand on the ship to see the sea. I choose a chair to sit and rest. I pull up a chair to sit with my friends. I go to the lake to catch fish. I buy fresh fish to cook dinner. I choose a big room to stay. I need a big car to carry my things. I choose to live in a quiet place. I move here to live near my family. I try to work hard to become rich. I eat fruit to get a rich source of nutrition. I move to the city to find a job. I walk around the city to explore the streets. I go to the farm to see the pig. I feed the pig vegetables to eat.",
+                fullVie: "Tôi lên tàu để đi ra đảo. Tôi đứng trên tàu ngắm nhìn biển cả. Tôi chọn một chiếc ghế để ngồi nghỉ ngơi. Tôi kéo ghế lại gần để ngồi cùng bạn bè. Tôi ra hồ để câu cá. Tôi mua cá tươi về nấu bữa tối. Tôi chọn một căn phòng rộng rãi để ở. Tôi cần một chiếc xe lớn để chở đồ đạc. Tôi chọn sống ở một nơi yên tĩnh. Tôi chuyển đến đây để sống gần gia đình. Tôi nỗ lực làm việc để trở nên giàu có. Tôi ăn trái cây để bổ sung nguồn dinh dưỡng dồi dào. Tôi chuyển đến thành phố để tìm việc làm. Tôi đi dạo quanh thành phố để khám phá các con phố. Tôi đến trang trại để xem con lợn. Tôi cho lợn ăn rau."
+            },
+            {
+                id: 'lesson-3',
+                title: 'Bài 3: Âm /e/',
+                sound: '/e/ (Âm e ngắn)',
+                cards: [
+                    { vocab: '1. bed (chiếc giường)', vie1: 'Tôi nằm xuống chiếc giường (bed) để nghỉ (to rest) ngơi.', eng1: 'I lie on the bed to rest.', vie2: 'Tôi dọn chiếc giường (bed) để giữ (to keep) phòng gọn gàng.', eng2: 'I make the bed to keep the room tidy.' },
+                    { vocab: '2. pen (cây bút)', vie1: 'Tôi lấy một cây bút (pen) để ghi (to write) chép bài.', eng1: 'I take a pen to write notes.', vie2: 'Tôi mượn một cây bút (pen) để ký (to sign) tên.', eng2: 'I borrow a pen to sign my name.' },
+                    { vocab: '3. head (cái đầu)', vie1: 'Tôi gật đầu (head) để đồng ý (to agree) với kế hoạch.', eng1: 'I nod my head to agree with the plan.', vie2: 'Tôi đội mũ lên đầu (head) để che (to protect) nắng.', eng2: 'I wear a hat on my head to protect from the sun.' },
+                    { vocab: '4. red (màu đỏ)', vie1: 'Tôi chọn một cái áo màu đỏ (red) để mặc (to wear) hôm nay.', eng1: 'I choose a red shirt to wear today.', vie2: 'Tôi mua những quả táo màu đỏ (red) để ăn (to eat).', eng2: 'I buy red apples to eat.' },
+                    { vocab: '5. ten (số mười / 10)', vie1: 'Tôi đếm đến mười (ten) để giữ (to keep) bình tĩnh.', eng1: 'I count to ten to keep calm.', vie2: 'Tôi dành mười (ten) phút để tập (to exercise) thể dục.', eng2: 'I spend ten minutes to exercise.' },
+                    { vocab: '6. friend (người bạn)', vie1: 'Tôi gọi cho người bạn (friend) để rủ (to invite) đi chơi.', eng1: 'I call my friend to invite them out.', vie2: 'Tôi lắng nghe người bạn (friend) để hiểu (to understand) họ hơn.', eng2: 'I listen to my friend to understand them better.' },
+                    { vocab: '7. check (kiểm tra)', vie1: 'Tôi mở lịch để kiểm tra (to check) thời gian.', eng1: 'I open the calendar to check the time.', vie2: 'Tôi đọc lại bài để kiểm tra (to check) lỗi chính tả.', eng2: 'I reread the text to check for mistakes.' },
+                    { vocab: '8. letter (lá thư)', vie1: 'Tôi viết một lá thư (letter) để gửi (to send) cho người thân.', eng1: 'I write a letter to send to my family.', vie2: 'Tôi dán tem lên lá thư (letter) để gửi (to mail) đi.', eng2: 'I put a stamp on the letter to mail it.' }
+                ],
+                fullEng: "I lie on the bed to rest. I make the bed to keep the room tidy. I take a pen to write notes. I borrow a pen to sign my name. I nod my head to agree with the plan. I wear a hat on my head to protect from the sun. I choose a red shirt to wear today. I buy red apples to eat. I count to ten to keep calm. I spend ten minutes to exercise. I call my friend to invite them out. I listen to my friend to understand them better. I open the calendar to check the time. I reread the text to check for mistakes. I write a letter to send to my family. I put a stamp on the letter to mail it.",
+                fullVie: "Tôi nằm trên giường để nghỉ ngơi. Tôi dọn giường cho gọn gàng. Tôi lấy bút để ghi chú. Tôi mượn bút để ký tên. Tôi gật đầu đồng ý với kế hoạch. Tôi đội mũ để che nắng. Tôi chọn mặc chiếc áo màu đỏ hôm nay. Tôi mua táo đỏ để ăn. Tôi đếm đến mười để giữ bình tĩnh. Tôi dành mười phút để tập thể dục. Tôi gọi điện rủ bạn bè ra ngoài. Tôi lắng nghe bạn mình để hiểu họ hơn. Tôi mở lịch để xem thời gian. Tôi đọc lại văn bản để kiểm tra lỗi. Tôi viết thư gửi cho gia đình. Tôi dán tem lên lá thư để gửi đi."
+            },
+            {
+                id: 'lesson-4',
+                title: 'Bài 4: Âm /ɑː/',
+                sound: '/ɑː/ (Âm a dài)',
+                cards: [
+                    { vocab: '1. car (xe hơi / ô tô)', vie1: 'Tôi lái chiếc xe hơi (car) để đi (to drive) làm.', eng1: 'I drive the car to go to work.', vie2: 'Tôi rửa chiếc xe hơi (car) để làm (to make) nó sạch đẹp.', eng2: 'I wash the car to make it clean.' },
+                    { vocab: '2. star (ngôi sao)', vie1: 'Tôi nhìn lên ngôi sao (star) để ước (to make) một điều ước.', eng1: 'I look at the star to make a wish.', vie2: 'Tôi vẽ một ngôi sao (star) để trang trí (to decorate) cuốn sổ.', eng2: 'I draw a star to decorate my notebook.' },
+                    { vocab: '3. father (bố / cha)', vie1: 'Tôi gọi cho bố (father) để hỏi (to ask) thăm sức khỏe.', eng1: 'I call my father to ask about his health.', vie2: 'Tôi giúp bố (father) để sửa (to fix) cái bàn.', eng2: 'I help my father to fix the table.' },
+                    { vocab: '4. park (công viên)', vie1: 'Tôi đi đến công viên (park) để chạy (to run) bộ.', eng1: 'I go to the park to run.', vie2: 'Tôi ghé công viên (park) để hít (to breathe) thở không khí an lành.', eng2: 'I visit the park to breathe fresh air.' },
+                    { vocab: '5. dark (bóng tối / tối)', vie1: 'Tôi bật đèn khi trời tối (dark) để nhìn (to see) rõ hơn.', eng1: 'I turn on the light when it is dark to see better.', vie2: 'Tôi mở rèm lúc trời tối (dark) để ngắm (to watch) thành phố.', eng2: 'I open the curtain when it is dark to watch the city.' },
+                    { vocab: '6. art (nghệ thuật)', vie1: 'Tôi học nghệ thuật (art) để phát triển (to develop) sáng tạo.', eng1: 'I study art to develop creativity.', vie2: 'Tôi ngắm bức tranh nghệ thuật (art) để thư giãn (to relax).', eng2: 'I view the art piece to relax.' },
+                    { vocab: '7. heart (trái tim)', vie1: 'Tôi lắng nghe trái tim (heart) để đưa (to make) ra quyết định.', eng1: 'I listen to my heart to make a decision.', vie2: 'Tôi tập thể dục để giữ (to keep) cho trái tim (heart) khỏe mạnh.', eng2: 'I exercise to keep my heart healthy.' },
+                    { vocab: '8. large (rộng lớn / to)', vie1: 'Tôi chọn một căn phòng rộng lớn (large) để ở (to live) thoải mái.', eng1: 'I choose a large room to live comfortably.', vie2: 'Tôi mua một cái bàn rộng lớn (large) để làm (to work) việc.', eng2: 'I buy a large desk to work.' }
+                ],
+                fullEng: "I drive the car to go to work. I wash the car to make it clean. I look at the star to make a wish. I draw a star to decorate my notebook. I call my father to ask about his health. I help my father to fix the table. I go to the park to run. I visit the park to breathe fresh air. I turn on the light when it is dark to see better. I open the curtain when it is dark to watch the city. I study art to develop creativity. I view the art piece to relax. I listen to my heart to make a decision. I exercise to keep my heart healthy. I choose a large room to live comfortably. I buy a large desk to work.",
+                fullVie: "Tôi lái xe ô tô đi làm. Tôi rửa xe hơi cho sạch dẹp. Tôi nhìn lên ngôi sao để ước một điều ước. Tôi vẽ một ngôi sao để trang trí cuốn sổ. Tôi gọi điện cho bố hỏi thăm sức khỏe. Tôi giúp bố sửa cái bàn. Tôi ra công viên chạy bộ. Tôi ghé công viên hít thở không khí lành lạnh. Tôi bật đèn khi trời tối để nhìn rõ hơn. Tôi mở rèm lúc trời tối ngắm thành phố. Tôi học nghệ thuật để phát triển khả năng sáng tạo. Tôi ngắm nhìn tác phẩm nghệ thuật để thư giãn. Tôi lắng nghe trái tim để đưa ra quyết định. Tôi tập thể dục giữ trái tim khỏe mạnh. Tôi chọn một phòng lớn ở cho thoải mái. Tôi mua một bàn rộng lớn để làm việc."
+            },
+            {
+                id: 'lesson-5',
+                title: 'Bài 5: Âm /ɒ/',
+                sound: '/ɒ/ (Âm o ngắn)',
+                cards: [
+                    { vocab: '1. not (không)', vie1: 'Tôi quyết định không (not) thức khuya để bảo vệ (to protect) sức khỏe.', eng1: 'I decide not to stay up late to protect my health.', vie2: 'Tôi cố gắng không (not) lo lắng để tập trung (to focus) làm việc.', eng2: 'I try not to worry to focus on work.' },
+                    { vocab: '2. box (chiếc hộp)', vie1: 'Tôi mở chiếc hộp (box) để lấy (to take) đồ chơi.', eng1: 'I open the box to take out toys.', vie2: 'Tôi dùng chiếc hộp (box) để cất (to keep) sách cũ.', eng2: 'I use the box to keep old books.' },
+                    { vocab: '3. dog (con chó)', vie1: 'Tôi dắt con chó (dog) để đi (to walk) dạo.', eng1: 'I take the dog to walk.', vie2: 'Tôi cho con chó (dog) ăn (to eat) đúng giờ.', eng2: 'I feed the dog to eat on time.' },
+                    { vocab: '4. hot (nóng)', vie1: 'Tôi thổi ly nước nóng (hot) để uống (to drink) an toàn.', eng1: 'I blow on the hot water to drink safely.', vie2: 'Tôi bật quạt khi trời nóng (hot) để làm (to feel) mát.', eng2: 'I turn on the fan when it is hot to feel cool.' },
+                    { vocab: '5. job (công việc)', vie1: 'Tôi tìm một công việc (job) mới để học (to learn) kĩ năng.', eng1: 'I search for a new job to learn skills.', vie2: 'Tôi làm tốt công việc (job) để kiếm (to earn) thu nhập.', eng2: 'I do my job well to earn an income.' },
+                    { vocab: '6. stop (dừng lại)', vie1: 'Tôi dừng lại (stop) để chờ (to wait) đèn đỏ.', eng1: 'I stop to wait for the red light.', vie2: 'Tôi dừng lại (stop) để nghỉ (to rest) chân một chút.', eng2: 'I stop to rest my legs for a bit.' },
+                    { vocab: '7. watch (xem / đồng hồ)', vie1: 'Tôi đeo chiếc đồng hồ (watch) để xem (to check) giờ.', eng1: 'I wear a watch to check the time.', vie2: 'Tôi ngồi xuống để xem (to watch) tin tức.', eng2: 'I sit down to watch the news.' },
+                    { vocab: '8. coffee (cà phê)', vie1: 'Tôi pha một ly cà phê (coffee) để giữ (to stay) tỉnh táo.', eng1: 'I make a cup of coffee to stay awake.', vie2: 'Tôi mua cà phê (coffee) để thưởng thức (to enjoy) buổi sáng.', eng2: 'I buy coffee to enjoy the morning.' }
+                ],
+                fullEng: "I decide not to stay up late to protect my health. I try not to worry to focus on work. I open the box to take out toys. I use the box to keep old books. I take the dog to walk. I feed the dog to eat on time. I blow on the hot water to drink safely. I turn on the fan when it is hot to feel cool. I search for a new job to learn skills. I do my job well to earn an income. I stop to wait for the red light. I stop to rest my legs for a bit. I wear a watch to check the time. I sit down to watch the news. I make a cup of coffee to stay awake. I buy coffee to enjoy the morning.",
+                fullVie: "Tôi quyết định không thức khuya để bảo vệ sức khỏe. Tôi cố gắng không lo lắng để tập trung vào công việc. Tôi mở hộp để lấy đồ chơi ra. Tôi dùng chiếc hộp đó để đựng sách cũ. Tôi dắt chó đi dạo. Tôi cho chó ăn đúng giờ. Tôi thổi vào nước nóng để uống cho an toàn. Tôi bật quạt khi trời nóng để cảm thấy mát mẻ. Tôi tìm kiếm công việc mới để học hỏi kỹ năng. Tôi làm tốt công việc của mình để kiếm thu nhập. Tôi dừng lại chờ đèn đỏ. Tôi dừng lại để nghỉ chân một chút. Tôi đeo đồng hồ để xem giờ. Tôi ngồi xuống xem tin tức. Tôi pha một tách cà phê để giữ tỉnh táo. Tôi mua cà phê để tận hưởng buổi sáng."
+            },
+            {
+                id: 'lesson-6',
+                title: 'Bài 6: Âm /ʊ/',
+                sound: '/ʊ/ (Âm u ngắn)',
+                cards: [
+                    { vocab: '1. book (cuốn sách)', vie1: 'Tôi mở cuốn sách (book) để đọc (to read) trước khi ngủ.', eng1: 'I open the book to read before bed.', vie2: 'Tôi mua một cuốn sách (book) mới để học (to learn) tiếng Anh.', eng2: 'I buy a new book to learn English.' },
+                    { vocab: '2. foot (bàn chân)', vie1: 'Tôi nhấc bàn chân (foot) để bước (to step) qua vũng nước.', eng1: 'I lift my foot to step over the puddle.', vie2: 'Tôi đi ngâm bàn chân (foot) để thư giãn (to relax) sau ngày dài.', eng2: 'I soak my foot to relax after a long day.' },
+                    { vocab: '3. look (nhìn)', vie1: 'Tôi quay lại để nhìn (to look) bức tranh trên tường.', eng1: 'I turn around to look at the picture on the wall.', vie2: 'Tôi mở cửa sổ để nhìn (to look) ra ngoài trời.', eng2: 'I open the window to look outside.' },
+                    { vocab: '4. put (đặt / để / cất)', vie1: 'Tôi đặt (put) chìa khóa lên bàn để nhớ (to remember) vị trí.', eng1: 'I put the key on the table to remember its place.', vie2: 'Tôi cất (put) sách vào cặp để mang (to bring) đi học.', eng2: 'I put books in my bag to bring to class.' },
+                    { vocab: '5. good (tốt / hay)', vie1: 'Tôi chọn một món ăn tốt (good) để bảo vệ (to protect) sức khỏe.', eng1: 'I choose good food to protect my health.', vie2: 'Tôi cố gắng làm việc tốt (good) để đạt (to achieve) kết quả cao.', eng2: 'I try to do good work to achieve high results.' },
+                    { vocab: '6. full (đầy / no)', vie1: 'Tôi uống một ly nước đầy (full) để giải (to quench) cơn khát.', eng1: 'I drink a full glass of water to quench my thirst.', vie2: 'Tôi ăn no (full) để có (to have) năng lượng làm việc.', eng2: 'I eat until full to have energy to work.' },
+                    { vocab: '7. cook (nấu ăn)', vie1: 'Tôi vào bếp để nấu (to cook) bữa tối cho gia đình.', eng1: 'I go to the kitchen to cook dinner for my family.', vie2: 'Tôi học cách nấu (to cook) các món ăn mới.', eng2: 'I learn to cook new dishes.' },
+                    { vocab: '8. sugar (đường)', vie1: 'Tôi thêm một chút đường (sugar) để làm (to make) cà phê ngọt hơn.', eng1: 'I add a little sugar to make the coffee sweeter.', vie2: 'Tôi giảm bớt đường (sugar) để giữ (to keep) dáng.', eng2: 'I reduce sugar to keep fit.' }
+                ],
+                fullEng: "I open the book to read before bed. I buy a new book to learn English. I lift my foot to step over the puddle. I soak my foot to relax after a long day. I turn around to look at the picture on the wall. I open the window to look outside. I put the key on the table to remember its place. I put books in my bag to bring to class. I choose good food to protect my health. I try to do good work to achieve high results. I drink a full glass of water to quench my thirst. I eat until full to have energy to work. I go to the kitchen to cook dinner for my family. I learn to cook new dishes. I add a little sugar to make the coffee sweeter. I reduce sugar to keep fit.",
+                fullVie: "Tôi mở cuốn sách để đọc trước khi ngủ. Tôi mua một cuốn sách mới để học tiếng Anh. Tôi nhấc bàn chân để bước qua vũng nước. Tôi đi ngâm bàn chân để thư giãn sau ngày dài. Tôi quay lại để nhìn bức tranh trên tường. Tôi mở cửa sổ để nhìn ra ngoài trời. Tôi đặt chìa khóa lên bàn để nhớ vị trí. Tôi cất sách vào cặp để mang đi học. Tôi chọn một món ăn tốt để bảo vệ sức khỏe. Tôi cố gắng làm việc tốt để đạt kết quả cao. Tôi uống một ly nước đầy để giải cơn khát. Tôi ăn no để có năng lượng làm việc. Tôi vào bếp để nấu bữa tối cho gia đình. Tôi học cách nấu các món ăn mới. Tôi thêm một chút đường để làm cà phê ngọt hơn. Tôi giảm bớt đường để giữ dáng."
+            },
+            {
+                id: 'lesson-7',
+                title: 'Bài 7: Âm /uː/',
+                sound: '/uː/ (Âm u dài)',
+                cards: [
+                    { vocab: '1. food (thức ăn / đồ ăn)', vie1: 'Tôi mua thức ăn (food) để nấu (to cook) bữa tối.', eng1: 'I buy food to cook dinner.', vie2: 'Tôi chuẩn bị thức ăn (food) để mang (to bring) đi làm.', eng2: 'I prepare food to bring to work.' },
+                    { vocab: '2. school (trường học)', vie1: 'Tôi đi đến trường học (school) để gặp (to meet) giáo viên.', eng1: 'I go to school to meet the teacher.', vie2: 'Tôi chọn một trường học (school) tốt để học (to study).', eng2: 'I choose a good school to study.' },
+                    { vocab: '3. blue (màu xanh dương)', vie1: 'Tôi chọn một chiếc áo màu xanh dương (blue) để mặc (to wear).', eng1: 'I choose a blue shirt to wear.', vie2: 'Tôi sơn bức tường màu xanh dương (blue) để làm (to make) phòng mát mẻ.', eng2: 'I paint the wall blue to make the room cool.' },
+                    { vocab: '4. two (số hai / 2)', vie1: 'Tôi mua hai (two) cuốn sách để đọc (to read).', eng1: 'I buy two books to read.', vie2: 'Tôi dành hai (two) giờ để tập (to exercise) thể thao.', eng2: 'I spend two hours to exercise.' },
+                    { vocab: '5. cool (mát mẻ / ngầu)', vie1: 'Tôi bật điều hòa để làm (to make) phòng mát mẻ (cool).', eng1: 'I turn on the air conditioner to make the room cool.', vie2: 'Tôi mặc chiếc áo này để trông (to look) ngầu (cool) hơn.', eng2: 'I wear this jacket to look cool.' },
+                    { vocab: '6. new (mới)', vie1: 'Tôi mua một chiếc điện thoại mới (new) để dùng (to use) cho công việc.', eng1: 'I buy a new phone to use for work.', vie2: 'Tôi học một từ mới (new) để cải thiện (to improve) vốn từ.', eng2: 'I learn a new word to improve my vocabulary.' },
+                    { vocab: '7. music (âm nhạc)', vie1: 'Tôi bật âm nhạc (music) để thư giãn (to relax) sau giờ làm.', eng1: 'I turn on music to relax after work.', vie2: 'Tôi nghe âm nhạc (music) để tập trung (to focus) hơn.', eng2: 'I listen to music to focus better.' },
+                    { vocab: '8. student (học sinh / sinh viên)', vie1: 'Tôi giúp đỡ học sinh (student) để hiểu (to understand) bài học.', eng1: 'I help the student to understand the lesson.', vie2: 'Tôi khuyến khích mỗi học sinh (student) để thực hành (to practice) hàng ngày.', eng2: 'I encourage each student to practice every day.' }
+                ],
+                fullEng: "I buy food to cook dinner. I prepare food to bring to work. I go to school to meet the teacher. I choose a good school to study. I choose a blue shirt to wear. I paint the wall blue to make the room cool. I buy two books to read. I spend two hours to exercise. I turn on the air conditioner to make the room cool. I wear this jacket to look cool. I buy a new phone to use for work. I learn a new word to improve my vocabulary. I turn on music to relax after work. I listen to music to focus better. I help the student to understand the lesson. I encourage each student to practice every day.",
+                fullVie: "Tôi mua thức ăn để nấu bữa tối. Tôi chuẩn bị thức ăn để mang đi làm. Tôi đi đến trường học để gặp giáo viên. Tôi chọn một trường học tốt để học. Tôi chọn một chiếc áo màu xanh dương để mặc. Tôi sơn bức tường màu xanh dương để làm phòng mát mẻ. Tôi mua hai cuốn sách để đọc. Tôi dành hai giờ để tập thể thao. Tôi bật điều hòa để làm phòng mát mẻ. Tôi mặc chiếc áo này để trông ngầu hơn. Tôi mua một chiếc điện thoại mới để dùng cho công việc. Tôi học một từ mới để cải thiện vốn từ. Tôi bật âm nhạc để thư giãn sau giờ làm. Tôi nghe âm nhạc để tập trung hơn. Tôi giúp đỡ học sinh để hiểu bài học. Tôi khuyến khích mỗi học sinh để thực hành hàng ngày."
+            },
+            {
+                id: 'lesson-8',
+                title: 'Bài 8: Âm /ʌ/',
+                sound: '/ʌ/ (Âm ă ngắn)',
+                cards: [
+                    { vocab: '1. come (đến / tới)', vie1: 'Tôi đến (come) cửa hàng để mua (to buy) đồ ăn.', eng1: 'I come to the store to buy food.', vie2: 'Tôi đến (come) sớm để chuẩn bị (to prepare) cho buổi học.', eng2: 'I come early to prepare for the lesson.' },
+                    { vocab: '2. money (tiền)', vie1: 'Tôi dùng tiền (money) để mua (to buy) sách mới.', eng1: 'I use money to buy new books.', vie2: 'Tôi tiết kiệm tiền (money) để đi (to travel) du lịch.', eng2: 'I save money to travel.' },
+                    { vocab: '3. mother (mẹ)', vie1: 'Tôi giúp mẹ (mother) để nấu (to cook) bữa tối.', eng1: 'I help my mother to cook dinner.', vie2: 'Tôi gọi cho mẹ (mother) để hỏi (to ask) thăm sức khỏe.', eng2: 'I call my mother to ask about her health.' },
+                    { vocab: '4. run (chạy)', vie1: 'Tôi chạy (run) bộ mỗi sáng để rèn luyện (to practice) sức khỏe.', eng1: 'I run every morning to improve my health.', vie2: 'Tôi chạy (run) nhanh để bắt (to catch) kịp xe buýt.', eng2: 'I run fast to catch the bus.' },
+                    { vocab: '5. cup (cái tách / cái cốc)', vie1: 'Tôi dùng chiếc cốc (cup) để uống (to drink) trà.', eng1: 'I use a cup to drink tea.', vie2: 'Tôi rửa chiếc cốc (cup) để giữ (to keep) vệ sinh.', eng2: 'I wash the cup to keep it clean.' },
+                    { vocab: '6. sun (mặt trời)', vie1: 'Tôi nhìn mặt trời (sun) để cảm nhận (to feel) ánh nắng ấm áp.', eng1: 'I look at the sun to feel the warmth.', vie2: 'Tôi thức dậy sớm để ngắm (to watch) mặt trời (sun) mọc.', eng2: 'I wake up early to watch the sun rise.' },
+                    { vocab: '7. love (yêu / thích)', vie1: 'Tôi thích (love) học tiếng Anh để giao tiếp (to communicate) tốt hơn.', eng1: 'I love to learn English to communicate better.', vie2: 'Tôi dành tình yêu (love) thương cho gia đình để tạo (to create) niềm vui.', eng2: 'I give love to my family to create happiness.' },
+                    { vocab: '8. bus (xe buýt)', vie1: 'Tôi bắt xe buýt (bus) để đi (to go) làm hàng ngày.', eng1: 'I take the bus to go to work every day.', vie2: 'Tôi đợi xe buýt (bus) để di chuyển (to travel) quanh thành phố.', eng2: 'I wait for the bus to travel around the city.' }
+                ],
+                fullEng: "I come to the store to buy food. I come early to prepare for the lesson. I use money to buy new books. I save money to travel. I help my mother to cook dinner. I call my mother to ask about her health. I run every morning to improve my health. I run fast to catch the bus. I use a cup to drink tea. I wash the cup to keep it clean. I look at the sun to feel the warmth. I wake up early to watch the sun rise. I love to learn English to communicate better. I give love to my family to create happiness. I take the bus to go to work every day. I wait for the bus to travel around the city.",
+                fullVie: "Tôi đến cửa hàng để mua đồ ăn. Tôi đến sớm để chuẩn bị cho buổi học. Tôi dùng tiền để mua sách mới. Tôi tiết kiệm tiền để đi du lịch. Tôi giúp mẹ để nấu bữa tối. Tôi gọi cho mẹ để hỏi thăm sức khỏe. Tôi chạy bộ mỗi sáng để rèn luyện sức khỏe. Tôi chạy nhanh để bắt kịp xe buýt. Tôi dùng chiếc cốc để uống trà. Tôi rửa chiếc cốc để giữ vệ sinh. Tôi nhìn mặt trời để cảm nhận ánh nắng ấm áp. Tôi thức dậy sớm để ngắm mặt trời mọc. Tôi thích học tiếng Anh để giao tiếp tốt hơn. Tôi dành tình yêu thương cho gia đình để tạo niềm vui. Tôi bắt xe buýt để đi làm hàng ngày. Tôi đợi xe buýt để di chuyển quanh thành phố."
+            },
+            {
+                id: 'lesson-9',
+                title: 'Bài 9: Âm /ɜː/',
+                sound: '/ɜː/ (Âm ơ dài)',
+                cards: [
+                    { vocab: '1. bird (con chim)', vie1: 'Tôi nhìn con chim (bird) để lắng nghe (to listen) tiếng hót.', eng1: 'I look at the bird to listen to its song.', vie2: 'Tôi ngắm con chim (bird) để thư giãn (to relax) tinh thần.', eng2: 'I watch the bird to relax my mind.' },
+                    { vocab: '2. girl (cô gái)', vie1: 'Tôi gặp cô gái (girl) để trao đổi (to discuss) công việc.', eng1: 'I meet the girl to discuss work.', vie2: 'Tôi giúp cô gái (girl) để xách (to carry) hành lý.', eng2: 'I help the girl to carry her luggage.' },
+                    { vocab: '3. work (làm việc / công việc)', vie1: 'Tôi đến văn phòng để làm việc (to work) chăm chỉ.', eng1: 'I go to the office to work hard.', vie2: 'Tôi sắp xếp thời gian để làm việc (to work) hiệu quả hơn.', eng2: 'I organize my time to work more efficiently.' },
+                    { vocab: '4. first (đầu tiên / trước hết)', vie1: 'Tôi rửa tay đầu tiên để giữ (to keep) vệ sinh.', eng1: 'I wash my hands first to keep clean.', vie2: 'Tôi đọc yêu cầu đầu tiên để hiểu (to understand) nhiệm vụ.', eng2: 'I read the requirements first to understand the task.' },
+                    { vocab: '5. shirt (áo sơ mi / áo)', vie1: 'Tôi ủi chiếc áo sơ mi (shirt) để mặc (to wear) đi làm.', eng1: 'I iron the shirt to wear to work.', vie2: 'Tôi chọn chiếc áo sơ mi (shirt) trắng để tham dự (to attend) buổi họp.', eng2: 'I choose a white shirt to attend the meeting.' },
+                    { vocab: '6. learn (học)', vie1: 'Tôi đọc sách để học (to learn) thêm kiến thức.', eng1: 'I read books to learn more knowledge.', vie2: 'Tôi thực hành hàng ngày để học (to learn) cách nói tiếng Anh.', eng2: 'I practice daily to learn how to speak English.' },
+                    { vocab: '7. world (thế giới)', vie1: 'Tôi đi du lịch để khám phá (to explore) thế giới (world).', eng1: 'I travel to explore the world.', vie2: 'Tôi học ngoại ngữ để kết nối (to connect) với thế giới (world).', eng2: 'I learn foreign languages to connect with the world.' },
+                    { vocab: '8. early (sớm)', vie1: 'Tôi thức dậy sớm (early) để tập (to exercise) thể dục.', eng1: 'I wake up early to exercise.', vie2: 'Tôi rời nhà sớm (early) để tránh (to avoid) kẹt xe.', eng2: 'I leave home early to avoid traffic jams.' }
+                ],
+                fullEng: "I look at the bird to listen to its song. I watch the bird to relax my mind. I meet the girl to discuss work. I help the girl to carry her luggage. I go to the office to work hard. I organize my time to work more efficiently. I wash my hands first to keep clean. I read the requirements first to understand the task. I iron the shirt to wear to work. I choose a white shirt to attend the meeting. I read books to learn more knowledge. I practice daily to learn how to speak English. I travel to explore the world. I learn foreign languages to connect with the world. I wake up early to exercise. I leave home early to avoid traffic jams.",
+                fullVie: "Tôi nhìn con chim để lắng nghe tiếng hót. Tôi ngắm con chim để thư giãn tinh thần. Tôi gặp cô gái để trao đổi công việc. Tôi giúp cô gái để xách hành lý. Tôi đến văn phòng để làm việc chăm chỉ. Tôi sắp xếp thời gian để làm việc hiệu quả hơn. Tôi rửa tay đầu tiên để giữ vệ sinh. Tôi đọc yêu cầu đầu tiên để hiểu nhiệm vụ. Tôi ủi chiếc áo sơ mi để mặc đi làm. Tôi chọn chiếc áo sơ mi trắng để tham dự buổi họp. Tôi đọc sách để học thêm kiến thức. Tôi thực hành hàng ngày để học cách nói tiếng Anh. Tôi đi du lịch để khám phá thế giới. Tôi học ngoại ngữ để kết nối với thế giới. Tôi thức dậy sớm để tập thể dục. Tôi rời nhà sớm để tránh kẹt xe."
+            },
+            {
+                id: 'lesson-10',
+                title: 'Bài 10: Âm /eɪ/',
+                sound: '/eɪ/ (Nguyên âm đôi)',
+                cards: [
+                    { vocab: '1. say (nói)', vie1: 'Tôi nói (say) xin chào để chào (to greet) bạn bè.', eng1: 'I say hello to greet my friends.', vie2: 'Tôi nói (say) cảm ơn để thể hiện (to show) sự tôn trọng.', eng2: 'I say thank you to show respect.' },
+                    { vocab: '2. day (ngày)', vie1: 'Tôi dành cả ngày (day) để làm (to work) dự án.', eng1: 'I spend the day to work on my project.', vie2: 'Tôi cần một ngày (day) đẹp trời để đi (to go) dạo.', eng2: 'I need a clear day to go for a walk.' },
+                    { vocab: '3. make (làm / tạo ra / pha)', vie1: 'Tôi pha (make) cà phê để giữ (to stay) tỉnh táo.', eng1: 'I make coffee to stay awake.', vie2: 'Tôi lập (make) kế hoạch để đạt (to reach) mục tiêu.', eng2: 'I make a plan to reach my goals.' },
+                    { vocab: '4. name (tên)', vie1: 'Tôi viết tên (name) mình để ký (to sign) giấy tờ.', eng1: 'I write my name to sign the paper.', vie2: 'Tôi gọi tên (name) anh ấy để gây (to get) sự chú ý.', eng2: 'I call his name to get his attention.' },
+                    { vocab: '5. late (trễ / muộn)', vie1: 'Tôi đến muộn (late) để tránh (to avoid) đám đông.', eng1: 'I arrive late to avoid the crowd.', vie2: 'Tôi ngủ muộn (late) để nghỉ (to rest) sau giờ làm.', eng2: 'I sleep late to rest after work.' },
+                    { vocab: '6. wait (chờ / đợi)', vie1: 'Tôi đợi (wait) xe buýt để đi (to go) về nhà.', eng1: 'I wait for the bus to go home.', vie2: 'Tôi đợi (wait) bạn để ăn (to eat) trưa cùng nhau.', eng2: 'I wait for my friend to eat lunch together.' },
+                    { vocab: '7. great (tuyệt vời)', vie1: 'Tôi cảm thấy tuyệt vời (great) để hoàn thành (to finish) nhiệm vụ.', eng1: 'I feel great to finish the task.', vie2: 'Tôi có một ý tưởng tuyệt vời (great) để cải thiện (to improve) ứng dụng.', eng2: 'I have a great idea to improve the app.' },
+                    { vocab: '8. train (tàu hỏa)', vie1: 'Tôi đi tàu hỏa (train) để di chuyển (to travel) đến thành phố.', eng1: 'I take the train to travel to the city.', vie2: 'Tôi lên tàu hỏa (train) để thăm (to visit) gia đình.', eng2: 'I board the train to visit my family.' }
+                ],
+                fullEng: "I say hello to greet my friends. I say thank you to show respect. I spend the day to work on my project. I need a clear day to go for a walk. I make coffee to stay awake. I make a plan to reach my goals. I write my name to sign the paper. I call his name to get his attention. I arrive late to avoid the crowd. I sleep late to rest after work. I wait for the bus to go home. I wait for my friend to eat lunch together. I feel great to finish the task. I have a great idea to improve the app. I take the train to travel to the city. I board the train to visit my family.",
+                fullVie: "Tôi nói xin chào để chào hỏi bạn bè. Tôi nói cảm ơn để thể hiện sự tôn trọng. Tôi dành cả ngày để làm dự án. Tôi cần một ngày đẹp trời để đi dạo. Tôi pha cà phê để giữ tỉnh táo. Tôi lập kế hoạch để đạt mục tiêu. Tôi viết tên mình để ký giấy tờ. Tôi gọi tên anh ấy để gây sự chú ý. Tôi đến muộn để tránh đám đông. Tôi ngủ muộn để nghỉ ngơi sau giờ làm. Tôi đợi xe buýt để về nhà. Tôi đợi bạn để ăn trưa cùng nhau. Tôi cảm thấy tuyệt vời khi hoàn thành nhiệm vụ. Tôi có một ý tưởng tuyệt vời để cải thiện ứng dụng. Tôi đi tàu hỏa để đến thành phố. Tôi lên tàu hỏa để thăm gia đình."
+            },
+            {
+                id: 'lesson-11',
+                title: 'Bài 11: Âm /aɪ/',
+                sound: '/aɪ/ (Nguyên âm đôi)',
+                cards: [
+                    { vocab: '1. my (của tôi)', vie1: 'Tôi dùng điện thoại của tôi (my) để gọi (to call) cho gia đình.', eng1: 'I use my phone to call my family.', vie2: 'Tôi dọn dẹp bàn của tôi (my) để làm việc (to work) tốt hơn.', eng2: 'I clean my desk to work better.' },
+                    { vocab: '2. high (cao)', vie1: 'Tôi nhảy cao (high) để bắt (to catch) quả bóng.', eng1: 'I jump high to catch the ball.', vie2: 'Tôi đặt mục tiêu cao (high) để thử thách (to challenge) bản thân.', eng2: 'I set a high goal to challenge myself.' },
+                    { vocab: '3. buy (mua)', vie1: 'Tôi mua (buy) thực phẩm tươi để nấu (to cook) bữa tối.', eng1: 'I buy fresh food to cook dinner.', vie2: 'Tôi mua (buy) một cuốn sách mới để đọc (to read) cuối tuần này.', eng2: 'I buy a new book to read this weekend.' },
+                    { vocab: '4. time (thời gian)', vie1: 'Tôi kiểm tra thời gian (time) để tham dự (to attend) cuộc họp.', eng1: 'I check the time to attend the meeting.', vie2: 'Tôi dành thời gian (time) để học (to learn) những điều mới.', eng2: 'I spend time to learn new things.' },
+                    { vocab: '5. like (thích)', vie1: 'Tôi thích (like) đọc sách để mở rộng (to expand) kiến thức.', eng1: 'I like to read to expand my knowledge.', vie2: 'Tôi thích (like) đi du lịch để khám phá (to explore) những nơi mới.', eng2: 'I like to travel to explore new places.' },
+                    { vocab: '6. night (ban đêm)', vie1: 'Tôi nghỉ ngơi vào ban đêm (night) để hồi phục (to regain) năng lượng.', eng1: 'I rest at night to regain energy.', vie2: 'Tôi học vào ban đêm (night) để chuẩn bị (to prepare) cho kỳ thi.', eng2: 'I study at night to prepare for exams.' },
+                    { vocab: '7. find (tìm / tìm thấy)', vie1: 'Tôi tìm (find) một phòng yên tĩnh để học (to study).', eng1: 'I find a quiet room to study.', vie2: 'Tôi tìm (find) chìa khóa để mở (to open) cửa.', eng2: 'I find my key to open the door.' },
+                    { vocab: '8. white (màu trắng)', vie1: 'Tôi mặc một chiếc áo sơ mi trắng (white) để đi (to go) làm.', eng1: 'I wear a white shirt to go to work.', vie2: 'Tôi chọn một tờ giấy trắng (white) để vẽ (to draw) tranh.', eng2: 'I choose a white paper to draw a picture.' }
+                ],
+                fullEng: "I use my phone to call my family. I clean my desk to work better. I jump high to catch the ball. I set a high goal to challenge myself. I buy fresh food to cook dinner. I buy a new book to read this weekend. I check the time to attend the meeting. I spend time to learn new things. I like to read to expand my knowledge. I like to travel to explore new places. I rest at night to regain energy. I study at night to prepare for exams. I find a quiet room to study. I find my key to open the door. I wear a white shirt to go to work. I choose a white paper to draw a picture.",
+                fullVie: "Tôi dùng điện thoại của tôi để gọi cho gia đình. Tôi dọn dẹp bàn của tôi để làm việc tốt hơn. Tôi nhảy cao để bắt quả bóng. Tôi đặt mục tiêu cao để thử thách bản thân. Tôi mua thực phẩm tươi để nấu bữa tối. Tôi mua một cuốn sách mới để đọc cuối tuần này. Tôi kiểm tra thời gian để tham dự cuộc họp. Tôi dành thời gian để học những điều mới. Tôi thích đọc sách để mở rộng kiến thức. Tôi thích đi du lịch để khám phá những nơi mới. Tôi nghỉ ngơi vào ban đêm để hồi phục năng lượng. Tôi học vào ban đêm để chuẩn bị cho kỳ thi. Tôi tìm một phòng yên tĩnh để học. Tôi tìm chìa khóa để mở cửa. Tôi mặc một chiếc áo sơ mi trắng để đi làm. Tôi chọn một tờ giấy trắng để vẽ tranh."
+            },
+            {
+                id: 'lesson-12',
+                title: 'Bài 12: Âm /ɔɪ/',
+                sound: '/ɔɪ/ (Nguyên âm đôi)',
+                cards: [
+                    { vocab: '1. boy (cậu bé)', vie1: 'Tôi hướng dẫn cậu bé (boy) để sang (to cross) đường.', eng1: 'I guide the boy to cross the street.', vie2: 'Tôi khen ngợi cậu bé (boy) để khuyến khích (to encourage) cậu ấy.', eng2: 'I praise the boy to encourage him.' },
+                    { vocab: '2. toy (đồ chơi)', vie1: 'Tôi mua một món đồ chơi (toy) để tặng (to give) cho cháu trai.', eng1: 'I buy a toy to give to my nephew.', vie2: 'Tôi sửa món đồ chơi (toy) để làm (to make) nó vui.', eng2: 'I fix the toy to make him happy.' },
+                    { vocab: '3. voice (giọng nói)', vie1: 'Tôi cất cao giọng (voice) để nói (to speak) rõ ràng.', eng1: 'I raise my voice to speak clearly.', vie2: 'Tôi luyện giọng (voice) để thuyết trình (to present) tốt hơn.', eng2: 'I train my voice to present better.' },
+                    { vocab: '4. choice (lựa chọn)', vie1: 'Tôi đưa ra lựa chọn (choice) để thay đổi (to change) sự nghiệp.', eng1: 'I make a choice to change my career.', vie2: 'Tôi tôn trọng lựa chọn (choice) để rời (to leave) đi của bạn.', eng2: 'I respect your choice to leave.' },
+                    { vocab: '5. noise (tiếng ồn)', vie1: 'Tôi tránh tiếng ồn (noise) để tập trung (to focus) học tập.', eng1: 'I avoid the noise to focus on study.', vie2: 'Tôi giảm tiếng ồn (noise) để ngủ (to sleep) ngon.', eng2: 'I reduce the noise to sleep well.' },
+                    { vocab: '6. coin (đồng xu)', vie1: 'Tôi thả một đồng xu (coin) để ước (to make) một điều ước.', eng1: 'I drop a coin to make a wish.', vie2: 'Tôi tiết kiệm từng đồng xu (coin) để mua (to buy) quà.', eng2: 'I save every coin to buy a gift.' },
+                    { vocab: '7. join (tham gia)', vie1: 'Tôi tham gia (join) câu lạc bộ để thực hành (to practice) tiếng Anh.', eng1: 'I join the club to practice English.', vie2: 'Tôi tham gia (join) cuộc họp để thảo luận (to discuss) về dự án.', eng2: 'I join the meeting to discuss the project.' },
+                    { vocab: '8. point (chỉ vào / điểm)', vie1: 'Tôi chỉ (point) vào bản đồ để chỉ (to show) đường.', eng1: 'I point at the map to show the way.', vie2: 'Tôi chỉ (point) ra lỗi sai để khắc phục (to fix) nó.', eng2: 'I point out the error to fix it.' }
+                ],
+                fullEng: "I guide the boy to cross the street. I praise the boy to encourage him. I buy a toy to give to my nephew. I fix the toy to make him happy. I raise my voice to speak clearly. I train my voice to present better. I make a choice to change my career. I respect your choice to leave. I avoid the noise to focus on study. I reduce the noise to sleep well. I drop a coin to make a wish. I save every coin to buy a gift. I join the club to practice English. I join the meeting to discuss the project. I point at the map to show the way. I point out the error to fix it.",
+                fullVie: "Tôi hướng dẫn cậu bé để qua đường. Tôi khen ngợi cậu bé để khuyến khích cậu ấy. Tôi mua một món đồ chơi để tặng cháu trai. Tôi sửa món đồ chơi để làm nó vui. Tôi cất cao giọng để nói rõ ràng. Tôi luyện giọng để thuyết trình tốt hơn. Tôi đưa ra lựa chọn để thay đổi sự nghiệp. Tôi tôn trọng lựa chọn của bạn khi ra đi. Tôi tránh tiếng ồn để tập trung học tập. Tôi giảm tiếng ồn để ngủ ngon. Tôi thả một đồng xu để ước một điều ước. Tôi tiết kiệm từng đồng xu để mua quà. Tôi tham gia câu lạc bộ để thực hành tiếng Anh. Tôi tham gia cuộc họp để thảo luận về dự án. Tôi chỉ vào bản đồ để chỉ đường. Tôi chỉ ra lỗi sai để khắc phục nó."
+            },
+            {
+                id: 'lesson-13',
+                title: 'Bài 13: Âm /əʊ/',
+                sound: '/əʊ/ (Nguyên âm đôi)',
+                cards: [
+                    { vocab: '1. go (đi)', vie1: 'Tôi đi (go) ra ngoài để gặp (to meet) bạn bè.', eng1: 'I go out to meet my friends.', vie2: 'Tôi đi (go) ngủ sớm để thức dậy (to wake up) đúng giờ.', eng2: 'I go to bed early to wake up on time.' },
+                    { vocab: '2. home (nhà)', vie1: 'Tôi về nhà (home) để ăn (to eat) tối với gia đình.', eng1: 'I return home to eat dinner with my family.', vie2: 'Tôi ở nhà (home) để nghỉ ngơi (to rest) sau một tuần làm việc.', eng2: 'I stay home to rest after a working week.' },
+                    { vocab: '3. phone (điện thoại)', vie1: 'Tôi mua điện thoại (phone) để liên lạc (to contact) với khách hàng.', eng1: 'I buy a phone to contact clients.', vie2: 'Tôi dùng điện thoại (phone) để học (to learn) tiếng Anh mỗi ngày.', eng2: 'I use a phone to learn English every day.' },
+                    { vocab: '4. boat (thuyền / con tàu)', vie1: 'Tôi thuê một con thuyền (boat) để ngắm (to see) cảnh biển.', eng1: 'I rent a boat to see the sea view.', vie2: 'Tôi lên thuyền (boat) để đi (to travel) sang đảo.', eng2: 'I board the boat to travel to the island.' },
+                    { vocab: '5. road (con đường)', vie1: 'Tôi băng qua đường (road) để sang (to reach) phía bên kia.', eng1: 'I cross the road to reach the other side.', vie2: 'Tôi chọn con đường (road) này để tiết kiệm (to save) thời gian.', eng2: 'I choose this road to save time.' },
+                    { vocab: '6. old (cũ / già)', vie1: 'Tôi giữ cuốn sách cũ (old) để lưu (to keep) lại kỷ niệm.', eng1: 'I keep the old book to keep memories.', vie2: 'Tôi giúp đỡ người già (old) để thể hiện (to show) lòng tốt.', eng2: 'I help old people to show kindness.' },
+                    { vocab: '7. cold (lạnh)', vie1: 'Tôi mặc áo khoác lạnh (cold) để giữ (to keep) ấm cơ thể.', eng1: 'I wear a jacket in the cold weather to keep warm.', vie2: 'Tôi uống nước lạnh (cold) để giải (to cool) nhiệt.', eng2: 'I drink cold water to cool down.' },
+                    { vocab: '8. show (cho xem / buổi diễn)', vie1: 'Tôi cho xem (show) thẻ để vào (to enter) tòa nhà.', eng1: 'I show my card to enter the building.', vie2: 'Tôi xem buổi biểu diễn (show) để thư giãn (to relax) tinh thần.', eng2: 'I watch the show to relax my mind.' }
+                ],
+                fullEng: "I go out to meet my friends. I go to bed early to wake up on time. I return home to eat dinner with my family. I stay home to rest after a working week. I buy a phone to contact clients. I use a phone to learn English every day. I rent a boat to see the sea view. I board the boat to travel to the island. I cross the road to reach the other side. I choose this road to save time. I keep the old book to keep memories. I help old people to show kindness. I wear a jacket in the cold weather to keep warm. I drink cold water to cool down. I show my card to enter the building. I watch the show to relax my mind.",
+                fullVie: "Tôi đi ra ngoài để gặp bạn bè. Tôi đi ngủ sớm để thức dậy đúng giờ. Tôi về nhà để ăn tối với gia đình. Tôi ở nhà để nghỉ ngơi sau một tuần làm việc. Tôi mua điện thoại để liên lạc với khách hàng. Tôi dùng điện thoại để học tiếng Anh mỗi ngày. Tôi thuê một con thuyền để ngắm cảnh biển. Tôi lên thuyền để đi sang đảo. Tôi băng qua đường để sang phía bên kia. Tôi chọn con đường này để tiết kiệm thời gian. Tôi giữ cuốn sách cũ để lưu lại kỷ niệm. Tôi giúp đỡ người già để thể hiện lòng tốt. Tôi mặc áo khoác trong thời tiết lạnh để giữ ấm. Tôi uống nước lạnh để giải nhiệt. Tôi cho xem thẻ để vào tòa nhà. Tôi xem buổi biểu diễn để thư giãn tinh thần."
+            },
+            {
+                id: 'lesson-14',
+                title: 'Bài 14: Âm /aʊ/',
+                sound: '/aʊ/ (Nguyên âm đôi)',
+                cards: [
+                    { vocab: '1. now (bây giờ)', vie1: 'Tôi bắt đầu bây giờ (now) để hoàn thành (to finish) công việc sớm.', eng1: 'I start now to finish the work early.', vie2: 'Tôi rời đi bây giờ (now) để đón (to catch) chuyến tàu.', eng2: 'I leave now to catch the train.' },
+                    { vocab: '2. house (ngôi nhà)', vie1: 'Tôi xây một ngôi nhà (house) để sống (to live) cùng gia đình.', eng1: 'I build a house to live with my family.', vie2: 'Tôi dọn dẹp ngôi nhà (house) để đón (to welcome) khách.', eng2: 'I clean the house to welcome guests.' },
+                    { vocab: '3. out (ra ngoài)', vie1: 'Tôi đi ra ngoài (out) để hít thở (to breathe) không khí tươi mát.', eng1: 'I go out to breathe fresh air.', vie2: 'Tôi bước ra ngoài (out) để nghe (to answer) điện thoại.', eng2: 'I step out to answer the phone.' },
+                    { vocab: '4. how (như thế nào / làm sao)', vie1: 'Tôi học cách (how) để nói (to speak) tiếng Anh lưu loát.', eng1: 'I learn how to speak English fluently.', vie2: 'Tôi hỏi làm sao (how) để sửa (to fix) lỗi này.', eng2: 'I ask how to fix this problem.' },
+                    { vocab: '5. mouse (con chuột)', vie1: 'Tôi dùng con chuột (mouse) để điều khiển (to control) máy tính.', eng1: 'I use a mouse to control the computer.', vie2: 'Tôi mua một con chuột (mouse) mới để làm việc (to work) nhanh hơn.', eng2: 'I buy a new mouse to work faster.' },
+                    { vocab: '6. town (thị trấn / thành phố)', vie1: 'Tôi đến thị trấn (town) để mua (to buy) đồ dùng.', eng1: 'I go to town to buy supplies.', vie2: 'Tôi sống ở thị trấn (town) này để tận hưởng (to enjoy) sự yên bình.', eng2: 'I live in this town to enjoy the peace.' },
+                    { vocab: '7. down (xuống)', vie1: 'Tôi ngồi xuống (down) để bắt đầu (to start) bài học.', eng1: 'I sit down to start the lesson.', vie2: 'Tôi nhìn xuống (down) để tìm (to look for) chìa khóa.', eng2: 'I look down to look for the key.' },
+                    { vocab: '8. sound (âm thanh)', vie1: 'Tôi mở âm thanh (sound) để nghe (to listen to) âm nhạc.', eng1: 'I turn on the sound to listen to music.', vie2: 'Tôi kiểm tra âm thanh (sound) để chuẩn bị (to prepare) cho buổi họp.', eng2: 'I check the sound to prepare for the meeting.' }
+                ],
+                fullEng: "I start now to finish the work early. I leave now to catch the train. I build a house to live with my family. I clean the house to welcome guests. I go out to breathe fresh air. I step out to answer the phone. I learn how to speak English fluently. I ask how to fix this problem. I use a mouse to control the computer. I buy a new mouse to work faster. I go to town to buy supplies. I live in this town to enjoy the peace. I sit down to start the lesson. I look down to look for the key. I turn on the sound to listen to music. I check the sound to prepare for the meeting.",
+                fullVie: "Tôi bắt đầu bây giờ để hoàn thành công việc sớm. Tôi rời đi bây giờ để đón chuyến tàu. Tôi xây một ngôi nhà để sống cùng gia đình. Tôi dọn dẹp ngôi nhà để đón khách. Tôi đi ra ngoài để hít thở không khí tươi mát. Tôi bước ra ngoài để nghe điện thoại. Tôi học cách để nói tiếng Anh lưu loát. Tôi hỏi làm sao để sửa lỗi này. Tôi dùng con chuột để điều khiển máy tính. Tôi mua một con chuột mới để làm việc nhanh hơn. Tôi đến thị trấn để mua đồ dùng. Tôi sống ở thị trấn này để tận hưởng sự yên bình. Tôi ngồi xuống để bắt đầu bài học. Tôi nhìn xuống để tìm chìa khóa. Tôi mở âm thanh để nghe âm nhạc. Tôi kiểm tra âm thanh để chuẩn bị cho buổi họp."
+            },
+            {
+                id: 'lesson-15',
+                title: 'Bài 15: Âm /ɪə/',
+                sound: '/ɪə/ (Nguyên âm đôi)',
+                cards: [
+                    { vocab: '1. here (ở đây)', vie1: 'Tôi đứng ở đây (here) để đợi (to wait for) bạn.', eng1: 'I stand here to wait for you.', vie2: 'Tôi sống ở đây (here) để làm việc (to work) cho công ty.', eng2: 'I live here to work for the company.' },
+                    { vocab: '2. near (gần)', vie1: 'Tôi ở gần (near) trường để đi (to walk) bộ đi học.', eng1: 'I stay near the school to walk to class.', vie2: 'Tôi ngồi gần (near) cửa sổ để lấy (to get) ánh sáng.', eng2: 'I sit near the window to get light.' },
+                    { vocab: '3. ear (tai)', vie1: 'Tôi bịt tai (ear) lại để tránh (to avoid) tiếng ồn.', eng1: 'I cover my ear to avoid the noise.', vie2: 'Tôi ghé tai (ear) để lắng nghe (to listen to) bí mật.', eng2: 'I lend an ear to listen to the secret.' },
+                    { vocab: '4. dear (thân yêu / đắt)', vie1: 'Tôi gửi thư cho người bạn thân yêu (dear) để thăm hỏi (to ask about) sức khỏe.', eng1: 'I write to my dear friend to ask about health.', vie2: 'Tôi giữ món đồ thân thương (dear) để nhớ (to remember) về kỉ niệm.', eng2: 'I keep this dear item to remember the past.' },
+                    { vocab: '5. year (năm)', vie1: 'Tôi học chăm chỉ mỗi năm (year) để đạt (to achieve) thành công.', eng1: 'I study hard every year to achieve success.', vie2: 'Tôi đi du lịch mỗi năm (year) để mở rộng (to expand) tầm mắt.', eng2: 'I travel every year to expand my horizon.' },
+                    { vocab: '6. clear (rõ ràng / dọn dẹp)', vie1: 'Tôi giải thích rõ ràng (clear) để giúp (to help) mọi người hiểu.', eng1: 'I make it clear to help everyone understand.', vie2: 'Tôi dọn dẹp (clear) bàn để bắt đầu (to start) làm việc.', eng2: 'I clear the table to start working.' },
+                    { vocab: '7. beer (bia)', vie1: 'Tôi uống một ly bia (beer) để ăn mừng (to celebrate) chiến thắng.', eng1: 'I drink a beer to celebrate the victory.', vie2: 'Tôi mua bia (beer) để đãi (to treat) bạn bè.', eng2: 'I buy beer to treat my friends.' },
+                    { vocab: '8. cheer (cổ vũ / reo hò)', vie1: 'Tôi cổ vũ (cheer) để tiếp (to give) năng lượng cho đội nhà.', eng1: 'I cheer to give energy to the home team.', vie2: 'Tôi nâng ly ăn mừng (cheer) để chúc (to wish) mừng sinh nhật.', eng2: 'I cheer to wish a happy birthday.' }
+                ],
+                fullEng: "I stand here to wait for you. I live here to work for the company. I stay near the school to walk to class. I sit near the window to get light. I cover my ear to avoid the noise. I lend an ear to listen to the secret. I write to my dear friend to ask about health. I keep this dear item to remember the past. I study hard every year to achieve success. I travel every year to expand my horizon. I make it clear to help everyone understand. I clear the table to start working. I drink a beer to celebrate the victory. I buy beer to treat my friends. I cheer to give energy to the home team. I cheer to wish a happy birthday.",
+                fullVie: "Tôi đứng ở đây để đợi bạn. Tôi sống ở đây để làm việc cho công ty. Tôi ở gần trường để đi bộ đi học. Tôi ngồi gần cửa sổ để lấy ánh sáng. Tôi bịt tai lại để tránh tiếng ồn. Tôi ghé tai để lắng nghe bí mật. Tôi viết thư cho người bạn thân yêu để thăm hỏi sức khỏe. Tôi giữ món đồ thân thương để nhớ về kỷ niệm. Tôi học chăm chỉ mỗi năm để đạt thành công. Tôi đi du lịch mỗi năm để mở rộng tầm mắt. Tôi giải thích rõ ràng để giúp mọi người hiểu. Tôi dọn dẹp bàn để bắt đầu làm việc. Tôi uống một ly bia để ăn mừng chiến thắng. Tôi mua bia để đãi bạn bè. Tôi cổ vũ để tiếp năng lượng cho đội nhà. Tôi nâng ly ăn mừng để chúc mừng sinh nhật."
+            },
+            {
+                id: 'lesson-16',
+                title: 'Bài 16: Âm /eə/',
+                sound: '/eə/ (Nguyên âm đôi)',
+                cards: [
+                    { vocab: '1. hair (tóc)', vie1: 'Tôi cắt tóc (hair) để nhìn (to look) gọn gàng hơn.', eng1: 'I cut my hair to look neater.', vie2: 'Tôi chải tóc (hair) để chuẩn bị (to prepare) đi ra ngoài.', eng2: 'I comb my hair to prepare to go out.' },
+                    { vocab: '2. chair (cái ghế)', vie1: 'Tôi kéo chiếc ghế (chair) để ngồi (to sit) xuống.', eng1: 'I pull the chair to sit down.', vie2: 'Tôi mua chiếc ghế (chair) này để làm việc (to work) thoải mái.', eng2: 'I buy this chair to work comfortably.' },
+                    { vocab: '3. where (ở đâu)', vie1: 'Tôi hỏi ở đâu (where) để tìm (to find) bến xe.', eng1: 'I ask where to find the bus stop.', vie2: 'Tôi tìm xem ở đâu (where) để mua (to buy) sách hay.', eng2: 'I search where to buy good books.' },
+                    { vocab: '4. air (không khí)', vie1: 'Tôi mở cửa sổ để đón (to get) không khí (air) tươi mát.', eng1: 'I open the window to get fresh air.', vie2: 'Tôi hít thở không khí (air) để thư giãn (to relax) đầu óc.', eng2: 'I breathe the air to relax my mind.' },
+                    { vocab: '5. there (ở đó)', vie1: 'Tôi đi đến đó (there) để tham dự (to attend) cuộc họp.', eng1: 'I go there to attend the meeting.', vie2: 'Tôi đứng ở đó (there) để chụp (to take) một bức ảnh.', eng2: 'I stand there to take a photo.' },
+                    { vocab: '6. care (chăm sóc / quan tâm)', vie1: 'Tôi chăm sóc (care) cây cối để giúp (to help) chúng phát triển.', eng1: 'I care for plants to help them grow.', vie2: 'Tôi quan tâm (care) đến bạn bè để xây dựng (to build) tình bạn đẹp.', eng2: 'I care about my friends to build a good friendship.' },
+                    { vocab: '7. share (chia sẻ)', vie1: 'Tôi chia sẻ (share) thức ăn để giúp đỡ (to help) đồng nghiệp.', eng1: 'I share food to help my colleagues.', vie2: 'Tôi chia sẻ (share) kiến thức để truyền (to inspire) cảm hứng cho học sinh.', eng2: 'I share knowledge to inspire students.' },
+                    { vocab: '8. wear (mặc / đeo)', vie1: 'Tôi mặc (wear) áo khoác để giữ (to keep) ấm.', eng1: 'I wear a coat to keep warm.', vie2: 'Tôi đeo (wear) kính để nhìn (to see) rõ hơn.', eng2: 'I wear glasses to see better.' }
+                ],
+                fullEng: "I cut my hair to look neater. I comb my hair to prepare to go out. I pull the chair to sit down. I buy this chair to work comfortably. I ask where to find the bus stop. I search where to buy good books. I open the window to get fresh air. I breathe the air to relax my mind. I go there to attend the meeting. I stand there to take a photo. I care for plants to help them grow. I care about my friends to build a good friendship. I share food to help my colleagues. I share knowledge to inspire students. I wear a coat to keep warm. I wear glasses to see better.",
+                fullVie: "Tôi cắt tóc để nhìn gọn gàng hơn. Tôi chải tóc để chuẩn bị đi ra ngoài. Tôi kéo chiếc ghế để ngồi xuống. Tôi mua chiếc ghế này để làm việc thoải mái. Tôi hỏi ở đâu để tìm bến xe. Tôi tìm xem ở đâu để mua sách hay. Tôi mở cửa sổ để đón không khí tươi mát. Tôi hít thở không khí để thư giãn đầu óc. Tôi đi đến đó để tham dự cuộc họp. Tôi đứng ở đó để chụp một bức ảnh. Tôi chăm sóc cây cối để giúp chúng phát triển. Tôi quan tâm đến bạn bè để xây dựng tình bạn đẹp. Tôi chia sẻ thức ăn để giúp đỡ đồng nghiệp. Tôi chia sẻ kiến thức để truyền cảm hứng cho học sinh. Tôi mặc áo khoác để giữ ấm. Tôi đeo kính để nhìn rõ hơn."
+            },
+            {
+                id: 'lesson-17',
+                title: 'Bài 17: Âm /ʊə/',
+                sound: '/ʊə/ (Nguyên âm đôi)',
+                cards: [
+                    { vocab: '1. tour (chuyến du lịch / đi tour)', vie1: 'Tôi đặt một chuyến du lịch (tour) để khám phá (to explore) đất nước.', eng1: 'I book a tour to explore the country.', vie2: 'Tôi tham gia chuyến đi (tour) để thư giãn (to relax) cuối tuần.', eng2: 'I join the tour to relax on the weekend.' },
+                    { vocab: '2. poor (nghèo / tội nghiệp)', vie1: 'Tôi quyên góp cho người nghèo (poor) để hỗ trợ (to support) cuộc sống của họ.', eng1: 'I donate to the poor to support their lives.', vie2: 'Tôi giúp đỡ cậu bé tội nghiệp (poor) để cải thiện (to improve) tương lai của cậu ấy.', eng2: 'I help the poor boy to improve his future.' },
+                    { vocab: '3. sure (chắc chắn)', vie1: 'Tôi kiểm tra kỹ để chắc chắn (sure) hoàn thành (to complete) đúng hạn.', eng1: 'I check carefully to be sure to complete on time.', vie2: 'Tôi hỏi lại để chắc chắn (sure) hiểu (to understand) yêu cầu.', eng2: 'I ask again to be sure to understand the request.' },
+                    { vocab: '4. pure (tinh khiết / nguyên chất)', vie1: 'Tôi uống nước tinh khiết (pure) để bảo vệ (to protect) sức khỏe.', eng1: 'I drink pure water to protect my health.', vie2: 'Tôi dùng mật ong nguyên chất (pure) để làm (to make) thuốc.', eng2: 'I use pure honey to make medicine.' },
+                    { vocab: '5. cure (chữa trị)', vie1: 'Tôi dùng thuốc để chữa trị (cure) khỏi bệnh cảm cúm.', eng1: 'I use medicine to cure the cold.', vie2: 'Tôi tìm phương pháp để chữa trị (cure) giảm căng thẳng.', eng2: 'I find ways to cure stress.' },
+                    { vocab: '6. tourist (khách du lịch)', vie1: 'Tôi hướng dẫn cho khách du lịch (tourist) để tham quan (to visit) thành phố.', eng1: 'I guide the tourist to visit the city.', vie2: 'Tôi giúp khách du lịch (tourist) để tìm (to find) khách sạn.', eng2: 'I help the tourist to find the hotel.' },
+                    { vocab: '7. furious (giận dữ)', vie1: 'Tôi giữ bình tĩnh để tránh (to avoid) cảm giác giận dữ (furious).', eng1: 'I stay calm to avoid feeling furious.', vie2: 'Tôi giải thích rõ ràng để ngắt (to stop) sự giận dữ (furious) của họ.', eng2: 'I explain clearly to stop them from feeling furious.' },
+                    { vocab: '8. mature (trưởng thành)', vie1: 'Tôi học hỏi kinh nghiệm để trở nên (to become) trưởng thành (mature).', eng1: 'I learn from experience to become mature.', vie2: 'Tôi suy nghĩ thấu đáo để đưa ra (to make) quyết định trưởng thành (mature).', eng2: 'I think deeply to make a mature decision.' }
+                ],
+                fullEng: "I book a tour to explore the country. I join the tour to relax on the weekend. I donate to the poor to support their lives. I help the poor boy to improve his future. I check carefully to be sure to complete on time. I ask again to be sure to understand the request. I drink pure water to protect my health. I use pure honey to make medicine. I use medicine to cure the cold. I find ways to cure stress. I guide the tourist to visit the city. I help the tourist to find the hotel. I stay calm to avoid feeling furious. I explain clearly to stop them from feeling furious. I learn from experience to become mature. I think deeply to make a mature decision.",
+                fullVie: "Tôi đặt một chuyến du lịch để khám phá đất nước. Tôi tham gia chuyến đi để thư giãn cuối tuần. Tôi quyên góp cho người nghèo để hỗ trợ cuộc sống của họ. Tôi giúp đỡ cậu bé tội nghiệp để cải thiện tương lai của cậu ấy. Tôi kiểm tra kỹ để chắc chắn hoàn thành đúng hạn. Tôi hỏi lại để chắc chắn hiểu yêu cầu. Tôi uống nước tinh khiết để bảo vệ sức khỏe. Tôi dùng mật ong nguyên chất để làm thuốc. Tôi dùng thuốc để chữa trị khỏi bệnh cảm cúm. Tôi tìm phương pháp để chữa trị giảm căng thẳng. Tôi hướng dẫn cho khách du lịch để tham quan thành phố. Tôi giúp khách du lịch để tìm khách sạn. Tôi giữ bình tĩnh để tránh cảm giác giận dữ. Tôi giải thích rõ ràng để ngắt sự giận dữ của họ. Tôi học hỏi kinh nghiệm để trở nên trưởng thành. Tôi suy nghĩ thấu đáo để đưa ra quyết định trưởng thành."
+            },
+            {
+                id: 'lesson-18',
+                title: 'Bài 18: Phụ âm /p/ & /b/',
+                sound: '/p/ & /b/ (Phụ âm bật môi)',
+                cards: [
+                    { vocab: '1. pen & pig', vie1: 'Tôi dùng cây bút (pen) để ghi chép (to note) thông tin.', eng1: 'I use a pen to note information.', vie2: 'Cậu bé nuôi một chú heo (pig) để tăng (to increase) thu nhập.', eng2: 'The boy raises a pig to increase income.' },
+                    { vocab: '2. stop & happy', vie1: 'Tôi dừng lại (stop) để kiểm tra (to check) bản đồ.', eng1: 'I stop to check the map.', vie2: 'Tôi cảm thấy hạnh phúc (happy) khi hoàn thành (to finish) mục tiêu.', eng2: 'I feel happy to finish the goal.' },
+                    { vocab: '3. park & apple', vie1: 'Tôi đi dạo trong công viên (park) để thư giãn (to relax).', eng1: 'I walk in the park to relax.', vie2: 'Tôi ăn một quả táo (apple) để bổ sung (to add) vitamin.', eng2: 'I eat an apple to add vitamins.' },
+                    { vocab: '4. map & play', vie1: 'Tôi xem bản đồ (map) để tìm (to find) đường đi.', eng1: 'I look at the map to find the way.', vie2: 'Trẻ em chơi (play) thể thao để nâng cao (to improve) sức khỏe.', eng2: 'Children play sports to improve health.' },
+                    { vocab: '5. book & big', vie1: 'Tôi đọc sách (book) để mở rộng (to expand) kiến thức.', eng1: 'I read a book to expand knowledge.', vie2: 'Công ty xây dựng một tòa nhà lớn (big) để phát triển (to grow) quy mô.', eng2: 'The company builds a big building to grow in scale.' },
+                    { vocab: '6. job & baby', vie1: 'Tôi tìm một công việc (job) tốt để đảm bảo (to ensure) cuộc sống.', eng1: 'I find a good job to ensure my life.', vie2: 'Mẹ chăm sóc em bé (baby) để giúp em phát triển (to grow) khỏe mạnh.', eng2: 'The mother cares for the baby to help it grow healthy.' },
+                    { vocab: '7. boy & bank', vie1: 'Cậu bé (boy) học tập chăm chỉ để đạt (to achieve) điểm cao.', eng1: 'The boy studies hard to achieve high marks.', vie2: 'Tôi đến ngân hàng (bank) để gửi (to deposit) tiền.', eng2: 'I go to the bank to deposit money.' },
+                    { vocab: '8. club & table', vie1: 'Tôi tham gia câu lạc bộ (club) để kết nối (to connect) với bạn bè.', eng1: 'I join the club to connect with friends.', vie2: 'Tôi đặt tài liệu lên bàn (table) để sắp xếp (to organize) lại.', eng2: 'I put documents on the table to organize them.' }
+                ],
+                fullEng: "I use a pen to note information. The boy raises a pig to increase income. I stop to check the map. I feel happy to finish the goal. I walk in the park to relax. I eat an apple to add vitamins. I look at the map to find the way. Children play sports to improve health. I read a book to expand knowledge. The company builds a big building to grow in scale. I find a good job to ensure my life. The mother cares for the baby to help it grow healthy. The boy studies hard to achieve high marks. I go to the bank to deposit money. I join the club to connect with friends. I put documents on the table to organize them.",
+                fullVie: "Tôi dùng một cây bút để ghi chép thông tin. Cậu bé nuôi một chú heo để tăng thu nhập. Tôi dừng lại để kiểm tra bản đồ. Tôi cảm thấy hạnh phúc khi hoàn thành mục tiêu. Tôi đi dạo trong công viên để thư giãn. Tôi ăn một quả táo để bổ sung vitamin. Tôi xem bản đồ để tìm đường đi. Trẻ em chơi thể thao để nâng cao sức khỏe. Tôi đọc sách để mở rộng kiến thức. Công ty xây dựng một tòa nhà lớn để phát triển quy mô. Tôi tìm một công việc tốt để đảm bảo cuộc sống. Mẹ chăm sóc em bé để giúp em phát triển khỏe mạnh. Cậu bé học tập chăm chỉ để đạt điểm cao. Tôi đến ngân hàng để gửi tiền. Tôi tham gia câu lạc bộ để kết nối với bạn bè. Tôi đặt tài liệu lên bàn để sắp xếp lại."
+            },
+            {
+                id: 'lesson-19',
+                title: 'Bài 19: Phụ âm /t/ & /d/',
+                sound: '/t/ & /d/ (Phụ âm răng - lợi)',
+                cards: [
+                    { vocab: '1. tea & ten', vie1: 'Tôi uống trà (tea) để giữ (to stay) tỉnh táo.', eng1: 'I drink tea to stay awake.', vie2: 'Tôi mất mười (ten) phút để hoàn thành (to complete) bài tập.', eng2: 'I take ten minutes to complete the test.' },
+                    { vocab: '2. hot & water', vie1: 'Cà phê quá nóng (hot) nên tôi chờ để làm nguội (to cool) nó.', eng1: 'The coffee is hot so I wait to cool it.', vie2: 'Tôi uống nước (water) để duy trì (to maintain) năng lượng.', eng2: 'I drink water to maintain energy.' },
+                    { vocab: '3. time & tall', vie1: 'Tôi quản lý thời gian (time) để làm việc (to work) hiệu quả.', eng1: 'I manage time to work efficiently.', vie2: 'Anh ấy rất cao (tall) nên dễ dàng chơi (to play) bóng rổ.', eng2: 'He is tall so he easily plays basketball.' },
+                    { vocab: '4. cat & train', vie1: 'Tôi nuôi một chú mèo (cat) để làm (to make) bạn.', eng1: 'I keep a cat to make a companion.', vie2: 'Tôi đi tàu (train) để đến (to reach) thành phố.', eng2: 'I take the train to reach the city.' },
+                    { vocab: '5. day & dog', vie1: 'Tôi bắt đầu ngày (day) mới để thực hiện (to execute) kế hoạch.', eng1: 'I start a new day to execute the plan.', vie2: 'Con chó (dog) sủa để cảnh báo (to warn) nguy hiểm.', eng2: 'The dog barks to warn of danger.' },
+                    { vocab: '6. good & bad', vie1: 'Tôi học thói quen tốt (good) để cải thiện (to improve) bản thân.', eng1: 'I learn good habits to improve myself.', vie2: 'Tôi loại bỏ thói quen xấu (bad) để tránh (to avoid) rủi ro.', eng2: 'I remove bad habits to avoid risks.' },
+                    { vocab: '7. door & deep', vie1: 'Tôi mở cửa (door) để đón (to welcome) không khí mới.', eng1: 'I open the door to welcome fresh air.', vie2: 'Tôi hít một hơi sâu (deep) để giảm (to reduce) căng thẳng.', eng2: 'I take a deep breath to reduce stress.' },
+                    { vocab: '8. food & address', vie1: 'Tôi chuẩn bị thức ăn (food) để phục vụ (to serve) gia đình.', eng1: 'I prepare food to serve the family.', vie2: 'Tôi ghi lại địa chỉ (address) để gửi (to send) thư.', eng2: 'I write the address to send the letter.' }
+                ],
+                fullEng: "I drink tea to stay awake. I take ten minutes to complete the test. The coffee is hot so I wait to cool it. I drink water to maintain energy. I manage time to work efficiently. He is tall so he easily plays basketball. I keep a cat to make a companion. I take the train to reach the city. I start a new day to execute the plan. The dog barks to warn of danger. I learn good habits to improve myself. I remove bad habits to avoid risks. I open the door to welcome fresh air. I take a deep breath to reduce stress. I prepare food to serve the family. I write the address to send the letter.",
+                fullVie: "Tôi uống trà để giữ tỉnh táo. Tôi mất mười phút để hoàn thành bài kiểm tra. Cà phê nóng nên tôi chờ để làm nguội. Tôi uống nước để duy trì năng lượng. Tôi quản lý thời gian để làm việc hiệu quả. Anh ấy rất cao nên dễ dàng chơi bóng rổ. Tôi nuôi một chú mèo để làm bạn. Tôi đi tàu để đến thành phố. Tôi bắt đầu ngày mới để thực hiện kế hoạch. Con chó sủa để cảnh báo nguy hiểm. Tôi học thói quen tốt để cải thiện bản thân. Tôi loại bỏ thói quen xấu để tránh rủi ro. Tôi mở cửa để đón không khí mới. Tôi hít một hơi sâu để giảm căng thẳng. Tôi chuẩn bị thức ăn để phục vụ gia đình. Tôi ghi lại địa chỉ để gửi thư."
+            },
+            {
+                id: 'lesson-20',
+                title: 'Bài 20: Phụ âm /k/ & /ɡ/',
+                sound: '/k/ & /ɡ/ (Phụ âm vòm họng)',
+                cards: [
+                    { vocab: '1. key & car', vie1: 'Tôi giữ chìa khóa (key) để mở (to open) cửa.', eng1: 'I hold the key to open the door.', vie2: 'Tôi lái chiếc xe hơi (car) để đi (to travel) làm.', eng2: 'I drive a car to travel to work.' },
+                    { vocab: '2. book & school', vie1: 'Tôi đọc sách (book) để thu thập (to gather) thông tin.', eng1: 'I read a book to gather information.', vie2: 'Học sinh đến trường (school) để học (to learn) tri thức.', eng2: 'Students go to school to learn knowledge.' },
+                    { vocab: '3. cat & keep', vie1: 'Chú mèo (cat) bắt chuột để bảo vệ (to protect) ngôi nhà.', eng1: 'The cat catches mice to protect the house.', vie2: 'Tôi giữ (keep) lời hứa để xây dựng (to build) lòng tin.', eng2: 'I keep my promise to build trust.' },
+                    { vocab: '4. look & quick', vie1: 'Tôi nhìn (look) vào bảng để hiểu (to understand) bài giảng.', eng1: 'I look at the board to understand the lecture.', vie2: 'Tôi phản ứng nhanh chóng (quick) để giải quyết (to solve) sự cố.', eng2: 'I am quick to solve the problem.' },
+                    { vocab: '5. go & get', vie1: 'Tôi đi (go) đến văn phòng để làm việc (to work).', eng1: 'I go to the office to work.', vie2: 'Tôi nỗ lực để nhận (get) kết quả tốt.', eng2: 'I try hard to get good results.' },
+                    { vocab: '6. big & green', vie1: 'Cửa hàng lớn (big) cung cấp (to provide) nhiều sản phẩm.', eng1: 'The big store provides many products.', vie2: 'Cây cối xanh (green) giúp làm sạch (to clean) không khí.', eng2: 'Green trees help to clean the air.' },
+                    { vocab: '7. girl & game', vie1: 'Cô gái (girl) luyện tập để trở thành (to become) giáo viên.', eng1: 'The girl practices to become a teacher.', vie2: 'Chúng tôi chơi trò chơi (game) để thư giãn (to relax).', eng2: 'We play a game to relax.' },
+                    { vocab: '8. dog & again', vie1: 'Con chó (dog) giữ nhà để bảo vệ (to guard) tài sản.', eng1: 'The dog guards the house to protect property.', vie2: 'Tôi thử lại (again) để hoàn thiện (to perfect) kỹ năng.', eng2: 'I try again to perfect the skill.' }
+                ],
+                fullEng: "I hold the key to open the door. I drive a car to travel to work. I read a book to gather information. Students go to school to learn knowledge. The cat catches mice to protect the house. I keep my promise to build trust. I look at the board to understand the lecture. I am quick to solve the problem. I go to the office to work. I try hard to get good results. The big store provides many products. Green trees help to clean the air. The girl practices to become a teacher. We play a game to relax. The dog guards the house to protect property. I try again to perfect the skill.",
+                fullVie: "Tôi giữ chìa khóa để mở cửa. Tôi lái xe hơi để đi làm. Tôi đọc sách để thu thập thông tin. Học sinh đến trường để học tri thức. Chú mèo bắt chuột để bảo vệ ngôi nhà. Tôi giữ lời hứa để xây dựng lòng tin. Tôi nhìn vào bảng để hiểu bài giảng. Tôi phản ứng nhanh chóng để giải quyết sự cố. Tôi đi đến văn phòng để làm việc. Tôi nỗ lực để nhận kết quả tốt. Cửa hàng lớn cung cấp nhiều sản phẩm. Cây cối xanh giúp làm sạch không khí. Cô gái luyện tập để trở thành giáo viên. Chúng tôi chơi trò chơi để thư giãn. Con chó giữ nhà để bảo vệ tài sản. Tôi thử lại để hoàn thiện kỹ năng."
+            },
+            {
+                id: 'lesson-21',
+                title: 'Bài 21: Phụ âm /f/ & /v/',
+                sound: '/f/ & /v/ (Phụ âm răng môi)',
+                cards: [
+                    { vocab: '1. five & food', vie1: 'Tôi chuẩn bị năm (five) phần quà để tặng (to give) học sinh.', eng1: 'I prepare five gifts to give to students.', vie2: 'Tôi mua thức ăn (food) để nấu (to cook) bữa tối.', eng2: 'I buy food to cook dinner.' },
+                    { vocab: '2. laugh & coffee', vie1: 'Mọi người cười (laugh) để chia sẻ (to share) niềm vui.', eng1: 'People laugh to share joy.', vie2: 'Tôi uống cà phê (coffee) để tập trung (to focus) làm việc.', eng2: 'I drink coffee to focus on work.' },
+                    { vocab: '3. fish & find', vie1: 'Tôi chế biến cá (fish) để cung cấp (to supply) dinh dưỡng.', eng1: 'I prepare fish to supply nutrition.', vie2: 'Tôi tìm (find) giải pháp để khắc phục (to fix) lỗi.', eng2: 'I find a solution to fix the error.' },
+                    { vocab: '4. half & photo', vie1: 'Tôi dành một nửa (half) giờ để tập (to practice) thể thao.', eng1: 'I spend half an hour to practice sports.', vie2: 'Tôi chụp một bức ảnh (photo) để lưu giữ (to save) kỷ niệm.', eng2: 'I take a photo to save memories.' },
+                    { vocab: '5. very & voice', vie1: 'Bài tập này rất (very) quan trọng để nâng cao (to improve) trình độ.', eng1: 'This test is very important to improve ability.', vie2: 'Cô ấy luyện giọng nói (voice) để phát âm (to pronounce) chuẩn.', eng2: 'She trains her voice to pronounce correctly.' },
+                    { vocab: '6. live & love', vie1: 'Tôi sống (live) ở thành phố để làm việc (to work).', eng1: 'I live in the city to work.', vie2: 'Tôi yêu (love) công việc giảng dạy để truyền (to pass) kiến thức.', eng2: 'I love teaching to pass knowledge.' },
+                    { vocab: '7. view & visit', vie1: 'Tôi ngắm cảnh (view) để truyền (to inspire) cảm hứng.', eng1: 'I look at the view to inspire ideas.', vie2: 'Tôi đi thăm (visit) bảo tàng để mở rộng (to broaden) tầm nhìn.', eng2: 'I visit the museum to broaden my view.' },
+                    { vocab: '8. have & seven', vie1: 'Tôi có (have) một kế hoạch để triển khai (to implement) dự án.', eng1: 'I have a plan to implement the project.', vie2: 'Tôi dậy lúc bảy (seven) giờ để chuẩn bị (to prepare) làm việc.', eng2: 'I wake up at seven o\'clock to prepare for work.' }
+                ],
+                fullEng: "I prepare five gifts to give to students. I buy food to cook dinner. People laugh to share joy. I drink coffee to focus on work. I prepare fish to supply nutrition. I find a solution to fix the error. I spend half an hour to practice sports. I take a photo to save memories. This test is very important to improve ability. She trains her voice to pronounce correctly. I live in the city to work. I love teaching to pass knowledge. I look at the view to inspire ideas. I visit the museum to broaden my view. I have a plan to implement the project. I wake up at seven o'clock to prepare for work.",
+                fullVie: "Tôi chuẩn bị năm phần quà để tặng học sinh. Tôi mua thức ăn để nấu bữa tối. Mọi người cười để chia sẻ niềm vui. Tôi uống cà phê để tập trung làm việc. Tôi chế biến cá để cung cấp dinh dưỡng. Tôi tìm giải pháp để khắc phục lỗi. Tôi dành một nửa giờ để tập thể thao. Tôi chụp một bức ảnh để lưu giữ kỷ niệm. Bài tập này rất quan trọng để nâng cao trình độ. Cô ấy luyện giọng nói để phát âm chuẩn. Tôi sống ở thành phố để làm việc. Tôi yêu công việc giảng dạy để truyền kiến thức. Tôi ngắm cảnh để truyền cảm hứng. Tôi đi thăm bảo tàng để mở rộng tầm nhìn. Tôi có một kế hoạch để triển khai dự án. Tôi dậy lúc bảy giờ để chuẩn bị làm việc."
+            },
+            {
+                id: 'lesson-22',
+                title: 'Bài 22: Phụ âm /s/ & /z/',
+                sound: '/s/ & /z/ (Phụ âm ma sát)',
+                cards: [
+                    { vocab: '1. sun & sit', vie1: 'Tôi đón ánh mặt trời (sun) để bắt đầu (to start) ngày mới.', eng1: 'I welcome the sun to start a new day.', vie2: 'Tôi ngồi (sit) xuống ghế để nghỉ ngơi (to rest).', eng2: 'I sit down on the chair to rest.' },
+                    { vocab: '2. bus & house', vie1: 'Tôi đón xe buýt (bus) để đi (to go) học.', eng1: 'I catch the bus to go to school.', vie2: 'Tôi trang trí nhà (house) để chuẩn bị (to prepare) đón Tết.', eng2: 'I decorate the house to prepare for Tet.' },
+                    { vocab: '3. see & stop', vie1: 'Tôi mở mắt để nhìn thấy (see) vẻ đẹp thiên nhiên.', eng1: 'I open my eyes to see the beauty of nature.', vie2: 'Tôi dừng (stop) xe lại để nhường đường (to give way).', eng2: 'I stop the car to give way.' },
+                    { vocab: '4. star & class', vie1: 'Tôi ngắm ngôi sao (star) trên bầu trời đêm.', eng1: 'I look at the star in the night sky.', vie2: 'Tôi đến lớp (class) để tham gia (to attend) bài giảng.', eng2: 'I come to class to attend the lecture.' },
+                    { vocab: '5. zoo & zero', vie1: 'Tôi đến sở thú (zoo) để xem (to watch) động vật.', eng1: 'I visit the zoo to watch animals.', vie2: 'Tôi bắt đầu từ con số không (zero) để xây dựng (to build) sự nghiệp.', eng2: 'I start from zero to build a career.' },
+                    { vocab: '6. rose & music', vie1: 'Tôi trồng một bông hoa hồng (rose) trong vườn.', eng1: 'I plant a rose in the garden.', vie2: 'Tôi nghe nhạc (music) để thư giãn (to relax) tâm hồn.', eng2: 'I listen to music to relax my soul.' },
+                    { vocab: '7. easy & please', vie1: 'Bài tập này rất dễ (easy) để hoàn thành (to complete).', eng1: 'This exercise is easy to complete.', vie2: 'Xin vui lòng (please) giữ trật tự trong thư viện.', eng2: 'Please keep quiet in the library.' },
+                    { vocab: '8. size & busy', vie1: 'Tôi chọn đúng kích cỡ (size) áo để mặc (to wear).', eng1: 'I choose the right size to wear.', vie2: 'Tôi rất bận rộn (busy) với công việc hàng ngày.', eng2: 'I am very busy with daily work.' }
+                ],
+                fullEng: "I welcome the sun to start a new day. I sit down on the chair to rest. I catch the bus to go to school. I decorate the house to prepare for Tet. I open my eyes to see the beauty of nature. I stop the car to give way. I look at the star in the night sky. I come to class to attend the lecture. I visit the zoo to watch animals. I start from zero to build a career. I plant a rose in the garden. I listen to music to relax my soul. This exercise is easy to complete. Please keep quiet in the library. I choose the right size to wear. I am very busy with daily work.",
+                fullVie: "Tôi đón ánh mặt trời để bắt đầu ngày mới. Tôi ngồi xuống ghế để nghỉ ngơi. Tôi đón xe buýt để đi học. Tôi trang trí nhà để chuẩn bị đón Tết. Tôi mở mắt để nhìn thấy vẻ đẹp thiên nhiên. Tôi dừng xe lại để nhường đường. Tôi ngắm ngôi sao trên bầu trời đêm. Tôi đến lớp để tham gia bài giảng. Tôi đến sở thú để xem động vật. Tôi bắt đầu từ con số không để xây dựng sự nghiệp. Tôi trồng một bông hoa hồng trong vườn. Tôi nghe nhạc để thư giãn tâm hồn. Bài tập này rất dễ để hoàn thành. Xin vui lòng giữ trật tự trong thư viện. Tôi chọn đúng kích cỡ áo để mặc. Tôi rất bận rộn với công việc hàng ngày."
+            },
+            {
+                id: 'lesson-23',
+                title: 'Bài 23: Phụ âm /θ/ & /ð/',
+                sound: '/θ/ & /ð/ (Phụ âm ma sát răng)',
+                cards: [
+                    { vocab: '1. think & three', vie1: 'Tôi suy nghĩ (think) cẩn thận để đưa ra (to make) lựa chọn.', eng1: 'I think carefully to make a choice.', vie2: 'Tôi mất ba (three) ngày để hoàn thành (to finish) báo cáo.', eng2: 'I spend three days to finish the report.' },
+                    { vocab: '2. month & thanks', vie1: 'Mỗi tháng (month), tôi kiểm tra để đánh giá (to evaluate) kết quả.', eng1: 'Every month, I check to evaluate results.', vie2: 'Tôi gửi lời cảm ơn (thanks) để thể hiện (to show) lòng biết ơn.', eng2: 'I say thanks to show gratitude.' },
+                    { vocab: '3. thin & throw', vie1: 'Quyển sách mỏng (thin) giúp người đọc dễ (to easily) mang theo.', eng1: 'The thin book helps readers to easily carry it.', vie2: 'Tôi ném (throw) bóng để luyện tập (to practice) phản xạ.', eng2: 'I throw the ball to practice reflexes.' },
+                    { vocab: '4. math & both', vie1: 'Tôi học môn toán (math) để phát triển (to develop) tư duy logic.', eng1: 'I study math to develop logical thinking.', vie2: 'Tôi chọn cả hai (both) phương án để tối ưu (to optimize) hiệu quả.', eng2: 'I choose both options to optimize efficiency.' },
+                    { vocab: '5. this & mother', vie1: 'Bài học này (this) rất hữu ích để cải thiện (to improve) kỹ năng.', eng1: 'This lesson is useful to improve skills.', vie2: 'Mẹ (mother) nấu ăn để chăm sóc (to care for) gia đình.', eng2: 'My mother cooks to care for the family.' },
+                    { vocab: '6. with & that', vie1: 'Tôi làm việc với (with) đồng nghiệp để hoàn thành (to complete) dự án.', eng1: 'I work with colleagues to complete the project.', vie2: 'Tôi chọn phương án đó (that) để tiết kiệm (to save) thời gian.', eng2: 'I select that option to save time.' },
+                    { vocab: '7. they & there', vie1: 'Họ (they) thảo luận để tìm (to find) hướng đi chung.', eng1: 'They discuss to find a common direction.', vie2: 'Tôi đến đó (there) để gặp (to meet) đối tác.', eng2: 'I go there to meet the partner.' },
+                    { vocab: '8. weather & breathe', vie1: 'Thời tiết (weather) hôm nay rất mát mẻ để đi (to go) dạo.', eng1: 'The weather today is cool to go for a walk.', vie2: 'Tôi hít thở (breathe) không khí trong lành để giải tỏa (to relieve) mệt mỏi.', eng2: 'I breathe fresh air to relieve fatigue.' }
+                ],
+                fullEng: "I think carefully to make a choice. I spend three days to finish the report. Every month, I check to evaluate results. I say thanks to show gratitude. The thin book helps readers to easily carry it. I throw the ball to practice reflexes. I study math to develop logical thinking. I choose both options to optimize efficiency. This lesson is useful to improve skills. My mother cooks to care for the family. I work with colleagues to complete the project. I select that option to save time. They discuss to find a common direction. I go there to meet the partner. The weather today is cool to go for a walk. I breathe fresh air to relieve fatigue.",
+                fullVie: "Tôi suy nghĩ cẩn thận để đưa ra lựa chọn. Tôi mất ba ngày để hoàn thành báo cáo. Mỗi tháng, tôi kiểm tra để đánh giá kết quả. Tôi gửi lời cảm ơn để thể hiện lòng biết ơn. Quyển sách mỏng giúp người đọc dễ mang theo. Tôi ném bóng để luyện tập phản xạ. Tôi học môn toán để phát triển tư duy logic. Tôi chọn cả hai phương án để tối ưu hiệu quả. Bài học này rất hữu ích để cải thiện kỹ năng. Mẹ nấu ăn để chăm sóc gia đình. Tôi làm việc với đồng nghiệp để hoàn thành dự án. Tôi chọn phương án đó để tiết kiệm thời gian. Họ thảo luận để tìm hướng đi chung. Tôi đến đó để gặp đối tác. Thời tiết hôm nay rất mát mẻ để đi dạo. Tôi hít thở không khí trong lành để giải tỏa mệt mỏi."
+            }
+        ];
+
+        // Text-to-Speech Engine
+        function speakText(text, event) {
+            if (event) event.stopPropagation();
+
+            // Stop any ongoing speech
+            window.speechSynthesis.cancel();
+
+            // Clean text
+            const cleanText = text.replace(/[\(\)]/g, '').trim();
+
+            if (!cleanText) return;
+
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+            utterance.lang = 'en-US';
+            utterance.rate = currentSpeechRate;
+
+            // Highlight word if event came from clickable element
+            let targetElem = null;
+            if (event && event.currentTarget) {
+                targetElem = event.currentTarget;
+                targetElem.classList.add('speaking-active');
+            }
+
+            utterance.onend = () => {
+                if (targetElem) {
+                    targetElem.classList.remove('speaking-active');
+                }
+            };
+
+            utterance.onerror = () => {
+                if (targetElem) {
+                    targetElem.classList.remove('speaking-active');
+                }
+            };
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function stopSpeech() {
+            window.speechSynthesis.cancel();
+            document.querySelectorAll('.speaking-active').forEach(el => el.classList.remove('speaking-active'));
+        }
+
+        function setSpeed(speed) {
+            currentSpeechRate = speed;
+            document.querySelectorAll('.speed-btn').forEach(btn => {
+                btn.classList.remove('bg-white', 'text-blue-600', 'shadow-sm');
+                btn.classList.add('text-slate-600');
+            });
+            const activeBtn = document.getElementById(`speed-${speed}`);
+            if (activeBtn) {
+                activeBtn.classList.add('bg-white', 'text-blue-600', 'shadow-sm');
+                activeBtn.classList.remove('text-slate-600');
+            }
+        }
+
+        // Convert Sentence to Clickable Word Spans
+        function makeSentenceInteractive(sentence) {
+            const words = sentence.split(' ');
+            return words.map(word => {
+                // Keep punctuation outside speech trigger
+                const cleanWord = word.replace(/[^a-zA-Z0-9']/g, "");
+                if(!cleanWord) return word;
+                return `<span class="clickable-word" onclick="speakText('${cleanWord}', event)" title="Bấm để nghe từ '${cleanWord}'">${word}</span>`;
+            }).join(' ');
+        }
+
+        // Render Navigation Bar
+        function renderNavigation(filteredList = lessonsData) {
+            const nav = document.getElementById('lessonNav');
+            if(filteredList.length === 0) {
+                nav.innerHTML = `<div class="text-xs text-slate-400 text-center py-6">Không tìm thấy bài học phù hợp</div>`;
+                return;
+            }
+            nav.innerHTML = filteredList.map((lesson) => {
+                const isActive = lesson.id === activeLessonId;
+                return `
+                    <button onclick="switchLesson('${lesson.id}')" 
+                        class="w-full text-left px-3.5 py-2.5 rounded-xl font-medium text-sm transition flex items-center justify-between ${
+                            isActive 
+                            ? 'bg-blue-50 text-blue-700 font-semibold shadow-xs border border-blue-100' 
+                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                        }">
+                        <div class="flex items-center space-x-2.5 overflow-hidden">
+                            <i class="fa-solid ${isActive ? 'fa-book-open text-blue-600' : 'fa-book text-slate-400'} text-xs"></i>
+                            <span class="truncate">${lesson.title}</span>
+                        </div>
+                        <span class="text-xs ${isActive ? 'bg-blue-200/60 text-blue-800' : 'bg-slate-100 text-slate-500'} px-2 py-0.5 rounded-full shrink-0 font-normal">
+                            ${lesson.sound.split(' ')[0]}
+                        </span>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function filterLessons() {
+            const query = document.getElementById('searchLessonInput').value.toLowerCase().trim();
+            if(!query) {
+                renderNavigation(lessonsData);
+                return;
+            }
+            const filtered = lessonsData.filter(lesson => 
+                lesson.title.toLowerCase().includes(query) ||
+                lesson.sound.toLowerCase().includes(query) ||
+                lesson.fullEng.toLowerCase().includes(query) ||
+                lesson.fullVie.toLowerCase().includes(query)
+            );
+            renderNavigation(filtered);
+        }
+
+        // Render Active Lesson Content
+        function renderLesson(lessonId) {
+            const lesson = lessonsData.find(l => l.id === lessonId);
+            if (!lesson) return;
+
+            const main = document.getElementById('mainContent');
+            
+            // Get index for pagination
+            const currentIndex = lessonsData.findIndex(l => l.id === lessonId);
+            const prevLesson = lessonsData[currentIndex - 1];
+            const nextLesson = lessonsData[currentIndex + 1];
+
+            let html = `
+                <div class="max-w-4xl mx-auto space-y-5 sm:space-y-6 pb-12">
+                    
+                    <!-- Lesson Header Banner -->
+                    <div class="bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700 rounded-2xl p-5 sm:p-6 text-white shadow-md relative overflow-hidden">
+                        <div class="absolute -right-6 -bottom-6 opacity-10 text-8xl sm:text-9xl font-black select-none pointer-events-none">
+                            ${lesson.sound.split(' ')[0]}
+                        </div>
+                        <div class="relative z-10">
+                            <div class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-medium mb-2">
+                                <i class="fa-solid fa-graduation-cap text-amber-300"></i> IPA Phonetics Series (1 - 23)
+                            </div>
+                            <h2 class="text-xl sm:text-2xl md:text-3xl font-bold mb-1">${lesson.title.toUpperCase()}</h2>
+                            <p class="text-blue-100 text-xs sm:text-sm font-medium"><i class="fa-solid fa-waveform mr-1.5"></i>Trọng tâm âm: ${lesson.sound}</p>
+                        </div>
+                    </div>
+
+                    <!-- Cards Section -->
+                    <div class="grid grid-cols-1 gap-4">
+            `;
+
+            lesson.cards.forEach((card) => {
+                // Extract word for standalone sound icon
+                const targetWord = card.vocab.split('.')[1]?.split('(')[0]?.trim() || '';
+
+                html += `
+                    <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs hover:shadow-md transition">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-3 gap-2">
+                            <div class="text-base sm:text-xl font-bold text-red-600 flex items-center space-x-2">
+                                <span>${card.vocab}</span>
+                            </div>
+                            <button onclick="speakText('${targetWord}', event)" class="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 active:bg-red-200 rounded-xl text-xs sm:text-sm font-bold flex items-center space-x-1.5 transition shrink-0 active:scale-95 shadow-2xs">
+                                <i class="fa-solid fa-volume-high text-sm"></i>
+                                <span>Phát âm từ</span>
+                            </button>
+                        </div>
+
+                        <!-- Sentence Pairs -->
+                        <div class="space-y-3.5">
+                            <div class="bg-slate-50/90 p-3.5 sm:p-4 rounded-xl border border-slate-200/80 shadow-2xs">
+                                <!-- Prominent Vietnamese sentence -->
+                                <div class="bg-amber-100/90 border-l-4 border-amber-500 rounded-r-lg px-3 py-2 mb-2.5">
+                                    <p class="text-slate-900 font-bold text-base sm:text-lg leading-snug flex items-start gap-2">
+                                        <i class="fa-solid fa-language text-amber-700 text-base sm:text-lg mt-0.5 shrink-0"></i>
+                                        <span>${card.vie1}</span>
+                                    </p>
+                                </div>
+                                <!-- English interactive sentence -->
+                                <div class="flex items-center justify-between gap-2 pt-1">
+                                    <p class="font-bold text-blue-900 text-base sm:text-lg leading-relaxed">
+                                        ${makeSentenceInteractive(card.eng1)}
+                                    </p>
+                                    <button onclick="speakText('${card.eng1.replace(/'/g, "\\'")}', event)" class="w-10 h-10 min-w-[40px] bg-blue-100/80 hover:bg-blue-600 hover:text-white text-blue-700 rounded-full flex items-center justify-center transition shrink-0 active:scale-95 shadow-2xs" title="Nghe cả câu">
+                                        <i class="fa-solid fa-volume-high text-base"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="bg-slate-50/90 p-3.5 sm:p-4 rounded-xl border border-slate-200/80 shadow-2xs">
+                                <!-- Prominent Vietnamese sentence -->
+                                <div class="bg-amber-100/90 border-l-4 border-amber-500 rounded-r-lg px-3 py-2 mb-2.5">
+                                    <p class="text-slate-900 font-bold text-base sm:text-lg leading-snug flex items-start gap-2">
+                                        <i class="fa-solid fa-language text-amber-700 text-base sm:text-lg mt-0.5 shrink-0"></i>
+                                        <span>${card.vie2}</span>
+                                    </p>
+                                </div>
+                                <!-- English interactive sentence -->
+                                <div class="flex items-center justify-between gap-2 pt-1">
+                                    <p class="font-bold text-blue-900 text-base sm:text-lg leading-relaxed">
+                                        ${makeSentenceInteractive(card.eng2)}
+                                    </p>
+                                    <button onclick="speakText('${card.eng2.replace(/'/g, "\\'")}', event)" class="w-10 h-10 min-w-[40px] bg-blue-100/80 hover:bg-blue-600 hover:text-white text-blue-700 rounded-full flex items-center justify-center transition shrink-0 active:scale-95 shadow-2xs" title="Nghe cả câu">
+                                        <i class="fa-solid fa-volume-high text-base"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+
+                    <!-- Paragraph Reading Section -->
+                    <div class="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-sm space-y-4">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-3 gap-2">
+                            <h3 class="font-bold text-slate-800 text-base sm:text-lg flex items-center space-x-2">
+                                <i class="fa-solid fa-headphones text-blue-600"></i>
+                                <span>Bản đọc Tiếng Anh liền mạch</span>
+                            </h3>
+                            <button onclick="speakText('${lesson.fullEng.replace(/'/g, "\\'")}', event)" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs sm:text-sm font-semibold flex items-center space-x-1.5 shadow-sm transition active:scale-95 shrink-0">
+                                <i class="fa-solid fa-play"></i>
+                                <span>Nghe toàn đoạn</span>
+                            </button>
+                        </div>
+
+                        <!-- Continuous English Text -->
+                        <div class="p-4 bg-sky-50/70 rounded-xl border border-sky-100 text-slate-800 font-medium leading-relaxed text-base sm:text-lg">
+                            ${makeSentenceInteractive(lesson.fullEng)}
+                        </div>
+
+                        <!-- Vietnamese Translation -->
+                        <div class="pt-2">
+                            <h4 class="font-bold text-amber-800 text-base sm:text-lg mb-2 flex items-center space-x-2">
+                                <i class="fa-solid fa-book-open text-amber-600"></i>
+                                <span>Bản dịch Tiếng Việt (Nổi bật)</span>
+                            </h4>
+                            <div class="p-4 bg-amber-50/90 rounded-xl border-2 border-amber-300 text-slate-900 font-semibold text-base sm:text-lg leading-relaxed shadow-2xs">
+                                "${lesson.fullVie}"
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Pagination Navigation -->
+                    <div class="flex items-center justify-between gap-3 pt-4">
+                        ${prevLesson ? `
+                            <button onclick="switchLesson('${prevLesson.id}')" class="flex-1 sm:flex-initial px-4 py-3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-sm sm:text-base rounded-xl transition flex items-center justify-center space-x-2 shadow-xs active:scale-95">
+                                <i class="fa-solid fa-arrow-left"></i>
+                                <span>${prevLesson.title}</span>
+                            </button>
+                        ` : '<div class="flex-1 sm:flex-initial"></div>'}
+
+                        ${nextLesson ? `
+                            <button onclick="switchLesson('${nextLesson.id}')" class="flex-1 sm:flex-initial px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm sm:text-base rounded-xl transition flex items-center justify-center space-x-2 shadow-xs active:scale-95">
+                                <span>${nextLesson.title}</span>
+                                <i class="fa-solid fa-arrow-right"></i>
+                            </button>
+                        ` : '<div class="flex-1 sm:flex-initial"></div>'}
+                    </div>
+
+                </div>
+            `;
+
+            main.innerHTML = html;
+            main.scrollTop = 0; // Scroll back to top
+        }
+
+        // Switch Lesson Action
+        function switchLesson(id) {
+            stopSpeech();
+            activeLessonId = id;
+            renderNavigation();
+            renderLesson(id);
+
+            // Close sidebar on mobile after selection
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.add('-translate-x-full');
+            overlay.classList.add('hidden');
+        }
+
+        // Toggle Mobile Sidebar Drawer
+        document.getElementById('toggleSidebarBtn').addEventListener('click', () => {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        });
+
+        document.getElementById('sidebarOverlay').addEventListener('click', () => {
+            document.getElementById('sidebar').classList.add('-translate-x-full');
+            document.getElementById('sidebarOverlay').classList.add('hidden');
+        });
+
+        // Initialize App on DOM Load
+        window.onload = function() {
+            renderNavigation();
+            renderLesson(activeLessonId);
+        };
+    </script>
+</body>
+</html>
