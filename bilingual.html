@@ -88,7 +88,6 @@
                         </select>
                     </div>
                     
-                    <!-- NÚT MỞ DANH SÁCH SỔ TAY ĐÃ LƯU -->
                     <button id="myNotebooksBtn" class="bg-amber-100 text-amber-700 p-1.5 px-3 rounded-lg border border-amber-200 hover:bg-amber-200 transition-colors flex items-center gap-2 font-bold text-sm shadow-sm" title="Sổ tay đã lưu">
                         <i class="ph-fill ph-books text-lg"></i> <span class="hidden sm:inline">Sổ tay của tôi</span>
                     </button>
@@ -102,7 +101,6 @@
 
         <main class="flex-grow max-w-6xl mx-auto w-full px-4 py-8 flex flex-col gap-8">
             
-            <!-- Khu vực nhập liệu -->
             <section id="inputSection" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-1 flex flex-col focus-within:ring-2 focus-within:ring-blue-500 transition-all">
                 <textarea id="sourceText" class="w-full h-48 md:h-64 p-5 md:p-6 resize-none outline-none text-slate-700 text-lg md:text-xl leading-relaxed placeholder-slate-400 bg-transparent" placeholder="Dán văn bản của bạn vào đây..."></textarea>
                 <div class="flex flex-col md:flex-row justify-between items-center p-3 border-t border-slate-100 bg-slate-50 rounded-b-xl gap-3">
@@ -117,7 +115,6 @@
                         <button id="startAskBtn" class="flex-1 md:flex-none bg-purple-600 hover:bg-purple-700 text-white font-medium py-2.5 px-4 rounded-lg shadow-sm transition-colors flex justify-center items-center gap-2">
                             <i class="ph ph-question text-lg"></i> Luyện Đặt Câu
                         </button>
-                        <!-- NÚT TÓM TẮT MỚI THÊM -->
                         <button id="startSummaryBtn" class="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 px-4 rounded-lg shadow-sm transition-colors flex justify-center items-center gap-2" title="Lấy ý chính để tự viết lại">
                             <i class="ph ph-list-dashes text-lg"></i> Tóm Tắt (3-4 Ý)
                         </button>
@@ -125,13 +122,11 @@
                 </div>
             </section>
 
-            <!-- Trạng thái đang tải chung -->
             <div id="loadingIndicator" class="hidden flex-col items-center justify-center py-12 gap-4">
                 <div class="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-blue-600"></div>
                 <p id="loadingMsg" class="text-slate-500 font-medium animate-pulse">Đang xử lý dữ liệu...</p>
             </div>
 
-            <!-- 1. KẾT QUẢ DỊCH SONG NGỮ -->
             <section id="resultSection" class="hidden flex-col gap-4">
                 <div class="flex flex-col md:flex-row md:justify-between items-start md:items-center gap-4 mb-2">
                     <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
@@ -156,7 +151,6 @@
                 <div id="outputArea" class="flex flex-col gap-6"></div>
             </section>
 
-            <!-- DANH SÁCH SỔ TAY ĐÃ LƯU -->
             <section id="savedListSection" class="hidden flex-col gap-6 w-full fade-in">
                 <div class="flex justify-between items-center mb-2">
                     <div>
@@ -173,12 +167,9 @@
                 </div>
             </section>
 
-            <!-- GIAO DIỆN XEM CHI TIẾT SỔ TAY -->
             <section id="notebookSection" class="hidden flex-col gap-6 max-w-4xl mx-auto w-full fade-in">
-                <!-- Nội dung sổ tay sẽ được render bằng JS vào đây -->
             </section>
 
-            <!-- 2. CHẾ ĐỘ LUYỆN DỊCH -->
             <section id="practiceSection" class="hidden flex-col gap-6 max-w-3xl mx-auto w-full">
                 <div class="flex justify-between items-center">
                     <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
@@ -213,7 +204,6 @@
                 </div>
             </section>
 
-            <!-- 3. CHẾ ĐỘ LUYỆN ĐẶT CÂU HỎI -->
             <section id="askSection" class="hidden flex-col gap-6 max-w-3xl mx-auto w-full">
                 <div class="flex justify-between items-center">
                     <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
@@ -292,7 +282,6 @@
                 </div>
             </section>
 
-            <!-- 4. CHẾ ĐỘ TÓM TẮT MỚI -->
             <section id="summarySection" class="hidden flex-col gap-6 max-w-3xl mx-auto w-full fade-in">
                 <div class="flex justify-between items-center">
                     <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
@@ -311,7 +300,6 @@
                     </div>
                     
                     <ul id="summaryList" class="flex flex-col gap-4 list-none pl-0">
-                        <!-- Ý chính sẽ được điền vào đây bằng Javascript -->
                     </ul>
                     
                     <div class="flex flex-col sm:flex-row gap-4 mt-4">
@@ -327,7 +315,6 @@
 
         </main>
 
-        <!-- Popup Từ Điển -->
         <div id="dictPopup" class="flex flex-col gap-2">
             <div class="flex items-center gap-2 border-b border-slate-100 pb-2">
                 <div class="bg-blue-100 p-1.5 rounded-full flex items-center justify-center"><i class="ph-fill ph-speaker-high text-blue-600"></i></div>
@@ -336,7 +323,6 @@
             <div id="dictMeaning" class="text-slate-600 text-base font-medium">Đang tra...</div>
         </div>
 
-        <!-- Popup Cài đặt AI -->
         <div id="apiModal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-[110] backdrop-blur-sm">
             <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 m-4 flex flex-col gap-4 fade-in">
                 <div class="flex justify-between items-center border-b border-slate-100 pb-3">
@@ -360,10 +346,9 @@
         </div>
     </div>
 
-    <!-- LOGIC ỨNG DỤNG -->
     <script>
         // --- QUẢN LÝ CẤU HÌNH AI ---
-        const apiKey = ""; // Tự động nhận diện key hệ thống do môi trường cung cấp
+        const apiKey = ""; // Key tự động do hệ thống cung cấp
         let userApiKey = localStorage.getItem('gemini_api_key') || "";
         const apiModal = document.getElementById('apiModal');
         const apiKeyInput = document.getElementById('apiKeyInput');
@@ -502,7 +487,6 @@
             }
         }
 
-        // HÀM HỖ TRỢ RETRY API
         async function fetchWithRetry(url, options, retries = 5) {
             const delays = [1000, 2000, 4000, 8000, 16000];
             for (let i = 0; i < retries; i++) {
@@ -517,14 +501,62 @@
             }
         }
 
-        // --- CÁC HÀM GỌI API ---
         async function translateText(text, sl, tl) {
-            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`;
+            if (!text || !text.trim()) return "";
+
+            // Cách 1: Thử dịch qua Google Translate dùng CORS Proxy (Giải quyết lỗi chặn trên mobile & web)
             try {
-                const res = await fetchWithRetry(url, { method: 'GET' }, 3);
-                const data = await res.json();
-                return data[0].map(item => item[0]).join('');
-            } catch (error) { return "[Lỗi dịch thuật]"; }
+                const googleUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`;
+                const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(googleUrl)}`;
+                
+                const response = await fetchWithRetry(proxyUrl, { method: 'GET' }, 2);
+                if (response.ok) {
+                    const data = await response.json();
+                    let translatedText = '';
+                    if (data && data[0]) {
+                        data[0].forEach(segment => {
+                            if (segment && segment[0]) translatedText += segment[0];
+                        });
+                    }
+                    if (translatedText.trim()) return translatedText;
+                }
+            } catch (e) {
+                console.warn("Proxy Google không thành công, thử phương án dự phòng...", e);
+            }
+
+            // Cách 2: Gọi trực tiếp Google Translate API
+            try {
+                const googleUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`;
+                const response = await fetch(googleUrl);
+                if (response.ok) {
+                    const data = await response.json();
+                    let translatedText = '';
+                    if (data && data[0]) {
+                        data[0].forEach(segment => {
+                            if (segment && segment[0]) translatedText += segment[0];
+                        });
+                    }
+                    if (translatedText.trim()) return translatedText;
+                }
+            } catch (e) {
+                console.warn("Google direct không thành công...", e);
+            }
+
+            // Cách 3: Máy chủ dịch thuật dự phòng MyMemory API
+            try {
+                const myMemoryUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${sl}|${tl}`;
+                const response = await fetch(myMemoryUrl);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.responseData && data.responseData.translatedText) {
+                        return data.responseData.translatedText;
+                    }
+                }
+            } catch (e) {
+                console.error("MyMemory API thất bại:", e);
+            }
+
+            return "[Lỗi dịch thuật]";
         }
 
         async function callAI(promptText) {
@@ -533,7 +565,6 @@
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${activeKey}`;
             const payload = { 
                 contents: [{ parts: [{ text: promptText }] }],
-                // Yêu cầu bắt buộc trả về JSON
                 generationConfig: { responseMimeType: "application/json" }
             };
             
@@ -545,7 +576,6 @@
             
             const data = await res.json();
             const textResult = data.candidates?.[0]?.content?.parts?.[0]?.text;
-            // Parse dữ liệu JSON an toàn
             return extractJSON(textResult || "{}");
         }
 
@@ -576,7 +606,6 @@
             return await callAI(prompt);
         }
 
-        // HÀM GỌI AI MỚI DÀNH RIÊNG CHO TÍNH NĂNG TÓM TẮT
         async function aiSummarizeText(text) {
             const prompt = `Đoạn văn: "${text}"
             Nhiệm vụ: Hãy phân tích đoạn văn trên và trích xuất đúng 3 đến 4 ý chính quan trọng nhất. 
@@ -593,12 +622,11 @@
             return await callAI(prompt);
         }
 
-        // --- DOM Elements & Navigation ---
         const sourceText = document.getElementById('sourceText');
         const translateBtn = document.getElementById('translateBtn');
         const startPracticeBtn = document.getElementById('startPracticeBtn');
         const startAskBtn = document.getElementById('startAskBtn');
-        const startSummaryBtn = document.getElementById('startSummaryBtn'); // Nút tóm tắt mới
+        const startSummaryBtn = document.getElementById('startSummaryBtn');
         
         const inputSection = document.getElementById('inputSection');
         const loadingIndicator = document.getElementById('loadingIndicator');
@@ -607,7 +635,7 @@
         const notebookSection = document.getElementById('notebookSection');
         const practiceSection = document.getElementById('practiceSection');
         const askSection = document.getElementById('askSection');
-        const summarySection = document.getElementById('summarySection'); // Section tóm tắt mới
+        const summarySection = document.getElementById('summarySection');
 
         document.getElementById('charCount').textContent = `${sourceText.value.length} ký tự`;
         sourceText.addEventListener('input', () => {
@@ -622,7 +650,7 @@
             notebookSection.classList.add('hidden');
             practiceSection.classList.add('hidden');
             askSection.classList.add('hidden');
-            summarySection.classList.add('hidden'); // Thêm dòng này
+            summarySection.classList.add('hidden');
             loadingIndicator.classList.replace('hidden', 'flex');
         }
 
@@ -634,7 +662,7 @@
             hideLoading();
             practiceSection.classList.add('hidden');
             askSection.classList.add('hidden');
-            summarySection.classList.add('hidden'); // Thêm dòng này
+            summarySection.classList.add('hidden');
             resultSection.classList.add('hidden');
             notebookSection.classList.add('hidden');
             savedListSection.classList.add('hidden');
@@ -669,7 +697,6 @@
             return chunks;
         }
 
-        // --- LƯU TRỮ VÀ QUẢN LÝ SỔ TAY LOCALSTORAGE (CHỐNG LAG) ---
         const NOTEBOOK_STORAGE_KEY = 'bilingual_saved_notebooks';
         const MAX_SAVES = 50; 
         let currentTempPairs = []; 
@@ -719,7 +746,6 @@
             showToast('Đã xóa khỏi Sổ tay');
         }
 
-        // --- CHẾ ĐỘ 1: DỊCH ---
         translateBtn.addEventListener('click', async () => {
             const text = sourceText.value.trim();
             if (!text) return showToast('Vui lòng nhập văn bản!', 'error');
@@ -773,7 +799,6 @@
             }
         });
 
-        // --- NÚT LƯU BẢN DỊCH VÀO SỔ TAY ---
         document.getElementById('saveToNotebookBtn').addEventListener('click', function() {
             if(currentTempPairs.length === 0 && currentTempSummary.length === 0) return;
             
@@ -798,7 +823,6 @@
             }
         });
 
-        // --- GIAO DIỆN XEM DANH SÁCH ĐÃ LƯU ---
         document.getElementById('myNotebooksBtn').addEventListener('click', () => {
             hideLoading();
             inputSection.classList.add('hidden');
@@ -859,7 +883,6 @@
             if(n) openNotebookDetail(n.title, n.pairs, n.summary, false);
         };
 
-        // --- TÍCH HỢP UI CHI TIẾT SỔ TAY (DÙNG CHUNG) ---
         function openNotebookDetail(title, pairs, summary, fromTranslationScreen = false) {
             resultSection.classList.add('hidden');
             inputSection.classList.add('hidden');
@@ -1023,8 +1046,6 @@
             });
         }
 
-
-        // --- CÁC HÀM XỬ LÝ NÚT COPY Ở KẾT QUẢ DỊCH ---
         document.getElementById('copyAllBtn').addEventListener('click', () => {
             const rows = document.getElementById('outputArea').querySelectorAll('.grid');
             if (rows.length === 0) return;
@@ -1057,7 +1078,6 @@
             copyTextToClipboard(finalString, 'Đã sao chép phần Tiếng Việt!');
         });
 
-        // --- CHẾ ĐỘ 2: LUYỆN DỊCH ---
         let practiceData = [];
         let currentPracticeIndex = 0;
 
@@ -1139,7 +1159,6 @@
             }
         });
 
-        // --- CHẾ ĐỘ 3: LUYỆN ĐẶT CÂU HỎI ---
         let askData = [];
         let currentAskIndex = 0;
 
@@ -1170,112 +1189,87 @@
         function loadAskQuestion() {
             document.getElementById('askProgress').textContent = `Đoạn ${currentAskIndex + 1} / ${askData.length}`;
             document.getElementById('askContextText').textContent = askData[currentAskIndex];
-            
             document.getElementById('askInput').value = '';
             document.getElementById('askInput').disabled = false;
             
             document.getElementById('hintBox').classList.add('hidden');
-            document.getElementById('getHintBtn').disabled = false;
-            document.getElementById('getHintBtn').innerHTML = `<i class="ph-fill ph-sparkle text-purple-500"></i> Gợi ý cách đặt câu hỏi (AI)`;
-            
-            const checkBtn = document.getElementById('checkAskBtn');
-            checkBtn.classList.remove('hidden');
-            checkBtn.disabled = false;
-            checkBtn.innerHTML = `<i class="ph ph-paper-plane-right"></i> Gửi AI chấm điểm`;
-
             document.getElementById('askFeedback').classList.add('hidden');
+            document.getElementById('checkAskBtn').classList.remove('hidden');
         }
 
         document.getElementById('getHintBtn').addEventListener('click', async () => {
-            const btn = document.getElementById('getHintBtn');
-            btn.disabled = true;
-            btn.innerHTML = `<span class="ai-spinner text-purple-600"></span> Đang suy nghĩ...`;
+            const hintBox = document.getElementById('hintBox');
+            const hintList = document.getElementById('hintList');
+            hintBox.classList.remove('hidden');
+            hintList.innerHTML = '<li class="text-slate-400 animate-pulse text-sm">AI đang suy nghĩ gợi ý...</li>';
             
             try {
                 const res = await aiSuggestQuestions(askData[currentAskIndex]);
-                const list = document.getElementById('hintList');
-                list.innerHTML = '';
-                
-                res.suggestions.forEach(item => {
-                    const li = document.createElement('li');
-                    li.className = 'text-sm text-slate-700 flex gap-2';
-                    li.innerHTML = `<span class="font-bold text-purple-600 w-12 shrink-0">${item.whWord}</span> <span>${item.hintVi}</span>`;
-                    list.appendChild(li);
-                });
-                
-                document.getElementById('hintBox').classList.remove('hidden');
-                btn.innerHTML = `<i class="ph-fill ph-check text-green-500"></i> Đã tải gợi ý`;
-            } catch (error) {
-                showToast('Lỗi khi tải gợi ý, vui lòng thử lại', 'error');
-                btn.disabled = false;
-                btn.innerHTML = `<i class="ph-fill ph-sparkle text-purple-500"></i> Thử lấy gợi ý lại`;
+                hintList.innerHTML = '';
+                if (res.suggestions && res.suggestions.length > 0) {
+                    res.suggestions.forEach(s => {
+                        const li = document.createElement('li');
+                        li.className = 'text-sm text-purple-900 bg-white p-2.5 rounded-lg border border-purple-100 flex items-center gap-2';
+                        li.innerHTML = `<span class="bg-purple-200 text-purple-800 font-bold px-2 py-0.5 rounded text-xs">${s.whWord}</span> ${s.hintVi}`;
+                        hintList.appendChild(li);
+                    });
+                } else {
+                    hintList.innerHTML = '<li class="text-sm text-slate-500">Đặt câu hỏi bất kỳ liên quan đến đoạn văn.</li>';
+                }
+            } catch (e) {
+                hintList.innerHTML = '<li class="text-sm text-red-500">Không thể tải gợi ý lúc này.</li>';
             }
         });
 
         document.getElementById('checkAskBtn').addEventListener('click', async () => {
             const userQ = document.getElementById('askInput').value.trim();
-            if (!userQ) return showToast('Vui lòng gõ câu hỏi của bạn!', 'error');
+            if (!userQ) return showToast('Vui lòng nhập câu hỏi của bạn!', 'error');
 
             const btn = document.getElementById('checkAskBtn');
             btn.disabled = true;
-            btn.innerHTML = `<span class="ai-spinner"></span> Đang chấm điểm...`;
-            document.getElementById('askInput').disabled = true;
+            btn.innerHTML = '<span class="ai-spinner"></span> AI Đang chấm điểm...';
 
             try {
-                const [translatedUserQ, res] = await Promise.all([
-                    translateText(userQ, 'en', 'vi'),
-                    aiEvaluateQuestion(askData[currentAskIndex], userQ)
-                ]);
+                const evalRes = await aiEvaluateQuestion(askData[currentAskIndex], userQ);
                 
                 document.getElementById('askFeedback').classList.remove('hidden');
-                document.getElementById('askFeedback').className = `flex flex-col gap-4 p-5 rounded-xl border mt-2 ${res.isGood ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`;
+                document.getElementById('checkAskBtn').classList.add('hidden');
                 
-                const titleIcon = res.isGood ? '<i class="ph-fill ph-check-circle text-green-600"></i>' : '<i class="ph-fill ph-x-circle text-red-600"></i>';
-                const titleColor = res.isGood ? 'text-green-800' : 'text-red-800';
-                
-                document.getElementById('askResultTitle').innerHTML = `${titleIcon} <span class="${titleColor}">${res.isGood ? 'Câu hỏi rất tốt!' : 'Cần sửa đổi một chút!'}</span>`;
-                document.getElementById('askFeedbackText').textContent = res.feedbackVi;
-                
-                const diffHtml = generateDiffHtml(userQ, res.correctedQuestion);
-                document.getElementById('askUserDiff').innerHTML = diffHtml;
-                
-                document.getElementById('askCorrectedVi').textContent = res.correctedQuestionVi || translatedUserQ;
-                
-                document.getElementById('askImproved').textContent = res.alternativeQuestion;
-                document.getElementById('askImprovedVi').textContent = res.alternativeQuestionVi || "Không có bản dịch";
+                const resultTitle = document.getElementById('askResultTitle');
+                if (evalRes.isGood) {
+                    resultTitle.className = "font-bold text-lg flex items-center gap-2 text-green-700 bg-green-50 p-3 rounded-lg border border-green-200";
+                    resultTitle.innerHTML = '<i class="ph-fill ph-check-circle text-xl"></i> Câu hỏi rất tốt!';
+                } else {
+                    resultTitle.className = "font-bold text-lg flex items-center gap-2 text-amber-700 bg-amber-50 p-3 rounded-lg border border-amber-200";
+                    resultTitle.innerHTML = '<i class="ph-fill ph-warning-circle text-xl"></i> Cần điều chỉnh một chút';
+                }
 
-                btn.classList.add('hidden');
-            } catch (error) {
-                showToast('Lỗi khi xử lý! Hãy thử lại', 'error');
-                const btnObj = document.getElementById('checkAskBtn');
-                btnObj.disabled = false;
-                btnObj.innerHTML = `<i class="ph-fill ph-paper-plane-right"></i> Thử gửi lại`;
-                document.getElementById('askInput').disabled = false;
+                document.getElementById('askFeedbackText').textContent = evalRes.feedbackVi || 'Đã kiểm tra xong câu hỏi.';
+                document.getElementById('askUserDiff').innerHTML = wrapWordsForEnglish(evalRes.correctedQuestion || userQ);
+                document.getElementById('askCorrectedVi').textContent = evalRes.correctedQuestionVi || '';
+                
+                document.getElementById('askImproved').innerHTML = wrapWordsForEnglish(evalRes.alternativeQuestion || '');
+                document.getElementById('askImprovedVi').textContent = evalRes.alternativeQuestionVi || '';
+
+            } catch (e) {
+                showToast('Lỗi khi chấm điểm câu hỏi!', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ph ph-paper-plane-right"></i> Gửi AI chấm điểm';
             }
         });
 
         document.getElementById('retryAskBtn').addEventListener('click', () => {
             document.getElementById('askFeedback').classList.add('hidden');
-            document.getElementById('askInput').disabled = false;
+            document.getElementById('checkAskBtn').classList.remove('hidden');
             document.getElementById('askInput').focus();
-            
-            const btn = document.getElementById('checkAskBtn');
-            btn.classList.remove('hidden');
-            btn.disabled = false;
-            btn.innerHTML = `<i class="ph ph-paper-plane-right"></i> Gửi AI chấm điểm lại`;
         });
 
         document.getElementById('askMoreBtn').addEventListener('click', () => {
+            document.getElementById('askInput').value = '';
             document.getElementById('askFeedback').classList.add('hidden');
-            const input = document.getElementById('askInput');
-            input.value = '';
-            input.disabled = false;
-            input.focus();
-            
-            const btn = document.getElementById('checkAskBtn');
-            btn.classList.remove('hidden');
-            btn.disabled = false;
-            btn.innerHTML = `<i class="ph ph-paper-plane-right"></i> Gửi AI chấm điểm`;
+            document.getElementById('checkAskBtn').classList.remove('hidden');
+            document.getElementById('askInput').focus();
         });
 
         document.getElementById('nextAskBtn').addEventListener('click', () => {
@@ -1283,11 +1277,10 @@
             if (currentAskIndex < askData.length) {
                 loadAskQuestion();
             } else {
-                document.getElementById('askSection').innerHTML = `
+                askSection.innerHTML = `
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-10 text-center flex flex-col items-center gap-4">
                         <i class="ph-fill ph-confetti text-6xl text-purple-500"></i>
-                        <h2 class="text-2xl font-bold text-slate-800">Hoàn thành bài luyện tập!</h2>
-                        <p class="text-slate-600 mb-4">Bạn đã luyện hỏi xong toàn bộ văn bản.</p>
+                        <h2 class="text-2xl font-bold text-slate-800">Hoàn thành bài luyện đặt câu hỏi!</h2>
                         <button onclick="exitToMain()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-xl transition-colors">
                             Trở về màn hình chính
                         </button>
@@ -1296,92 +1289,58 @@
             }
         });
 
-        // --- CHẾ ĐỘ 4: TÓM TẮT ĐỂ TỰ TRIỂN KHAI LẠI ---
         startSummaryBtn.addEventListener('click', async () => {
             const text = sourceText.value.trim();
             if (!text) return showToast('Vui lòng nhập văn bản!', 'error');
 
-            if (text !== currentSourceText) {
-                currentTempPairs = [];
-                currentSourceText = text;
-            }
-
-            showLoading("AI đang đọc và tóm tắt ý chính...");
+            showLoading("AI Đang phân tích và tóm tắt ý chính...");
 
             try {
-                // Gọi AI tóm tắt
-                const res = await aiSummarizeText(text);
+                const summaryRes = await aiSummarizeText(text);
+                currentTempSummary = summaryRes.summaryPoints || [];
 
-                // Kiểm tra dữ liệu hợp lệ
-                if (!res || !res.summaryPoints || !Array.isArray(res.summaryPoints)) {
-                    throw new Error("Dữ liệu AI trả về không đúng định dạng");
+                const list = document.getElementById('summaryList');
+                list.innerHTML = '';
+
+                if (currentTempSummary.length === 0) {
+                    list.innerHTML = '<li class="text-slate-500">Không thể tạo tóm tắt cho văn bản này.</li>';
+                } else {
+                    currentTempSummary.forEach((point, idx) => {
+                        const li = document.createElement('li');
+                        li.className = 'bg-slate-50 p-4 md:p-5 rounded-xl border border-slate-200 flex items-start gap-3 shadow-sm';
+                        li.innerHTML = `
+                            <span class="bg-emerald-600 text-white text-sm font-bold w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">${idx + 1}</span>
+                            <p class="text-slate-800 text-base md:text-lg font-medium leading-relaxed">${point}</p>
+                        `;
+                        list.appendChild(li);
+                    });
                 }
-
-                currentTempSummary = res.summaryPoints;
-
-                // Render giao diện
-                const listContainer = document.getElementById('summaryList');
-                listContainer.innerHTML = '';
-
-                res.summaryPoints.forEach((point, index) => {
-                    const li = document.createElement('li');
-                    li.className = "flex items-start gap-4 bg-emerald-50 p-4 rounded-xl border border-emerald-100 shadow-sm";
-                    li.innerHTML = `
-                        <div class="flex-shrink-0 w-8 h-8 mt-0.5 bg-emerald-600 text-white font-bold rounded-full flex items-center justify-center shadow-sm">
-                            ${index + 1}
-                        </div>
-                        <p class="text-slate-800 text-lg leading-relaxed pt-0.5 font-medium">${point}</p>
-                    `;
-                    listContainer.appendChild(li);
-                });
 
                 hideLoading();
                 summarySection.classList.remove('hidden');
-            } catch (error) {
-                console.error(error);
-                showToast('Lỗi khi tóm tắt! Hãy thử lại (Có thể server đang bận)', 'error');
+            } catch (e) {
+                showToast('Không thể tóm tắt văn bản!', 'error');
                 exitToMain();
             }
         });
 
-        // Hàm hỗ trợ copy riêng cho phần Tóm tắt
-        window.copySummary = function() {
-            const listItems = document.querySelectorAll('#summaryList li p');
-            if (listItems.length === 0) return;
-            
-            let textToCopy = "CÁC Ý CHÍNH CẦN TRIỂN KHAI:\n\n";
-            listItems.forEach((p, index) => {
-                textToCopy += `${index + 1}. ${p.textContent.trim()}\n`;
+        function copySummary() {
+            if (currentTempSummary.length === 0) return;
+            let text = "📌 TÓM TẮT Ý CHÍNH:\n";
+            currentTempSummary.forEach((p, idx) => {
+                text += `${idx + 1}. ${p}\n`;
             });
-            
-            copyTextToClipboard(textToCopy, 'Đã copy thành công các ý chính!');
-        };
+            copyTextToClipboard(text, "Đã copy các ý chính!");
+        }
 
-        // GẮN SỰ KIỆN NÚT LƯU Ở PHẦN TÓM TẮT
         document.getElementById('saveSummaryToNotebookBtn').addEventListener('click', function() {
-            if(currentTempPairs.length === 0 && currentTempSummary.length === 0) return;
-            
-            const firstWords = sourceText.value.trim().substring(0, 30) + "...";
-            const autoTitle = `Đoạn: ${firstWords}`;
-            
+            if (currentTempSummary.length === 0) return;
+            const autoTitle = `Tóm tắt: ${sourceText.value.trim().substring(0, 30)}...`;
             const savedItem = saveNotebookToLocal(currentTempPairs, currentTempSummary, autoTitle);
-            
             if (savedItem) {
-                const btn = this;
-                const originalHtml = btn.innerHTML;
-                
-                btn.innerHTML = `<i class="ph-fill ph-check-circle text-xl"></i> Đã lưu xong`;
-                btn.classList.remove('bg-amber-100', 'text-amber-700', 'border-amber-300', 'hover:bg-amber-200');
-                btn.classList.add('bg-green-100', 'text-green-700', 'border-green-300', 'hover:bg-green-200');
-                
-                setTimeout(() => {
-                    btn.innerHTML = originalHtml;
-                    btn.classList.remove('bg-green-100', 'text-green-700', 'border-green-300', 'hover:bg-green-200');
-                    btn.classList.add('bg-amber-100', 'text-amber-700', 'border-amber-300', 'hover:bg-amber-200');
-                }, 2000);
+                showToast("Đã lưu tóm tắt vào sổ tay!");
             }
         });
-
     </script>
 </body>
 </html>
