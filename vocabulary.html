@@ -120,7 +120,6 @@
 
         <!-- Màn hình 3: Kết quả tổng hợp -->
         <section id="screen-result" class="hidden fade-in">
-            <!-- Card để chụp màn hình -->
             <div id="certificate-card" class="bg-white p-8 rounded-2xl shadow-lg border border-slate-200 max-w-2xl mx-auto mb-6 relative overflow-hidden">
                 <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 to-emerald-500"></div>
                 <div class="text-center mb-6">
@@ -179,7 +178,7 @@
             <h2 class="text-2xl font-bold mb-6 text-indigo-900 border-b pb-4">Sổ tay Bài học của bạn</h2>
             
             <div id="notebook-list" class="space-y-4">
-                <!-- Danh sách bài học sẽ được render bằng JS -->
+                <!-- Danh sách bài học -->
                 <div class="text-slate-500 text-center py-8">Chưa có bài học nào được lưu.</div>
             </div>
         </section>
@@ -188,22 +187,17 @@
 </div>
 
 <script>
-    /**
-     * Logic chính của ứng dụng
-     */
     const app = {
-        // State
         state: {
             sourceText: '',
             sentencesEn: [],
             sentencesVi: [],
-            chunks: [], // Mảng chứa các object: { en: string, vi: string }
+            chunks: [],
             currentChunkIndex: 0,
-            scores: [], // Điểm của từng chunk
+            scores: [],
             notebook: JSON.parse(localStorage.getItem('engReverseNotebook')) || []
         },
 
-        // Chuyển đổi màn hình
         showScreen(screenId) {
             ['input', 'practice', 'result', 'notebook'].forEach(id => {
                 document.getElementById(`screen-${id}`).classList.add('hidden');
@@ -215,7 +209,6 @@
             }
         },
 
-        // Bắt đầu bài học - Gọi API dịch
         async startLesson() {
             const textArea = document.getElementById('source-text');
             const text = textArea.value.trim();
@@ -237,15 +230,12 @@
             this.state.sourceText = text;
 
             try {
-                // Tách câu tiếng Anh cơ bản (bằng dấu chấm, hỏi, than)
-                // Dùng regex để giữ lại dấu câu gắn với từ trước đó
                 const rawSentencesEn = text.match(/[^.!?]+[.!?]+/g) || [text];
                 this.state.sentencesEn = rawSentencesEn.map(s => s.trim()).filter(s => s.length > 0);
 
-                // Dịch toàn bộ văn bản (Sử dụng Google API Free - Xử lý tốt văn bản dài tới 5000 ký tự)
+                // Gọi hàm dịch đã nâng cấp hỗ trợ đa nền tảng
                 const translatedText = await this.translateText(text, 'en', 'vi');
                 
-                // Tách câu tiếng Việt tương ứng
                 const rawSentencesVi = translatedText.match(/[^.!?]+[.!?]+/g) || [translatedText];
                 this.state.sentencesVi = rawSentencesVi.map(s => s.trim()).filter(s => s.length > 0);
 
@@ -261,35 +251,45 @@
             }
         },
 
-        // API Call dịch thuật (Sử dụng Google Translate API dạng Free - Không giới hạn 500 ký tự)
+        // API Call dịch thuật - Đã sửa lỗi CORS cho điện thoại & Vercel
         async translateText(text, fromLang, toLang) {
-            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${fromLang}&tl=${toLang}&dt=t&q=${encodeURIComponent(text)}`;
-            const response = await fetch(url);
-            
-            if (!response.ok) {
-                throw new Error("Lỗi kết nối đến server dịch thuật.");
-            }
-            
-            const data = await response.json();
-            
-            let translatedText = '';
-            // Google API trả về một mảng chứa các câu nhỏ được chia cắt, chúng ta cần nối lại
-            if (data && data[0]) {
-                data[0].forEach(segment => {
-                    if (segment[0]) {
-                        translatedText += segment[0];
+            // Cách 1: Thử dịch qua Google Translate thông qua CORS Proxy (hoạt động tốt trên di động)
+            try {
+                const googleUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${fromLang}&tl=${toLang}&dt=t&q=${encodeURIComponent(text)}`;
+                const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(googleUrl)}`;
+                
+                const response = await fetch(proxyUrl);
+                if (response.ok) {
+                    const data = await response.json();
+                    let translatedText = '';
+                    if (data && data[0]) {
+                        data[0].forEach(segment => {
+                            if (segment[0]) translatedText += segment[0];
+                        });
                     }
-                });
+                    if (translatedText.trim()) return translatedText;
+                }
+            } catch (e) {
+                console.warn("Proxy Google thất bại, đang chuyển sang máy chủ dự phòng...", e);
             }
-            
-            if (!translatedText) {
-                 throw new Error("Không thể trích xuất văn bản dịch.");
+
+            // Cách 2: Máy chủ dịch dự phòng MyMemory API (Chuẩn REST CORS công khai)
+            try {
+                const myMemoryUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${fromLang}|${toLang}`;
+                const response = await fetch(myMemoryUrl);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.responseData && data.responseData.translatedText) {
+                        return data.responseData.translatedText;
+                    }
+                }
+            } catch (e) {
+                console.error("MyMemory API thất bại:", e);
             }
-            
-            return translatedText;
+
+            throw new Error("Không thể kết nối dịch thuật.");
         },
 
-        // Gộp 2 câu thành 1 chunk
         createChunks() {
             this.state.chunks = [];
             const len = Math.max(this.state.sentencesEn.length, this.state.sentencesVi.length);
@@ -310,7 +310,6 @@
             }
         },
 
-        // Bắt đầu chế độ luyện tập
         startPractice() {
             this.state.currentChunkIndex = 0;
             this.state.scores = [];
@@ -324,7 +323,6 @@
             document.getElementById('user-input').value = '';
             document.getElementById('feedback-section').classList.add('hidden');
             
-            // Update progress
             const total = this.state.chunks.length;
             const current = this.state.currentChunkIndex + 1;
             document.getElementById('progress-text').textContent = `${current}/${total}`;
@@ -333,35 +331,29 @@
             document.getElementById('user-input').focus();
         },
 
-        // Kiểm tra đáp án
         checkAnswer() {
             const userText = document.getElementById('user-input').value.trim();
             if (!userText) return;
 
             const originalText = this.state.chunks[this.state.currentChunkIndex].en;
             
-            // Normalize chuỗi (bỏ qua dấu câu, đưa về chữ thường)
             const normalize = str => str.toLowerCase().replace(/[.,!?;:]/g, '');
             const userWords = normalize(userText).split(/\s+/).filter(w => w);
             const origWords = normalize(originalText).split(/\s+/).filter(w => w);
 
-            // Sinh Diff cơ bản
             const diffHTML = this.calculateWordDiff(origWords, userWords, userText);
             
-            // Tính điểm: tỷ lệ từ đúng trên tổng số từ của câu gốc
             let correctCount = 0;
             origWords.forEach(w => {
                 if(userWords.includes(w)) correctCount++;
             });
-            // Tránh điểm âm hoặc > 100
+
             let score = Math.round((correctCount / origWords.length) * 100);
             if (score > 100) score = 100;
 
             this.state.scores.push(score);
 
-            // Render feedback
             document.getElementById('chunk-score').textContent = `${score}%`;
-            // Chỉnh màu điểm
             document.getElementById('chunk-score').className = `text-2xl font-bold ${score >= 80 ? 'text-emerald-600' : (score >= 50 ? 'text-amber-500' : 'text-red-600')}`;
             
             document.getElementById('diff-result').innerHTML = diffHTML;
@@ -369,7 +361,6 @@
             
             document.getElementById('feedback-section').classList.remove('hidden');
 
-            // Đổi text nút Next nếu là câu cuối
             const btnNext = document.getElementById('btn-next');
             if (this.state.currentChunkIndex === this.state.chunks.length - 1) {
                 btnNext.textContent = "Hoàn thành & Xem Kết quả";
@@ -382,19 +373,13 @@
             }
         },
 
-        // Thuật toán so sánh mảng từ đơn giản (LCS rút gọn)
         calculateWordDiff(origArray, userArray, rawUserText) {
-            let html = '';
-            // Một mảng để đánh dấu từ user đã dùng
-            let usedUserIndices = new Set();
-            
-            // Hiển thị text user nhập, highlight từ sai
-            const rawUserWords = rawUserText.split(/(\s+)/); // Giữ lại khoảng trắng
-            
+            const rawUserWords = rawUserText.split(/(\s+)/);
             let htmlUser = '';
+
             rawUserWords.forEach((token) => {
                 if (token.trim() === '') {
-                    htmlUser += token; // Giữ khoảng trắng
+                    htmlUser += token;
                 } else {
                     const cleanToken = token.toLowerCase().replace(/[.,!?;:]/g, '');
                     if (origArray.includes(cleanToken)) {
@@ -405,7 +390,6 @@
                 }
             });
 
-            // Tìm từ thiếu (có trong gốc mà user ko có)
             let missingWords = [];
             origArray.forEach(w => {
                 if (!userArray.includes(w)) missingWords.push(w);
@@ -421,7 +405,6 @@
             return `<div>${htmlUser}</div>${missingHtml}`;
         },
 
-        // Chuyển sang cụm câu tiếp theo hoặc kết thúc
         nextChunk() {
             if (this.state.currentChunkIndex < this.state.chunks.length - 1) {
                 this.state.currentChunkIndex++;
@@ -431,12 +414,10 @@
             }
         },
 
-        // Màn hình kết quả
         showResult() {
             this.showScreen('result');
             document.getElementById('save-msg').classList.add('hidden');
             
-            // Xóa nội dung ô nhập tên bài học cũ (nếu có)
             const titleInput = document.getElementById('lesson-title');
             if (titleInput) titleInput.value = '';
             
@@ -452,7 +433,6 @@
             const now = new Date();
             document.getElementById('date-completed').textContent = `Hoàn thành: ${now.toLocaleDateString('vi-VN')} ${now.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}`;
 
-            // Cập nhật vòng tròn SVG
             const dashArray = 100;
             const strokeDashoffset = dashArray - (average / 100) * dashArray;
             document.getElementById('score-circle').style.strokeDashoffset = strokeDashoffset;
@@ -460,7 +440,6 @@
             document.getElementById('btn-save').classList.remove('opacity-50', 'cursor-not-allowed');
         },
 
-        // Lưu vào sổ tay (Local Storage)
         saveToNotebook() {
             const average = Math.round(this.state.scores.reduce((a, b) => a + b, 0) / this.state.scores.length);
             
@@ -476,18 +455,16 @@
                 chunks: this.state.chunks
             };
             
-            this.state.notebook.unshift(record); // Thêm vào đầu
+            this.state.notebook.unshift(record);
             localStorage.setItem('engReverseNotebook', JSON.stringify(this.state.notebook));
             
             document.getElementById('save-msg').classList.remove('hidden');
             
-            // Disable nút lưu sau khi lưu thành công
             const btnSave = document.getElementById('btn-save');
             btnSave.disabled = true;
             btnSave.classList.add('opacity-50', 'cursor-not-allowed');
         },
 
-        // Render Sổ tay
         renderNotebook() {
             const list = document.getElementById('notebook-list');
             list.innerHTML = '';
@@ -500,11 +477,7 @@
             this.state.notebook.forEach(item => {
                 const date = new Date(item.date);
                 const dateStr = `${date.toLocaleDateString('vi-VN')} - ${date.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}`;
-                
-                // Cắt ngắn nội dung
                 const shortText = item.original.length > 100 ? item.original.substring(0, 100) + '...' : item.original;
-                
-                // Lấy tên bài học (hỗ trợ tương thích ngược với các bài đã lưu trước đó không có title)
                 const title = item.title || "Bài học chưa đặt tên";
 
                 const card = document.createElement('div');
@@ -532,7 +505,6 @@
             });
         },
 
-        // Xem lại bài cũ
         reviewLesson(id) {
             const item = this.state.notebook.find(i => i.id === id);
             if (item) {
@@ -541,13 +513,11 @@
             }
         },
 
-        // Text To Speech bằng Web Speech API
         playAudioHint() {
             const text = this.state.chunks[this.state.currentChunkIndex].en;
             if ('speechSynthesis' in window) {
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'en-US';
-                // Điều chỉnh tốc độ đọc chậm một chút để dễ nghe
                 utterance.rate = 0.8; 
                 window.speechSynthesis.speak(utterance);
             } else {
@@ -555,7 +525,6 @@
             }
         },
 
-        // UI Helpers
         setLoading(isLoading) {
             const btn = document.getElementById('btn-start');
             const text = document.getElementById('btn-start-text');
@@ -575,9 +544,7 @@
         }
     };
 
-    // Khởi tạo
     app.showScreen('input');
-
 </script>
 </body>
 </html>
