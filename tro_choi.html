@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Học Từ Vựng & Trò Chơi</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Inter & FontAwesome Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .perspective-1000 { perspective: 1000px; }
+        .transform-style-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col pb-20">
+
+    <header class="bg-indigo-600 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-md mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-gamepad text-2xl text-yellow-300"></i>
+                <h1 class="font-bold text-lg tracking-wide">Lớp Học Từ Vựng</h1>
+            </div>
+            <div id="current-date-badge" class="text-xs bg-indigo-700 px-2.5 py-1 rounded-full font-medium"></div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-md w-full mx-auto p-4 mb-16 space-y-4">
+
+        <!-- TAB 1: TRA CỨU & DỊCH TỐI ƯU -->
+        <section id="tab-translate" class="space-y-4">
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+                <h2 class="text-base font-bold text-slate-700 mb-2 flex items-center">
+                    <i class="fa-solid fa-language text-indigo-500 mr-2"></i> Tra từ & Dịch tiếng Anh
+                </h2>
+                <textarea id="input-vi" rows="3" placeholder="Nhập từ hoặc câu tiếng Việt (Ví dụ: Hôm nay tôi muốn đi mua sắm...)" class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none text-base resize-none"></textarea>
+                
+                <div class="mt-3 flex items-center justify-between">
+                    <div>
+                        <label class="text-xs text-slate-500 block mb-1">Lưu vào bài học:</label>
+                        <select id="select-lesson" class="text-sm p-2 border border-slate-200 rounded-lg bg-slate-50 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <!-- Dynamic options -->
+                        </select>
+                    </div>
+                    <button id="btn-translate" onclick="handleTranslate()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm transition active:scale-95 flex items-center space-x-2">
+                        <i class="fa-solid fa-bolt"></i>
+                        <span>Dịch ngay</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loading-box" class="hidden text-center py-6">
+                <div class="inline-block animate-spin rounded-full h-7 w-7 border-4 border-indigo-500 border-t-transparent"></div>
+                <p class="text-xs text-slate-500 mt-2">Đang dịch chuẩn xác...</p>
+            </div>
+
+            <!-- Result Box -->
+            <div id="result-container" class="space-y-3 hidden">
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-indigo-100 relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-1.5 h-full bg-indigo-500"></div>
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50 px-2 py-0.5 rounded">Kết quả tối ưu</span>
+                        <button onclick="speakResult()" class="text-indigo-600 hover:text-indigo-800 p-2 rounded-full bg-indigo-50 transition" title="Phát âm">
+                            <i class="fa-solid fa-volume-high text-base"></i>
+                        </button>
+                    </div>
+                    <div class="mb-3">
+                        <p class="text-xs text-slate-400">Tiếng Việt gốc:</p>
+                        <p id="res-vi" class="font-medium text-slate-700 text-sm"></p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400">Tiếng Anh chuẩn:</p>
+                        <p id="res-en" class="text-lg font-bold text-indigo-900 mt-0.5"></p>
+                    </div>
+                    <div class="mt-4">
+                        <button onclick="saveCurrentResult()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-sm font-medium transition flex items-center justify-center space-x-1.5">
+                            <i class="fa-solid fa-bookmark"></i>
+                            <span>Lưu vào bài học này</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: SỔ TAY TỪ VỰNG -->
+        <section id="tab-notebook" class="space-y-4 hidden">
+            <div class="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-book-open text-indigo-500"></i>
+                    <span class="font-bold text-sm">Danh sách theo ngày / buổi</span>
+                </div>
+                <button onclick="openNewLessonModal()" class="text-xs bg-indigo-50 text-indigo-600 font-semibold px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition">
+                    <i class="fa-solid fa-plus mr-1"></i> Bài học mới
+                </button>
+            </div>
+
+            <div id="lessons-list-container" class="space-y-3">
+                <!-- Populated by JS -->
+            </div>
+        </section>
+
+        <!-- TAB 3: TRÒ CHƠI & ÔN TẬP -->
+        <section id="tab-games" class="space-y-4 hidden">
+            <div class="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-5 text-white shadow-md">
+                <h2 class="text-lg font-bold mb-1"><i class="fa-solid fa-gamepad mr-2"></i> Trò Chơi Ôn Tập</h2>
+                <p class="text-xs text-indigo-100">Chọn trò chơi để ghi nhớ từ vựng đã lưu một cách nhanh chóng!</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="startFlashcardGame()" class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:border-indigo-300 transition text-left flex flex-col justify-between group">
+                    <div class="w-10 h-10 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center text-lg mb-3 group-hover:scale-110 transition">
+                        <i class="fa-solid fa-clone"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-sm">Flashcard</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Lật thẻ ghi nhớ</p>
+                    </div>
+                </button>
+
+                <button onclick="startQuizGame()" class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:border-indigo-300 transition text-left flex flex-col justify-between group">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center text-lg mb-3 group-hover:scale-110 transition">
+                        <i class="fa-solid fa-circle-question"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-sm">Trắc nghiệm</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Thử thách chọn đáp án</p>
+                    </div>
+                </button>
+            </div>
+
+            <div id="game-area" class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hidden">
+                <!-- Dynamic game view -->
+            </div>
+        </section>
+
+    </main>
+
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 py-2 z-40 max-w-md mx-auto">
+        <div class="flex justify-around items-center">
+            <button onclick="switchTab('translate')" id="nav-translate" class="flex flex-col items-center text-indigo-600 transition">
+                <i class="fa-solid fa-language text-xl mb-0.5"></i>
+                <span class="text-[10px] font-semibold">Tra Cứu</span>
+            </button>
+            <button onclick="switchTab('notebook')" id="nav-notebook" class="flex flex-col items-center text-slate-400 hover:text-slate-600 transition">
+                <i class="fa-solid fa-book text-xl mb-0.5"></i>
+                <span class="text-[10px] font-semibold">Sổ Tay</span>
+            </button>
+            <button onclick="switchTab('games')" id="nav-games" class="flex flex-col items-center text-slate-400 hover:text-slate-600 transition">
+                <i class="fa-solid fa-gamepad text-xl mb-0.5"></i>
+                <span class="text-[10px] font-semibold">Trò Chơi</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Modal Tạo Bài Mới -->
+    <div id="modal-new-lesson" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl p-6 max-w-xs w-full shadow-xl space-y-4">
+            <h3 class="font-bold text-slate-800 text-base">Tạo Buổi Học / Bài Mới</h3>
+            <input type="text" id="new-lesson-name" placeholder="Ví dụ: Ngày 12/10 - Chủ đề Giao tiếp" class="w-full p-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            <div class="flex space-x-2">
+                <button onclick="closeNewLessonModal()" class="flex-1 bg-slate-100 text-slate-600 py-2.5 rounded-xl text-sm font-medium">Hủy</button>
+                <button onclick="createLesson()" class="flex-1 bg-indigo-600 text-white py-2.5 rounded-xl text-sm font-medium">Tạo bài</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-16 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-medium shadow-lg transition-all duration-300 opacity-0 pointer-events-none z-50">
+        Thông báo mẫu
+    </div>
+
+    <script>
+        let state = {
+            lessons: JSON.parse(localStorage.getItem('smartvocab_lessons')) || [
+                { id: '1', name: 'Ngày 1: Chào hỏi đơn giản', words: [
+                    { vi: 'Xin chào, rất vui được gặp bạn', en: 'Hello, nice to meet you' }
+                ]}
+            ],
+            currentLessonId: '1',
+            lastTranslated: null
+        };
+
+        function saveToLocalStorage() {
+            localStorage.setItem('smartvocab_lessons', JSON.stringify(state.lessons));
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.remove('opacity-0');
+            toast.classList.add('opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0');
+            }, 2000);
+        }
+
+        function switchTab(tabName) {
+            ['translate', 'notebook', 'games'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+                document.getElementById(`nav-${t}`).className = "flex flex-col items-center text-slate-400 hover:text-slate-600 transition";
+            });
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+            document.getElementById(`nav-${tabName}`).className = "flex flex-col items-center text-indigo-600 transition";
+            
+            if (tabName === 'notebook') renderNotebook();
+        }
+
+        function updateLessonDropdown() {
+            const select = document.getElementById('select-lesson');
+            select.innerHTML = '';
+            state.lessons.forEach(l => {
+                const opt = document.createElement('option');
+                opt.value = l.id;
+                opt.textContent = l.name;
+                if (l.id === state.currentLessonId) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
+
+        document.getElementById('select-lesson').addEventListener('change', (e) => {
+            state.currentLessonId = e.target.value;
+        });
+
+        async function handleTranslate() {
+            const textVi = document.getElementById('input-vi').value.trim();
+            if (!textVi) {
+                showToast('Vui lòng nhập từ hoặc câu tiếng Việt!');
+                return;
+            }
+
+            document.getElementById('loading-box').classList.remove('hidden');
+            document.getElementById('result-container').classList.add('hidden');
+
+            try {
+                // Free public translation engine (No Key Required, GitHub safe)
+                const apiUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=vi&tl=en&dt=t&q=${encodeURIComponent(textVi)}`;
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                
+                let translatedText = '';
+                if (data && data[0]) {
+                    data[0].forEach(item => {
+                        if (item[0]) translatedText += item[0];
+                    });
+                }
+
+                document.getElementById('loading-box').classList.add('hidden');
+
+                if (translatedText) {
+                    state.lastTranslated = {
+                        vi: textVi,
+                        en: translatedText
+                    };
+
+                    document.getElementById('res-vi').textContent = textVi;
+                    document.getElementById('res-en').textContent = translatedText;
+                    document.getElementById('result-container').classList.remove('hidden');
+                } else {
+                    showToast('Không thể dịch từ này, hãy thử lại!');
+                }
+            } catch (error) {
+                document.getElementById('loading-box').classList.add('hidden');
+                showToast('Lỗi kết nối mạng, vui lòng thử lại!');
+            }
+        }
+
+        function speakResult() {
+            if (!state.lastTranslated) return;
+            const utterance = new SpeechSynthesisUtterance(state.lastTranslated.en);
+            utterance.lang = 'en-US';
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function saveCurrentResult() {
+            if (!state.lastTranslated) return;
+            const lesson = state.lessons.find(l => l.id === state.currentLessonId);
+            if (lesson) {
+                const exists = lesson.words.some(w => w.en.toLowerCase() === state.lastTranslated.en.toLowerCase());
+                if (!exists) {
+                    lesson.words.push(state.lastTranslated);
+                    saveToLocalStorage();
+                    showToast('Đã lưu vào bài học thành công!');
+                } else {
+                    showToast('Từ/câu này đã có trong danh sách!');
+                }
+            }
+        }
+
+        function renderNotebook() {
+            const container = document.getElementById('lessons-list-container');
+            container.innerHTML = '';
+
+            state.lessons.forEach(lesson => {
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-2xl p-4 border border-slate-100 shadow-sm space-y-3";
+                
+                let wordsHtml = lesson.words.length === 0 
+                    ? `<p class="text-xs text-slate-400 italic">Chưa có từ vựng nào trong bài này.</p>` 
+                    : lesson.words.map((w, idx) => `
+                        <div class="flex justify-between items-center py-2 border-b border-slate-50 last:border-none">
+                            <div class="space-y-0.5 pr-2">
+                                <p class="text-xs text-slate-400">VN: ${w.vi}</p>
+                                <p class="text-sm font-bold text-indigo-900">EN: ${w.en}</p>
+                            </div>
+                            <button onclick="deleteWord('${lesson.id}', ${idx})" class="text-slate-300 hover:text-red-500 transition p-2"><i class="fa-solid fa-trash-can text-xs"></i></button>
+                        </div>
+                    `).join('');
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <h3 class="font-bold text-slate-800 text-sm flex items-center">
+                            <i class="fa-solid fa-folder-open text-indigo-500 mr-2"></i> ${lesson.name}
+                        </h3>
+                        <span class="text-xs bg-indigo-50 text-indigo-600 font-bold px-2 py-0.5 rounded-full">${lesson.words.length} từ</span>
+                    </div>
+                    <div class="space-y-1 bg-slate-50/50 p-3 rounded-xl">
+                        ${wordsHtml}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function deleteWord(lessonId, wordIndex) {
+            const lesson = state.lessons.find(l => l.id === lessonId);
+            if (lesson) {
+                lesson.words.splice(wordIndex, 1);
+                saveToLocalStorage();
+                renderNotebook();
+                showToast('Đã xóa từ vựng!');
+            }
+        }
+
+        function openNewLessonModal() {
+            document.getElementById('modal-new-lesson').classList.remove('hidden');
+        }
+
+        function closeNewLessonModal() {
+            document.getElementById('modal-new-lesson').classList.add('hidden');
+            document.getElementById('new-lesson-name').value = '';
+        }
+
+        function createLesson() {
+            const name = document.getElementById('new-lesson-name').value.trim();
+            if (!name) {
+                showToast('Vui lòng nhập tên bài học!');
+                return;
+            }
+            const newId = Date.now().toString();
+            state.lessons.push({ id: newId, name: name, words: [] });
+            state.currentLessonId = newId;
+            saveToLocalStorage();
+            updateLessonDropdown();
+            closeNewLessonModal();
+            renderNotebook();
+            showToast('Đã tạo bài học mới!');
+        }
+
+        function getAllWords() {
+            let all = [];
+            state.lessons.forEach(l => {
+                all = all.concat(l.words);
+            });
+            return all;
+        }
+
+        function startFlashcardGame() {
+            const words = getAllWords();
+            const area = document.getElementById('game-area');
+            area.classList.remove('hidden');
+
+            if (words.length === 0) {
+                area.innerHTML = `<p class="text-center text-sm text-slate-400 py-6">Chưa có từ vựng nào để chơi. Hãy tra cứu và lưu lại trước nhé!</p>`;
+                return;
+            }
+
+            let currentIndex = 0;
+
+            function renderCard() {
+                const w = words[currentIndex];
+                area.innerHTML = `
+                    <div class="text-center mb-3">
+                        <span class="text-xs text-slate-400 font-medium">Thẻ ${currentIndex + 1} / ${words.length}</span>
+                    </div>
+                    <div class="perspective-1000 w-full h-44 cursor-pointer" onclick="this.querySelector('.inner-card').classList.toggle('rotate-y-180')">
+                        <div class="inner-card relative w-full h-full duration-500 transform-style-3d shadow-sm rounded-2xl">
+                            <div class="absolute inset-0 bg-indigo-50 border border-indigo-100 rounded-2xl flex flex-col items-center justify-center p-6 backface-hidden">
+                                <span class="text-xs text-indigo-400 font-semibold uppercase mb-1">Tiếng Việt</span>
+                                <h4 class="text-base font-bold text-indigo-900 text-center">${w.vi}</h4>
+                                <span class="text-[10px] text-slate-400 mt-3">(Chạm để lật xem tiếng Anh)</span>
+                            </div>
+                            <div class="absolute inset-0 bg-white border border-slate-200 rounded-2xl flex flex-col items-center justify-center p-6 backface-hidden rotate-y-180">
+                                <span class="text-xs text-emerald-500 font-semibold uppercase mb-1">Tiếng Anh</span>
+                                <h4 class="text-base font-extrabold text-slate-800 text-center">${w.en}</h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex justify-between mt-4">
+                        <button id="prev-card" class="px-4 py-2 bg-slate-100 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-200 transition">Quay lại</button>
+                        <button id="next-card" class="px-4 py-2 bg-indigo-600 rounded-xl text-xs font-semibold text-white hover:bg-indigo-700 transition">Tiếp theo</button>
+                    </div>
+                `;
+
+                document.getElementById('prev-card').onclick = (e) => {
+                    e.stopPropagation();
+                    currentIndex = (currentIndex - 1 + words.length) % words.length;
+                    renderCard();
+                };
+                document.getElementById('next-card').onclick = (e) => {
+                    e.stopPropagation();
+                    currentIndex = (currentIndex + 1) % words.length;
+                    renderCard();
+                };
+            }
+
+            renderCard();
+        }
+
+        function startQuizGame() {
+            const words = getAllWords();
+            const area = document.getElementById('game-area');
+            area.classList.remove('hidden');
+
+            if (words.length < 2) {
+                area.innerHTML = `<p class="text-center text-sm text-slate-400 py-6">Cần ít nhất 2 từ vựng đã lưu để chơi trắc nghiệm!</p>`;
+                return;
+            }
+
+            let score = 0;
+            let questionIdx = 0;
+            const quizList = [...words].sort(() => 0.5 - Math.random()).slice(0, 5);
+
+            function loadQuestion() {
+                if (questionIdx >= quizList.length) {
+                    area.innerHTML = `
+                        <div class="text-center py-6 space-y-3">
+                            <i class="fa-solid fa-trophy text-4xl text-yellow-400"></i>
+                            <h3 class="font-bold text-slate-800 text-base">Hoàn thành thử thách!</h3>
+                            <p class="text-xs text-slate-500">Điểm số của bạn: <span class="font-bold text-indigo-600">${score}/${quizList.length}</span></p>
+                            <button onclick="startQuizGame()" class="bg-indigo-600 text-white px-5 py-2 rounded-xl text-xs font-medium">Chơi lại</button>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const current = quizList[questionIdx];
+                let options = [current.en];
+                while (options.length < 3 && options.length < words.length) {
+                    const randomWord = words[Math.floor(Math.random() * words.length)].en;
+                    if (!options.includes(randomWord)) options.push(randomWord);
+                }
+                options.sort(() => 0.5 - Math.random());
+
+                area.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center text-xs text-slate-400">
+                            <span>Câu hỏi ${questionIdx + 1} / ${quizList.length}</span>
+                            <span>Điểm: ${score}</span>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-xl text-center">
+                            <span class="text-xs text-slate-400 block mb-1">Nghĩa tiếng Việt là gì?</span>
+                            <h4 class="font-bold text-slate-800 text-base">"${current.vi}"</h4>
+                        </div>
+                        <div class="space-y-2" id="quiz-options">
+                            ${options.map(opt => `
+                                <button onclick="checkAnswer(this, '${opt.replace(/'/g, "\\'")}', '${current.en.replace(/'/g, "\\'")}')" class="w-full text-left p-3 rounded-xl border border-slate-200 text-sm font-medium hover:bg-indigo-50 hover:border-indigo-300 transition">${opt}</button>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            window.checkAnswer = function(btn, selected, correct) {
+                const buttons = document.querySelectorAll('#quiz-options button');
+                buttons.forEach(b => b.disabled = true);
+
+                if (selected === correct) {
+                    btn.classList.add('bg-emerald-500', 'text-white', 'border-emerald-500');
+                    score++;
+                    showToast('Chính xác! 🎉');
+                } else {
+                    btn.classList.add('bg-red-500', 'text-white', 'border-red-500');
+                    buttons.forEach(b => {
+                        if (b.textContent.trim() === correct) {
+                            b.classList.add('bg-emerald-500', 'text-white', 'border-emerald-500');
+                        }
+                    });
+                    showToast('Chưa chính xác!');
+                }
+
+                setTimeout(() => {
+                    questionIdx++;
+                    loadQuestion();
+                }, 1200);
+            };
+
+            loadQuestion();
+        }
+
+        window.onload = function() {
+            const options = { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' };
+            document.getElementById('current-date-badge').textContent = new Date().toLocaleDateString('vi-VN', options);
+            updateLessonDropdown();
+        };
+    </script>
+</body>
+</html>
