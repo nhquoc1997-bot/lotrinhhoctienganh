@@ -54,6 +54,7 @@
 
         .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 0.8); }
     </style>
+    <script src="bob-translate.js"></script>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
 
@@ -503,60 +504,13 @@
 
         async function translateText(text, sl, tl) {
             if (!text || !text.trim()) return "";
-
-            // Cách 1: Thử dịch qua Google Translate dùng CORS Proxy (Giải quyết lỗi chặn trên mobile & web)
+            // Dịch qua trạm dịch Bob English (Gemini + dự phòng, có lưu tạm)
             try {
-                const googleUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`;
-                const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(googleUrl)}`;
-                
-                const response = await fetchWithRetry(proxyUrl, { method: 'GET' }, 2);
-                if (response.ok) {
-                    const data = await response.json();
-                    let translatedText = '';
-                    if (data && data[0]) {
-                        data[0].forEach(segment => {
-                            if (segment && segment[0]) translatedText += segment[0];
-                        });
-                    }
-                    if (translatedText.trim()) return translatedText;
-                }
+                return await window.bobTranslate(text, sl, tl);
             } catch (e) {
-                console.warn("Proxy Google không thành công, thử phương án dự phòng...", e);
+                console.error("Lỗi dịch:", e);
+                return "[Chưa dịch được – thử lại sau vài giây]";
             }
-
-            // Cách 2: Gọi trực tiếp Google Translate API
-            try {
-                const googleUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`;
-                const response = await fetch(googleUrl);
-                if (response.ok) {
-                    const data = await response.json();
-                    let translatedText = '';
-                    if (data && data[0]) {
-                        data[0].forEach(segment => {
-                            if (segment && segment[0]) translatedText += segment[0];
-                        });
-                    }
-                    if (translatedText.trim()) return translatedText;
-                }
-            } catch (e) {
-                console.warn("Google direct không thành công...", e);
-            }
-
-            // Cách 3: Máy chủ dịch thuật dự phòng MyMemory API
-            try {
-                const myMemoryUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${sl}|${tl}`;
-                const response = await fetch(myMemoryUrl);
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data && data.responseData && data.responseData.translatedText) {
-                        return data.responseData.translatedText;
-                    }
-                }
-            } catch (e) {
-                console.error("MyMemory API thất bại:", e);
-            }
-
-            return "[Lỗi dịch thuật]";
         }
 
         async function callAI(promptText) {

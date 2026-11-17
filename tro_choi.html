@@ -16,6 +16,7 @@
         .backface-hidden { backface-visibility: hidden; }
         .rotate-y-180 { transform: rotateY(180deg); }
     </style>
+    <script src="bob-translate.js"></script>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col pb-20">
 
@@ -276,16 +277,7 @@
             document.getElementById('result-container').classList.add('hidden');
 
             try {
-                const apiUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=vi&tl=en&dt=t&q=${encodeURIComponent(textVi)}`;
-                const response = await fetch(apiUrl);
-                const data = await response.json();
-                
-                let translatedText = '';
-                if (data && data[0]) {
-                    data[0].forEach(item => {
-                        if (item[0]) translatedText += item[0];
-                    });
-                }
+                const translatedText = await window.bobTranslate(textVi, 'vi', 'en');
 
                 document.getElementById('loading-box').classList.add('hidden');
 
@@ -303,7 +295,7 @@
                 }
             } catch (error) {
                 document.getElementById('loading-box').classList.add('hidden');
-                showToast('Lỗi kết nối mạng, vui lòng thử lại!');
+                showToast(error.message || 'Lỗi kết nối mạng, vui lòng thử lại!');
             }
         }
 

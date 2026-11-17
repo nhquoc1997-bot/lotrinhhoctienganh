@@ -34,6 +34,7 @@
         .clickable-word { transition: all 0.2s ease; display: inline-block; border-radius: 0.25rem; padding: 0 2px; margin: 0 1px; }
         .clickable-word:hover { background-color: #dbeafe; color: #1d4ed8; transform: translateY(-1px); }
     </style>
+    <script src="bob-translate.js"></script>
 </head>
 <body>
     <div id="root"></div>
@@ -836,13 +837,7 @@
                 setTranslationError("");
                 
                 try {
-                    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=vi&tl=en&dt=t&q=${encodeURIComponent(currentViText)}`;
-                    const response = await fetch(url);
-                    
-                    if (!response.ok) throw new Error('API Error');
-                    
-                    const data = await response.json();
-                    const translatedText = data[0].map(item => item[0]).join('');
+                    const translatedText = await window.bobTranslate(currentViText, 'vi', 'en');
 
                     if (translatedText) {
                         const currentData = currentTopicData[currentStep] || {};
@@ -853,7 +848,7 @@
                     }
                 } catch (error) {
                     console.error(error);
-                    setTranslationError("Lỗi kết nối dịch thuật. Vui lòng kiểm tra mạng.");
+                    setTranslationError(error.message || "Lỗi kết nối dịch thuật. Vui lòng kiểm tra mạng.");
                 } finally {
                     setIsTranslating(false);
                 }

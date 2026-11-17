@@ -15,6 +15,7 @@
         .word-incorrect { color: #dc2626; text-decoration: line-through; } /* text-red-600 */
         .word-missing { color: #f59e0b; border-bottom: 2px dashed #f59e0b; padding-bottom: 2px;} /* text-amber-500 */
     </style>
+    <script src="bob-translate.js"></script>
 </head>
 <body class="text-slate-800">
 
@@ -253,41 +254,8 @@
 
         // API Call dịch thuật - Đã sửa lỗi CORS cho điện thoại & Vercel
         async translateText(text, fromLang, toLang) {
-            // Cách 1: Thử dịch qua Google Translate thông qua CORS Proxy (hoạt động tốt trên di động)
-            try {
-                const googleUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${fromLang}&tl=${toLang}&dt=t&q=${encodeURIComponent(text)}`;
-                const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(googleUrl)}`;
-                
-                const response = await fetch(proxyUrl);
-                if (response.ok) {
-                    const data = await response.json();
-                    let translatedText = '';
-                    if (data && data[0]) {
-                        data[0].forEach(segment => {
-                            if (segment[0]) translatedText += segment[0];
-                        });
-                    }
-                    if (translatedText.trim()) return translatedText;
-                }
-            } catch (e) {
-                console.warn("Proxy Google thất bại, đang chuyển sang máy chủ dự phòng...", e);
-            }
-
-            // Cách 2: Máy chủ dịch dự phòng MyMemory API (Chuẩn REST CORS công khai)
-            try {
-                const myMemoryUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${fromLang}|${toLang}`;
-                const response = await fetch(myMemoryUrl);
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data && data.responseData && data.responseData.translatedText) {
-                        return data.responseData.translatedText;
-                    }
-                }
-            } catch (e) {
-                console.error("MyMemory API thất bại:", e);
-            }
-
-            throw new Error("Không thể kết nối dịch thuật.");
+            // Dịch qua trạm dịch Bob English (Gemini + dự phòng, có lưu tạm)
+            return await window.bobTranslate(text, fromLang, toLang);
         },
 
         createChunks() {

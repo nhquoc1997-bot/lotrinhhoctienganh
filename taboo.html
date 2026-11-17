@@ -95,6 +95,7 @@
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
         select option { background-color: #111827; color: white; }
     </style>
+    <script src="bob-translate.js"></script>
 </head>
 <body>
     <div class="bg-mesh"></div>
@@ -626,10 +627,7 @@
                 if (!viText.trim()) return;
                 setIsTranslating(true);
                 try {
-                    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=vi&tl=en&dt=t&q=${encodeURIComponent(viText)}`;
-                    const response = await fetch(url);
-                    const data = await response.json();
-                    const translatedText = data[0].map(item => item[0]).join('');
+                    const translatedText = await window.bobTranslate(viText, 'vi', 'en');
                     setEnText(translatedText);
 
                     const newNoteData = {
@@ -641,7 +639,10 @@
                     currentNotes[selectedWord.keyword] = newNoteData;
                     setNotebook(currentNotes);
                     localStorage.setItem('vocab_master_notebook', JSON.stringify(currentNotes));
-                } catch (error) { console.error(error); } 
+                } catch (error) {
+                    console.error(error);
+                    setTranslationToast({ word: '⚠️ Chưa dịch được', vi: error.message || 'Vui lòng thử lại sau vài giây.', visible: true });
+                }
                 finally { setIsTranslating(false); }
             };
 
@@ -656,13 +657,10 @@
                 setTranslationToast({ word: cleanWord, vi: 'Đang dịch...', visible: true });
                 
                 try {
-                    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=vi&dt=t&q=${encodeURIComponent(cleanWord)}`;
-                    const response = await fetch(url);
-                    const data = await response.json();
-                    const translatedText = data[0].map(item => item[0]).join('');
+                    const translatedText = await window.bobTranslate(cleanWord, 'en', 'vi');
                     setTranslationToast({ word: cleanWord, vi: translatedText, visible: true });
                 } catch (err) {
-                    setTranslationToast({ word: cleanWord, vi: 'Lỗi khi dịch', visible: true });
+                    setTranslationToast({ word: cleanWord, vi: err.message || 'Lỗi khi dịch', visible: true });
                 }
             };
 
