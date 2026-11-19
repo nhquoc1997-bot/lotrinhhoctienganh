@@ -1,5 +1,5 @@
 // Trạm dịch Bob English — chạy trên Vercel (Serverless Function)
-// Thứ tự: Gemini (khóa GEMINI_API_KEY) → Google (gọi từ máy chủ) → MyMemory
+// Thứ tự: Google (nhanh nhất, gọi từ máy chủ) → MyMemory → Gemini (chỉ khi 2 cái trên lỗi và có GEMINI_API_KEY)
 // Có bộ nhớ đệm: kết quả giống nhau được trả ngay, không tốn lượt dịch.
 
 const MAX_CHARS = 6000;
@@ -47,7 +47,7 @@ async function fetchJSON(url, options = {}, timeoutMs = 15000) {
 async function viaGemini(text, sl, tl) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error('Chưa cấu hình GEMINI_API_KEY');
-  const models = [process.env.GEMINI_MODEL, 'gemini-flash-latest', 'gemini-2.5-flash'].filter(Boolean);
+  const models = [process.env.GEMINI_MODEL, 'gemini-flash-lite-latest', 'gemini-flash-latest'].filter(Boolean);
   const isWord = text.trim().split(/\s+/).length <= 3 && text.length < 40;
   const prompt =
     `Translate the following text from ${LANG_NAME[sl]} to ${LANG_NAME[tl]}.\n` +
@@ -58,7 +58,7 @@ async function viaGemini(text, sl, tl) {
 
   let lastErr;
   for (const model of models) {
-    for (let attempt = 0; attempt < 2; attempt++) {
+    for (let attempt = 0; attempt < 1; attempt++) {
       try {
         const data = await fetchJSON(
           `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
@@ -108,7 +108,7 @@ async function viaGoogle(text, sl, tl) {
   const out = [];
   for (const chunk of splitChunks(text, 1800)) {
     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(chunk)}`;
-    const data = await fetchJSON(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    const data = await fetchJSON(url, { headers: { 'User-Agent': 'Mozilla/5.0' } }, 6000);
     out.push((data?.[0] || []).map((s) => (s && s[0]) || '').join(''));
   }
   const res = out.join('').trim();
@@ -122,7 +122,7 @@ async function viaMyMemory(text, sl, tl) {
   const out = [];
   for (const chunk of splitChunks(text, 480)) {
     const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk)}&langpair=${src}|${tl}`;
-    const data = await fetchJSON(url);
+    const data = await fetchJSON(url, {}, 6000);
     const t = data?.responseData?.translatedText;
     if (!t || data.responseStatus >= 400 || /MYMEMORY WARNING/i.test(t)) throw new Error('MyMemory hết lượt');
     out.push(t);
@@ -161,9 +161,9 @@ export default async function handler(req, res) {
   }
 
   const providers = [
-    ['gemini', viaGemini],
     ['google', viaGoogle],
     ['mymemory', viaMyMemory],
+    ['gemini', viaGemini],
   ];
   const errors = [];
   for (const [name, fn] of providers) {
