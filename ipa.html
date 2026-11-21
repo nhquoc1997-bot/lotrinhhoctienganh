@@ -11,15 +11,15 @@
     <style>
         body { 
             font-family: 'Inter', sans-serif; 
-            background-color: #f8fafc; /* Nền Slate-50 sang trọng */
+            background-color: #FFFAF1; /* Nền Slate-50 sang trọng */
             -webkit-tap-highlight-color: transparent;
         }
 
         /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        ::-webkit-scrollbar-thumb { background: #E5D2B8; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #BFA791; }
 
         /* Card Effects */
         .card { 
@@ -35,7 +35,7 @@
         .speak-icon { cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
         .speak-icon:hover { transform: scale(1.05); }
         .speak-icon:active { transform: scale(0.95); }
-        .speak-icon.loading { animation: pulse-blue 1.5s infinite; color: #94a3b8; pointer-events: none; }
+        .speak-icon.loading { animation: pulse-blue 1.5s infinite; color: #BFA791; pointer-events: none; }
         
         .phoneme-btn { 
             transition: all 0.2s ease; 
@@ -43,7 +43,7 @@
             box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
         }
         .phoneme-btn.active { 
-            background: linear-gradient(135deg, #3b82f6 0%, #4f46e5 100%); 
+            background: linear-gradient(135deg, #A33F58 0%, #7E2A40 100%); 
             color: white; 
             transform: translateY(-2px); 
             box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3); 
@@ -89,7 +89,7 @@
 
         /* Text Interactions */
         .interactive-word { cursor: pointer; transition: all 0.2s; border-bottom: 2px solid transparent; padding-bottom: 2px;}
-        .interactive-word:hover { color: #4f46e5; border-bottom: 2px dotted #4f46e5; transform: translateY(-1px); }
+        .interactive-word:hover { color: #7E2A40; border-bottom: 2px dotted #7E2A40; transform: translateY(-1px); }
 
         /* Diff Highlight Styles - Modernized */
         .diff-char { display: inline-block; padding: 0 1px; }
@@ -110,6 +110,12 @@
         /* Glassmorphism utils */
         .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.5); }
     </style>
+
+    <!-- Bob English · giao diện ấm áp -->
+    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=Bricolage+Grotesque:opsz,wght@12..96,600..800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="bob-theme.css">
+    <script src="bob-theme.js"></script>
 </head>
 <body class="text-slate-800 antialiased selection:bg-indigo-100 selection:text-indigo-900">
 

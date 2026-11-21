@@ -35,17 +35,17 @@
             margin: 0 1px;
             border-radius: 6px;
             display: inline-block;
-            border-bottom: 2px dashed #cbd5e1;
+            border-bottom: 2px dashed #E5D2B8;
         }
         .clickable-word:hover { 
-            background-color: #dbeafe; 
-            color: #1d4ed8; 
+            background-color: #FAE4E8; 
+            color: #66213A; 
             border-bottom-color: transparent; 
             transform: translateY(-2px);
         }
         .clickable-word:active { 
             transform: scale(0.95); 
-            background-color: #bfdbfe; 
+            background-color: #F3C6CF; 
         }
 
         /* Tooltip Styles for Translation */
@@ -54,8 +54,8 @@
             bottom: calc(100% + 4px);
             left: 50%;
             transform: translateX(-50%);
-            background-color: #1e293b;
-            color: #38bdf8;
+            background-color: #3F2A2D;
+            color: #E59DAC;
             font-size: 0.9rem; /* Chỉnh nhỏ một chút cho mobile */
             padding: 6px 12px;
             border-radius: 8px;
@@ -81,7 +81,7 @@
             margin-left: -6px;
             border-width: 6px;
             border-style: solid;
-            border-color: #1e293b transparent transparent transparent;
+            border-color: #3F2A2D transparent transparent transparent;
         }
         .tooltip-loading {
             display: inline-block;
@@ -89,7 +89,7 @@
             height: 14px;
             border: 2px solid rgba(56,189,248,0.3);
             border-radius: 50%;
-            border-top-color: #38bdf8;
+            border-top-color: #E59DAC;
             animation: spin 1s ease-in-out infinite;
         }
         @keyframes spin {
@@ -101,8 +101,8 @@
         /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 4px; } /* Mỏng hơn cho mobile */
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        ::-webkit-scrollbar-thumb { background: #E5D2B8; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #BFA791; }
         
         /* Toast Animation */
         .toast-enter { transform: translateX(0) !important; opacity: 1 !important; }
@@ -124,6 +124,12 @@
         }
     </style>
     <script src="bob-translate.js"></script>
+
+    <!-- Bob English · giao diện ấm áp -->
+    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=Bricolage+Grotesque:opsz,wght@12..96,600..800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="bob-theme.css">
+    <script src="bob-theme.js"></script>
 </head>
 <body class="bg-slate-50 h-[100dvh] text-slate-800 overflow-hidden flex flex-col">
 

@@ -8,9 +8,9 @@
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <style>
         ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        ::-webkit-scrollbar-track { background: #FFF7E8; }
+        ::-webkit-scrollbar-thumb { background: #E5D2B8; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #BFA791; }
         
         .fade-in { animation: fadeIn 0.5s ease-in-out; }
         @keyframes fadeIn {
@@ -24,9 +24,9 @@
             border-bottom: 1px dashed transparent;
         }
         .word-clickable:hover {
-            background-color: #dbeafe; 
-            color: #1d4ed8; 
-            border-bottom-color: #3b82f6;
+            background-color: #FAE4E8; 
+            color: #66213A; 
+            border-bottom-color: #A33F58;
         }
 
         .word-correct { color: #16a34a; font-weight: 600; }
@@ -34,7 +34,7 @@
         .word-missing { color: #d97706; text-decoration: underline; text-decoration-style: dashed; }
 
         #dictPopup {
-            position: fixed; z-index: 100; background: white; border: 1px solid #e2e8f0;
+            position: fixed; z-index: 100; background: white; border: 1px solid #F3E5CF;
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); border-radius: 0.75rem;
             padding: 1rem; min-width: 200px; display: none;
             transform: translate(-50%, calc(-100% - 15px)); pointer-events: none;
@@ -55,6 +55,12 @@
         .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 0.8); }
     </style>
     <script src="bob-translate.js"></script>
+
+    <!-- Bob English · giao diện ấm áp -->
+    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=Bricolage+Grotesque:opsz,wght@12..96,600..800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="bob-theme.css">
+    <script src="bob-theme.js"></script>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
 

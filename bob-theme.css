@@ -1,0 +1,16 @@
+/* Bob English · giao diện ấm áp dùng chung */
+:root{--bob-cream:#FFF7E8;--bob-maroon:#4B1D2B;--bob-sun:#FFC83D;--bob-sun-d:#E5A512;--bob-line:#F1E2C8;--bob-muted:#86706D}
+html{background:var(--bob-cream)}
+body{font-family:'Be Vietnam Pro',system-ui,-apple-system,'Segoe UI',sans-serif!important;color:#3D1A23}
+h1,h2,.font-display{font-family:'Bricolage Grotesque','Be Vietnam Pro',sans-serif!important;letter-spacing:-.02em}
+h3{font-family:'Bricolage Grotesque','Be Vietnam Pro',sans-serif}
+::selection{background:#FFE69A;color:#4B1D2B}
+::-webkit-scrollbar-thumb{background:#E5D2B8;border-radius:8px}
+::-webkit-scrollbar-track{background:transparent}
+input:focus,textarea:focus,select:focus{outline:none;box-shadow:0 0 0 3px #FFE69A}
+button:focus-visible,a:focus-visible{outline:3px solid #E5A512;outline-offset:2px}
+.bob-btn-y{display:inline-flex;align-items:center;gap:10px;background:var(--bob-sun);color:var(--bob-maroon);font-weight:800;border-radius:999px;padding:13px 24px;box-shadow:0 4px 0 var(--bob-sun-d);transition:transform .15s,box-shadow .15s,background .15s}
+.bob-btn-y:hover{background:#FFD45E}.bob-btn-y:active{transform:translateY(3px);box-shadow:0 1px 0 var(--bob-sun-d)}
+.bob-btn-w{display:inline-flex;align-items:center;gap:10px;background:#fff;color:var(--bob-maroon);font-weight:800;border-radius:999px;padding:12px 22px;border:2px solid var(--bob-line);transition:border-color .15s}
+.bob-btn-w:hover{border-color:#E9C98D}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}

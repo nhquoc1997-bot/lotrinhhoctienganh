@@ -20,7 +20,7 @@
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #FFFAF1; }
         .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 0.8); }
         .topic-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
         .progress-bar { transition: width 0.8s cubic-bezier(0.65, 0, 0.35, 1); }
@@ -28,13 +28,19 @@
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); } 70% { box-shadow: 0 0 0 15px rgba(37, 99, 235, 0); } 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); } }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #E5D2B8; border-radius: 10px; }
         .spinner { animation: spin 1s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
         .clickable-word { transition: all 0.2s ease; display: inline-block; border-radius: 0.25rem; padding: 0 2px; margin: 0 1px; }
-        .clickable-word:hover { background-color: #dbeafe; color: #1d4ed8; transform: translateY(-1px); }
+        .clickable-word:hover { background-color: #FAE4E8; color: #66213A; transform: translateY(-1px); }
     </style>
     <script src="bob-translate.js"></script>
+
+    <!-- Bob English · giao diện ấm áp -->
+    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=Bricolage+Grotesque:opsz,wght@12..96,600..800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="bob-theme.css">
+    <script src="bob-theme.js"></script>
 </head>
 <body>
     <div id="root"></div>
@@ -1253,7 +1259,7 @@
                 <div 
                     onClick={onClick}
                     className="glass-card p-6 rounded-[2rem] cursor-pointer hover:-translate-y-1.5 hover:shadow-xl transition-all border-l-4 group relative overflow-hidden flex flex-col justify-between"
-                    style={{ borderLeftColor: topic.level === 'B1' ? '#2563eb' : '#4f46e5' }}
+                    style={{ borderLeftColor: topic.level === 'B1' ? '#7E2A40' : '#7E2A40' }}
                 >
                     <div>
                         <div className="flex justify-between items-start mb-5">
